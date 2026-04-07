@@ -1223,12 +1223,13 @@ async function runAI(){
       return;
     }
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',max_tokens:1000,
+      model:'claude-opus-4-5',max_tokens:1000,
       system:`Extraia dados de contratos de aluguel. Retorne SOMENTE JSON sem markdown:
 {"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"obs":""}`,
       messages:[{role:'user',content:[ci,{type:'text',text:'Extraia os dados deste contrato.'}]}]
     })});
     const data=await resp.json();
+    if(!resp.ok)throw new Error('API '+resp.status+': '+(data?.error?.message||JSON.stringify(data)));
     const txt=data.content?.map(i=>i.text||'').join('').trim();
     const p=JSON.parse(txt.replace(/```json|```/g,'').trim());
     const F=(id,v)=>{if(v!=null&&v!==''&&v!==0){const e=document.getElementById(id);if(e)e.value=v;}};
@@ -1240,8 +1241,9 @@ async function runAI(){
     document.getElementById('ait').innerHTML='✅ Dados extraídos! Revise antes de salvar.';
     document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Verifique os campos abaixo.</span>';
   }catch(e){
-    document.getElementById('ait').innerHTML='⚠️ Não foi possível extrair automaticamente';
-    document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Preencha manualmente.</span>';
+    document.getElementById('ait').innerHTML='⚠️ Erro ao chamar a IA';
+    document.getElementById('aim').innerHTML='<span style="color:var(--re);font-size:12px">'+e.message+'</span><br><span style="color:var(--dm);font-size:12px">Preencha manualmente ou verifique sua API key.</span>';
+    console.error('AI error:',e);
   }
 }
 
