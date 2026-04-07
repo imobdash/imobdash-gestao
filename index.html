@@ -394,6 +394,16 @@ tbody td{padding:9px 12px;font-size:13px;}
       <div class="g"><label>Vencimento</label><input type="date" id="cbvnc"></div>
       <div class="g"><label>Parcelas</label><input type="number" id="cbparc" value="1" min="1" max="120" oninput="fillCD()"></div>
       <div class="g ff"><label>Descrição</label><input type="text" id="cbdsc"></div>
+      <div class="g ff" id="destino-box">
+        <label>Destino do Dinheiro</label>
+        <select id="cbdestino" onchange="updateRepBox()">
+          <option value="auto">Automático (conforme regra)</option>
+          <option value="prop">100% Proprietário</option>
+          <option value="imob">100% Imobiliária</option>
+          <option value="split5050">50% Proprietário / 50% Imobiliária</option>
+          <option value="split1090">10% Imobiliária / 90% Proprietário</option>
+        </select>
+      </div>
       <div id="repbox" class="g ff"></div>
       <div class="g ff">
         <label>Comprovante (opcional)</label>
@@ -502,16 +512,17 @@ function calcInadimplencia(cid){
 function calcCaixaProj(){
   const hoje=new Date();
   const em30=new Date(hoje);em30.setDate(em30.getDate()+30);
-  const pend=D.cb.filter(c=>!c.pago&&c.venc&&new Date(c.venc+'T12:00:00')<=em30);
-  const aReceber=pend.reduce((a,b)=>a+(b.valor||0),0);
-  const aRepassar=pend.reduce((a,b)=>a+(b.repasse?.prop||0),0);
-  const liquido=pend.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+  // A Receber 30 dias: cobranças com venc nos próximos 30 dias OU sem venc definido
+  const pend30=D.cb.filter(c=>!c.pago&&(!c.venc||new Date(c.venc+'T12:00:00')<=em30));
+  const aReceber=pend30.reduce((a,b)=>a+(b.valor||0),0);
+  const aRepassar=pend30.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const liquido=pend30.reduce((a,b)=>a+(b.repasse?.imob||0),0);
   // ticket médio
   const alugPagos=D.cb.filter(c=>c.pago&&c.tipo==='Aluguel');
   const ticket=alugPagos.length?alugPagos.reduce((a,b)=>a+(+b.valorPago||+b.valor||0),0)/alugPagos.length:0;
-  // inadimplência geral
+  // inadimplência geral (conta quem não pagou e passou do venc)
   const totAlug=D.cb.filter(c=>c.tipo==='Aluguel').length;
-  const atrAlug=D.cb.filter(c=>c.tipo==='Aluguel'&&!c.pago&&DA(c.venc)<0).length;
+  const atrAlug=D.cb.filter(c=>c.tipo==='Aluguel'&&!c.pago&&c.venc&&DA(c.venc)<0).length;
   const pctInad=totAlug?Math.round(atrAlug/totAlug*100):0;
   return{aReceber,aRepassar,liquido,ticket,pctInad,atrAlug,totAlug};
 }
@@ -566,14 +577,25 @@ function gerarSugestoes(){
 // ══════════════════════════════════════════
 // REPASSE
 // ══════════════════════════════════════════
-function calcRepasse(tp,valor,primMes,adm){
+function calcRepasse(tp,valor,primMes,adm,valorBase){
+  // valorBase = valor integral do contrato (para calcular % correto no 1º mês proporcional)
   if(!adm)return{imob:0,prop:valor,tipo:'sem_adm'};
   if(tp==='Pintura')return{imob:valor,prop:0,tipo:'pintura'};
   if(tp==='Caução')return{imob:valor,prop:0,tipo:'caucao'};
   if(tp==='Aluguel'){
-    if(primMes){const im=Math.round(valor*.5*100)/100;return{imob:im,prop:valor-im,tipo:'primeiro'};}
+    if(primMes){
+      // 50% é calculado sobre o valor INTEGRAL do contrato, não sobre o proporcional
+      const base=valorBase||valor;
+      const im=Math.round(base*.5*100)/100;
+      // o que a imob retém não pode ser mais que o valor total cobrado
+      const imFinal=Math.min(im,valor);
+      return{imob:imFinal,prop:valor-imFinal,tipo:'primeiro',valorBase:base};
+    }
     const im=Math.round(valor*.1*100)/100;return{imob:im,prop:valor-im,tipo:'normal'};
   }
+  // Reembolso: 100% vai ao proprietário por padrão (é um repasse)
+  if(tp==='Reembolso')return{imob:0,prop:valor,tipo:'reembolso'};
+  // IPTU, Condomínio, Seguro, Taxas → 100% proprietário
   return{imob:0,prop:valor,tipo:'repasse'};
 }
 
@@ -877,7 +899,7 @@ function repasseCard(cid){
     </div>
   </div>
   <table class="rtable"><thead><tr><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th></tr></thead>
-  <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
+  <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'1º mês 50/50':rp.tipo==='normal'?'Mensal 10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='reembolso'?'Reembolso':rp.tipo==='manual'?'Manual':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
 }
 
 function renderRepasse(){
@@ -911,7 +933,7 @@ function renderRepasse(){
           </div>
         </div>
         ${cobs.length?`<table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th></tr></thead>
-        <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';
+        <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'1º mês 50/50':rp.tipo==='normal'?'Mensal 10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='reembolso'?'Reembolso':rp.tipo==='manual'?'Manual':'Repasse';
         return`<tr><td>${MF(cb.mes)}</td><td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</td><td style="font-weight:600">${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}
         </tbody></table>`:'<div style="font-size:13px;color:var(--dm)">Nenhum pagamento ainda.</div>'}
       `}
@@ -1115,8 +1137,8 @@ function gerarCobs(c){
     let valor=c.valor,prop=false,descExtra='';
     if(primMes){const diaIni=ini.getDate();if(diaIni!==1){const dm=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();const dr=dm-diaIni;valor=Math.round((c.valor/dm)*dr*100)/100;prop=true;descExtra=` (${dr}/${dm} dias)`;}}
     const isFirst=primMes;primMes=false;
-    const rep=calcRepasse('Aluguel',valor,isFirst,adm);
-    D.cb.push({id:UID(),contratoId:c.id,inquilino:c.inquilino,endereco:c.endereco,tipo:'Aluguel',mes:mesRef,descricao:`Aluguel ${MN[m]}/${y}${descExtra}`,valor,proporcional:prop,venc:vencData.toISOString().split('T')[0],pago:false,repasse:rep});
+    const rep=calcRepasse('Aluguel',valor,isFirst,adm,c.valor);
+    D.cb.push({id:UID(),contratoId:c.id,inquilino:c.inquilino,endereco:c.endereco,tipo:'Aluguel',mes:mesRef,descricao:`Aluguel ${MN[m]}/${y}${descExtra}`,valor,proporcional:prop,venc:vencData.toISOString().split('T')[0],pago:false,repasse:rep,valorBase:c.valor});
     cur=new Date(y,m+1,1);
   }
 }
@@ -1296,6 +1318,7 @@ function openNCob(){
   document.getElementById('cbdsc').value='';document.getElementById('cbtp').value='Aluguel';
   document.getElementById('cbparc').value='1';document.getElementById('cbfile').value='';
   document.getElementById('cbfn').textContent='';
+  document.getElementById('cbdestino').value='auto';
   fillCD();oM('mcb');
 }
 function openNCobCon(cid){openNCob();document.getElementById('cbcon').value=cid;fillCV();}
@@ -1313,21 +1336,30 @@ function fillCD(){
   if(tp==='Aluguel')fillCV();
   updateRepBox();
 }
+function calcRepasseOverride(tp,val,isFirst,adm,destino){
+  if(destino==='prop')return{imob:0,prop:val,tipo:'manual'};
+  if(destino==='imob')return{imob:val,prop:0,tipo:'manual'};
+  if(destino==='split5050'){const im=Math.round(val*.5*100)/100;return{imob:im,prop:val-im,tipo:'manual'};}
+  if(destino==='split1090'){const im=Math.round(val*.1*100)/100;return{imob:im,prop:val-im,tipo:'manual'};}
+  return calcRepasse(tp,val,isFirst,adm);
+}
 function updateRepBox(){
   const cid=document.getElementById('cbcon').value;
   const c=D.c.find(x=>x.id===cid);
   const tp=document.getElementById('cbtp').value;
   const val=parseFloat(document.getElementById('cbval').value)||0;
+  const destino=document.getElementById('cbdestino')?.value||'auto';
   const box=document.getElementById('repbox');
   if(!c||!val){box.innerHTML='';return;}
   const cobsAlug=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
   const isFirst=cobsAlug.length===0;
-  const rp=calcRepasse(tp,val,isFirst,c.adm==='sim');
+  const rp=calcRepasseOverride(tp,val,isFirst,c.adm==='sim',destino);
   if(rp.tipo==='sem_adm'){box.innerHTML='';return;}
+  const tipoLabel={primeiro:'1º mês — 50% Imob',normal:'Mensal — 10/90',pintura:'100% Imobiliária',caucao:'Caução — retido Imob',reembolso:'Reembolso — Proprietário',repasse:'Repasse integral — Proprietário',manual:'Destino manual'};
   box.innerHTML=`<label>Repasse calculado</label><div class="ibox ibox-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
     ${rp.prop>0?`<span>🏦 Proprietário: <strong>${R(rp.prop)}</strong></span>`:''}
     ${rp.imob>0?`<span>🏢 Imobiliária: <strong>${R(rp.imob)}</strong></span>`:''}
-    <span style="font-size:11px;opacity:.7">${rp.tipo==='primeiro'?'1º mês (50/50)':rp.tipo==='normal'?'Mensal (10/90)':rp.tipo==='pintura'?'100% imob':rp.tipo==='caucao'?'Retido imob':'Integral'}</span>
+    <span style="font-size:11px;opacity:.7">${tipoLabel[rp.tipo]||rp.tipo}</span>
   </div>`;
 }
 async function saveCob(){
@@ -1351,7 +1383,9 @@ async function saveCob(){
     if(parc>1){dsc=dsc.replace(/parcela \d+\//,`parcela ${p+1}/`).replace(/ 1\//,` ${p+1}/`);}
     let vncDate=baseVnc;
     if(p>0&&baseVnc){const bv=new Date(baseVnc+'T12:00:00');vncDate=new Date(bv.getFullYear(),bv.getMonth()+p,bv.getDate()).toISOString().split('T')[0];}
-    const rp=calcRepasse(tp,baseVal,isFirst&&p===0,c?.adm==='sim');
+    const destino=document.getElementById('cbdestino')?.value||'auto';
+    const cobsAlugSave=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
+    const rp=calcRepasseOverride(tp,baseVal,(cobsAlugSave.length===0)&&p===0,c?.adm==='sim',destino);
     D.cb.push({id:UID(),contratoId:cid,inquilino:c?.inquilino||'',endereco:c?.endereco||'',tipo:tp,mes:mesRef,descricao:dsc,valor:baseVal,venc:vncDate,pago:false,repasse:rp,fileData:p===0?fData:null,fileName:p===0?fName:null,fileType:p===0?fType:null});
   }
   save();cM('mcb');renderCobrancas();renderDash();
