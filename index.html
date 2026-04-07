@@ -307,7 +307,7 @@ tbody td{padding:9px 12px;font-size:13px;}
       <div style="font-size:11px;font-weight:600;color:var(--ye);margin-bottom:6px">🔑 API Key Anthropic necessária para leitura fora do Claude.ai</div>
       <div style="display:flex;gap:7px">
         <input type="password" id="apikey-input" placeholder="sk-ant-api03-..." style="flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:monospace;font-size:12px;padding:7px 10px;outline:none;">
-        <button class="btn bg bsm" onclick="saveApiKey()">Salvar</button>
+        <button class="btn bg bsm" id="btnSaveKey" onclick="saveApiKey()">Salvar</button>
       </div>
       <div style="font-size:11px;color:var(--dm);margin-top:5px">Obtenha em <a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--ac2)">console.anthropic.com/keys</a> · Salvo localmente no seu navegador.</div>
     </div>
@@ -1124,6 +1124,32 @@ function gerarCobs(c){
 // ══════════════════════════════════════════
 // NOVO CONTRATO — FIXED FILE UPLOAD
 // ══════════════════════════════════════════
+function getApiKey(){return localStorage.getItem('ig_apikey')||'';}
+function saveApiKey(){
+  const k=document.getElementById('apikey-input').value.trim();
+  if(!k||!k.startsWith('sk-')){alert('Cole uma API key válida (começa com sk-ant-)');return;}
+  localStorage.setItem('ig_apikey',k);
+  const inp=document.getElementById('apikey-input');
+  inp.value='';
+  inp.placeholder='✅ Salva e pronta para uso!';
+  inp.style.borderColor='var(--gn)';
+  inp.style.color='var(--gn)';
+}
+function renderApiKeyStatus(){
+  const saved=getApiKey();
+  const inp=document.getElementById('apikey-input');
+  if(!inp)return;
+  inp.value='';
+  if(saved){
+    inp.placeholder='✅ API key salva — pronta para uso';
+    inp.style.borderColor='var(--gn)';
+    inp.style.color='var(--gn)';
+  } else {
+    inp.placeholder='sk-ant-api03-...';
+    inp.style.borderColor='';
+    inp.style.color='';
+  }
+}
 function openNC(){
   clearForm();pdfFile=null;pdfB64=null;docsExtras=[];
   document.getElementById('dexl').innerHTML='';
@@ -1131,27 +1157,16 @@ function openNC(){
   document.getElementById('propbox').style.display='none';
   document.getElementById('pdfname').style.display='none';
   document.getElementById('btnAI').style.display='none';
-  // Show API key box when outside claude.ai
   const isClaudeAI=window.location.hostname.includes('claude.ai');
   const akbox=document.getElementById('apikey-box');
   if(!isClaudeAI){
     akbox.style.display='block';
-    const saved=getApiKey();
-    if(saved)document.getElementById('apikey-input').placeholder='✅ API key salva — pronta para uso';
+    renderApiKeyStatus();
   } else {
     akbox.style.display='none';
   }
   oM('mc');
 }
-function saveApiKey(){
-  const k=document.getElementById('apikey-input').value.trim();
-  if(!k){alert('Cole sua API key');return;}
-  localStorage.setItem('ig_apikey',k);
-  document.getElementById('apikey-input').value='';
-  document.getElementById('apikey-input').placeholder='✅ Salva! Pronta para uso.';
-  setTimeout(()=>{document.getElementById('apikey-input').placeholder='sk-ant-api03-...';},3000);
-}
-function getApiKey(){return localStorage.getItem('ig_apikey')||'';}
 
 function clearForm(){
   ['fen','finq','finqc','finqt','finqe','fprn','fprc','fprt','fpre','fval','fdv','fini','ffim','fobs','fcau'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
@@ -1188,6 +1203,10 @@ document.getElementById('cbval').addEventListener('input',updateRepBox);
 
 async function runAI(){
   if(!pdfFile)return;
+  // Auto-save key if typed in field but Salvar not clicked
+  const inputEl=document.getElementById('apikey-input');
+  const typed=inputEl?.value?.trim();
+  if(typed&&typed.startsWith('sk-')){localStorage.setItem('ig_apikey',typed);inputEl.value='';}
   document.getElementById('aibox').style.display='block';
   document.getElementById('ait').innerHTML='🤖 Lendo o contrato...';
   document.getElementById('aim').innerHTML='<div class="ail"><div class="sp"></div> Extraindo dados...</div>';
