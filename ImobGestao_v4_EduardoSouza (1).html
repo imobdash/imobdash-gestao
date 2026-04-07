@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImobGestão – Eduardo Souza Corretor</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;--sf:#161b22;--sf2:#1f2937;--bd:#30363d;
+  --ac:#2563eb;--ac2:#3b82f6;--ag:rgba(37,99,235,.14);
+  --gn:#22c55e;--gd:rgba(34,197,94,.12);
+  --ye:#f59e0b;--yd:rgba(245,158,11,.12);
+  --re:#ef4444;--rd:rgba(239,68,68,.12);
+  --pu:#a855f7;--pd:rgba(168,85,247,.12);
+  --or:#f97316;--od:rgba(249,115,22,.12);
+  --te:#e6edf3;--dm:#8b949e;--dmr:#484f58;
+  --r:12px;--rs:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--te);min-height:100vh;font-size:14px;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:224px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s;overflow-y:auto;}
+.logo{padding:20px 20px 15px;border-bottom:1px solid var(--bd);}
+.logo .br{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;}.logo .dot{color:var(--ac2);}.logo .su{font-size:11px;color:var(--dm);margin-top:2px;}
+nav{flex:1;padding:10px 0;}
+.ns{padding:7px 16px 3px;font-size:10px;font-weight:600;letter-spacing:1px;color:var(--dmr);text-transform:uppercase;}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 18px;cursor:pointer;color:var(--dm);font-size:13px;font-weight:400;transition:all .15s;border-left:2px solid transparent;}
+.ni:hover{color:var(--te);background:var(--sf2);}.ni.on{color:var(--ac2);background:var(--ag);border-left-color:var(--ac2);font-weight:500;}
+.ni .ic{font-size:15px;width:20px;text-align:center;}
+.bdg{margin-left:auto;font-size:10px;font-weight:700;border-radius:20px;padding:1px 6px;color:#fff;}
+.sfoot{padding:13px 17px;border-top:1px solid var(--bd);}
+.main{margin-left:224px;flex:1;}
+.topbar{background:var(--sf);border-bottom:1px solid var(--bd);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.ttl{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;}
+.content{padding:22px 24px;}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+.bp{background:var(--ac);color:#fff;}.bp:hover{background:var(--ac2);}
+.bg{background:transparent;color:var(--dm);border:1px solid var(--bd);}.bg:hover{color:var(--te);background:var(--sf2);}
+.bd2{background:var(--rd);color:var(--re);border:1px solid rgba(239,68,68,.25);}.bd2:hover{background:rgba(239,68,68,.22);}
+.bk{background:var(--gd);color:var(--gn);border:1px solid rgba(34,197,94,.25);}.bk:hover{background:rgba(34,197,94,.22);}
+.bsm{padding:4px 9px;font-size:12px;}
+/* VIEWS */
+.view{display:none;}.view.on{display:block;}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:18px;}
+.sc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:15px 17px;position:relative;overflow:hidden;}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.sc.bl::before{background:var(--ac2);}.sc.gr::before{background:var(--gn);}.sc.ye::before{background:var(--ye);}.sc.re::before{background:var(--re);}.sc.pu::before{background:var(--pu);}
+.slb{font-size:10px;color:var(--dm);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:5px;}
+.sv{font-family:'Syne',sans-serif;font-weight:700;font-size:24px;}
+.ss{font-size:11px;color:var(--dm);margin-top:2px;}
+/* CARDS */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:14px;}
+.ch{padding:12px 17px;border-bottom:1px solid var(--bd);font-family:'Syne',sans-serif;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;}
+.cb{padding:14px 17px;}
+/* TABLE */
+.tw{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;}
+.th2{padding:12px 17px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.th2 h3{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
+.sb{display:flex;align-items:center;gap:7px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:5px 11px;}
+.sb input{background:none;border:none;outline:none;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;width:165px;}
+.sb input::placeholder{color:var(--dmr);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--sf2);}
+thead th{padding:8px 13px;text-align:left;font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
+tbody tr{border-top:1px solid var(--bd);transition:background .1s;}
+tbody tr:hover{background:rgba(255,255,255,.018);}
+tbody td{padding:9px 13px;font-size:13px;}
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.cg{background:var(--gd);color:var(--gn);}.cy{background:var(--yd);color:var(--ye);}.cr{background:var(--rd);color:var(--re);}.cb2{background:var(--ag);color:var(--ac2);}.cp{background:var(--pd);color:var(--pu);}.co{background:var(--od);color:var(--or);}
+/* TYPE TAGS */
+.tt{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px;}
+.ta{background:var(--ag);color:var(--ac2);}.ti{background:var(--pd);color:var(--pu);}.tc{background:var(--yd);color:var(--ye);}.ts{background:var(--gd);color:var(--gn);}.tp{background:var(--od);color:var(--or);}.tou{background:rgba(139,148,158,.12);color:var(--dm);}
+/* REPASSE TAG */
+.rep{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;}
+.rep-im{background:rgba(37,99,235,.15);color:var(--ac2);}
+.rep-pr{background:rgba(34,197,94,.12);color:var(--gn);}
+.rep-rp{background:var(--gd);color:var(--gn);}
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px);}
+.mo.on{display:flex;}
+.md{background:var(--sf);border:1px solid var(--bd);border-radius:16px;width:100%;max-width:680px;max-height:92vh;overflow-y:auto;box-shadow:0 25px 70px rgba(0,0,0,.6);animation:mi .2s ease;}
+.mdw{max-width:940px;}
+@keyframes mi{from{opacity:0;transform:scale(.96) translateY(8px);}to{opacity:1;transform:none;}}
+.mh{padding:19px 22px 0;display:flex;align-items:flex-start;justify-content:space-between;}
+.mh h2{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;}
+.mh p{color:var(--dm);font-size:13px;margin-top:2px;}
+.mx{background:none;border:none;color:var(--dm);cursor:pointer;font-size:20px;line-height:1;padding:2px;}.mx:hover{color:var(--te);}
+.mb{padding:17px 22px 22px;}
+/* FORM */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.ff{grid-column:1/-1;}
+.fg .g{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px;}
+.fg input,.fg select,.fg textarea{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 11px;outline:none;transition:border-color .15s;width:100%;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--ac2);}
+.fg textarea{resize:vertical;min-height:58px;}
+.fa{display:flex;gap:9px;justify-content:flex-end;margin-top:15px;padding-top:13px;border-top:1px solid var(--bd);}
+.fsec{grid-column:1/-1;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--dm);text-transform:uppercase;letter-spacing:.5px;padding-top:6px;border-top:1px solid var(--bd);margin-top:2px;}
+/* UPLOAD */
+.uz{border:2px dashed var(--bd);border-radius:var(--r);padding:18px 16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--sf2);position:relative;}
+.uz:hover{border-color:var(--ac2);background:var(--ag);}
+.uz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+/* AI BOX */
+.aib{background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,58,237,.08));border:1px solid rgba(37,99,235,.25);border-radius:var(--r);padding:12px 15px;margin-bottom:12px;}
+.ait{font-size:13px;font-weight:600;color:var(--ac2);display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.ail{display:flex;align-items:center;gap:9px;color:var(--dm);font-size:13px;}
+.sp{width:15px;height:15px;border:2px solid var(--bd);border-top-color:var(--ac2);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* DETAIL */
+.dg{display:grid;grid-template-columns:1fr 310px;gap:15px;}
+.ir{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(48,54,61,.5);font-size:13px;}
+.ir:last-child{border-bottom:none;}
+.il{color:var(--dm);flex-shrink:0;padding-right:8px;}
+.iv{color:var(--te);font-weight:500;text-align:right;max-width:62%;word-break:break-word;}
+/* CI */
+.ci{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(48,54,61,.35);}
+.ci:last-child{border-bottom:none;}
+.cbg{background:var(--sf2);border-radius:7px;padding:4px 8px;text-align:center;min-width:42px;flex-shrink:0;margin-top:2px;}
+.cbg .m{font-size:11px;font-weight:700;}.cbg .y{font-size:9px;color:var(--dmr);}
+/* VENC */
+.vi{display:flex;align-items:center;gap:12px;padding:10px 17px;border-bottom:1px solid rgba(48,54,61,.3);cursor:pointer;transition:background .1s;}
+.vi:last-child{border-bottom:none;}.vi:hover{background:rgba(255,255,255,.018);}
+.vd{width:48px;height:48px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+.vd .n{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;line-height:1;}.vd .l{font-size:9px;font-weight:600;text-transform:uppercase;margin-top:1px;opacity:.8;}
+.vd.ok{background:var(--gd);color:var(--gn);}.vd.wa{background:var(--yd);color:var(--ye);}.vd.cr{background:var(--rd);color:var(--re);}.vd.pa{background:rgba(139,148,158,.1);color:var(--dm);}
+/* TL */
+.tl{position:relative;padding-left:19px;}.tl::before{content:'';position:absolute;left:4px;top:0;bottom:0;width:2px;background:var(--bd);}
+.tli{position:relative;margin-bottom:10px;}.tld{position:absolute;left:-16px;top:3px;width:9px;height:9px;border-radius:50%;background:var(--ac);border:2px solid var(--bg);}.tld.g{background:var(--gn);}
+.tlt{font-size:11px;color:var(--dm);margin-bottom:1px;}.tlx{font-size:13px;color:var(--te);}
+/* PROGRESS */
+.pw{background:var(--sf2);border-radius:4px;height:4px;margin-top:5px;overflow:hidden;}.pb{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ac),var(--ac2));}
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--sf2);border-radius:var(--rs);padding:3px;width:fit-content;}
+.tab{padding:5px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:var(--dm);transition:all .15s;}.tab.on{background:var(--sf);color:var(--te);box-shadow:0 1px 3px rgba(0,0,0,.3);}
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;}.empty .ei{font-size:36px;margin-bottom:8px;}.empty h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px;}.empty p{color:var(--dm);font-size:13px;}
+/* INFO BOX */
+.ibox{border-radius:var(--rs);padding:10px 13px;font-size:12px;line-height:1.5;margin-top:8px;}
+.ibox-y{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--ye);}
+.ibox-g{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--gn);}
+.ibox-b{background:var(--ag);border:1px solid rgba(37,99,235,.2);color:var(--ac2);}
+/* DI */
+.di{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(48,54,61,.35);}.di:last-child{border-bottom:none;}
+.dic{width:29px;height:29px;border-radius:7px;background:var(--rd);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}.dic.img{background:var(--ag);}
+/* REPASSE TABLE */
+.rtable{width:100%;border-collapse:collapse;margin-top:12px;}
+.rtable th{font-size:11px;color:var(--dm);text-align:left;padding:5px 8px;border-bottom:1px solid var(--bd);}
+.rtable td{font-size:13px;padding:6px 8px;border-bottom:1px solid rgba(48,54,61,.3);}
+.rtable tr:last-child td{border-bottom:none;}
+/* RESPONSIVE */
+.hm{display:none;align-items:center;justify-content:center;width:34px;height:34px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:18px;}
+.ovm{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;}.ovm.on{display:block;}
+@media(max-width:900px){.sidebar{transform:translateX(-100%);}.sidebar.on{transform:translateX(0);}.main{margin-left:0;}.stats{grid-template-columns:1fr 1fr;}.dg{grid-template-columns:1fr;}.fg{grid-template-columns:1fr;}.hm{display:flex;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<aside class="sidebar" id="sb">
+  <div class="logo"><div class="br">Imob<span class="dot">.</span>Gestão</div><div class="su">Gestão de Aluguéis</div></div>
+  <nav>
+    <div class="ns">Principal</div>
+    <div class="ni on" onclick="go('dashboard')"><span class="ic">⬛</span> Dashboard</div>
+    <div class="ni" onclick="go('contratos')"><span class="ic">📋</span> Contratos</div>
+    <div class="ns">Financeiro</div>
+    <div class="ni" onclick="go('cobrancas')"><span class="ic">💰</span> Cobranças <span class="bdg" id="bdgC" style="background:var(--re)">0</span></div>
+    <div class="ni" onclick="go('repasse')"><span class="ic">🔄</span> Repasse Proprietário</div>
+    <div class="ns">Agenda</div>
+    <div class="ni" onclick="go('vencimentos')"><span class="ic">📅</span> Vencimentos <span class="bdg" id="bdgV" style="background:var(--ye);color:#000;display:none">!</span></div>
+    <div class="ns">Suporte</div>
+    <div class="ni" onclick="go('ordens')"><span class="ic">🔧</span> Ordens de Serviço <span class="bdg" id="bdgO" style="background:var(--re);display:none">0</span></div>
+  </nav>
+  <div class="sfoot">
+    <div style="display:flex;align-items:center;gap:9px">
+      <div style="width:31px;height:31px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#7c3aed);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:#fff;flex-shrink:0">ES</div>
+      <div><div style="font-size:12px;font-weight:500">Eduardo Souza</div><div style="font-size:10px;color:var(--dm)">Corretor · Vila Velha</div></div>
+    </div>
+  </div>
+</aside>
+<div class="ovm" id="ovm" onclick="cSB()"></div>
+
+<main class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="hm" onclick="tSB()">☰</div>
+      <div class="ttl" id="ttl">Dashboard</div>
+    </div>
+    <button class="btn bp" onclick="openNC()">＋ Novo Contrato</button>
+  </div>
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="view on" id="view-dashboard">
+      <div class="stats" id="stats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px">
+        <div class="tw"><div class="th2"><h3>📅 Próximos Vencimentos</h3><button class="btn bg bsm" onclick="go('vencimentos')">Ver todos →</button></div><div id="dv"></div></div>
+        <div class="tw"><div class="th2"><h3>💸 Cobranças Pendentes</h3><button class="btn bg bsm" onclick="go('cobrancas')">Ver todas →</button></div><div id="dp"></div></div>
+      </div>
+    </div>
+
+    <!-- CONTRATOS -->
+    <div class="view" id="view-contratos">
+      <div class="tw"><div class="th2"><h3>Todos os Contratos</h3><div class="sb">🔍 <input type="text" id="sc" placeholder="Buscar..." oninput="renderContratos()"></div></div><div id="tc"></div></div>
+    </div>
+
+    <!-- COBRANÇAS -->
+    <div class="view" id="view-cobrancas">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;flex-wrap:wrap;gap:9px">
+        <div class="tabs">
+          <div class="tab on" onclick="fCob('todas',this)">Todas</div>
+          <div class="tab" onclick="fCob('pendente',this)">Pendentes</div>
+          <div class="tab" onclick="fCob('pago',this)">Pagas</div>
+          <div class="tab" onclick="fCob('atrasado',this)">Atrasadas</div>
+        </div>
+        <button class="btn bg" onclick="openNCob()">＋ Nova Cobrança</button>
+      </div>
+      <div class="tw"><div id="tcb"></div></div>
+    </div>
+
+    <!-- REPASSE -->
+    <div class="view" id="view-repasse">
+      <div id="repasse-content"></div>
+    </div>
+
+    <!-- VENCIMENTOS -->
+    <div class="view" id="view-vencimentos">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px">
+        <div class="tw"><div class="th2"><h3>🏠 Vigência dos Contratos</h3></div><div id="vvc"></div></div>
+        <div class="tw"><div class="th2"><h3>💳 Cobranças por Vencer</h3></div><div id="vvb"></div></div>
+      </div>
+    </div>
+
+    <!-- ORDENS -->
+    <div class="view" id="view-ordens">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:15px"><button class="btn bg" onclick="openNOS()">＋ Nova OS</button></div>
+      <div class="tw"><div id="to"></div></div>
+    </div>
+
+    <!-- DETALHE -->
+    <div class="view" id="view-detalhe">
+      <div style="margin-bottom:13px"><button class="btn bg bsm" onclick="go('contratos')">← Voltar</button></div>
+      <div class="dg" id="det"></div>
+    </div>
+
+  </div>
+</main>
+</div>
+
+<!-- MODAL: NOVO CONTRATO -->
+<div class="mo" id="mc">
+<div class="md mdw">
+  <div class="mh"><div><h2>Novo Contrato</h2><p>Faça upload do PDF para preenchimento automático</p></div><button class="mx" onclick="cM('mc')">✕</button></div>
+  <div class="mb">
+    <div class="uz" style="margin-bottom:12px"><input type="file" id="pdfin" accept=".pdf,image/*" onchange="readPDF(this)"><div style="font-size:26px;margin-bottom:6px">📄</div><div style="font-size:14px;font-weight:500">Arraste o contrato PDF aqui</div><div style="font-size:12px;color:var(--dm);margin-top:2px">ou clique para selecionar</div></div>
+    <div class="aib" id="aibox" style="display:none"><div class="ait" id="ait">🤖 Lendo...</div><div id="aim"></div></div>
+    <div class="fg">
+      <div class="fsec">📋 Contrato</div>
+      <div class="g ff"><label>Endereço do Imóvel</label><input type="text" id="fen" placeholder="Rua, número, bairro, cidade"></div>
+      <div class="g"><label>Administrado pela Imobiliária?</label>
+        <select id="fadm"><option value="sim">Sim — comissão 1º mês 50%, demais 10%</option><option value="nao">Não — sem repasse</option></select>
+      </div>
+      <div class="fsec">👤 Inquilino</div>
+      <div class="g"><label>Nome / Razão Social</label><input type="text" id="finq" placeholder="Nome ou empresa"></div>
+      <div class="g"><label>CPF / CNPJ</label><input type="text" id="finqc"></div>
+      <div class="g"><label>Telefone</label><input type="text" id="finqt" placeholder="(27) 9..."></div>
+      <div class="g"><label>E-mail</label><input type="email" id="finqe"></div>
+      <div class="fsec">🏦 Proprietário</div>
+      <div class="g"><label>Nome / Razão Social</label><input type="text" id="fprn"></div>
+      <div class="g"><label>CPF / CNPJ</label><input type="text" id="fprc"></div>
+      <div class="g"><label>Telefone</label><input type="text" id="fprt" placeholder="(27) 9..."></div>
+      <div class="g"><label>E-mail</label><input type="email" id="fpre"></div>
+      <div class="fsec">💰 Valores & Datas</div>
+      <div class="g"><label>Valor do Aluguel (R$)</label><input type="number" id="fval" placeholder="0,00" step="0.01" oninput="calcProp()"></div>
+      <div class="g"><label>Dia de Vencimento</label><input type="number" id="fdv" placeholder="Ex: 10" min="1" max="31"></div>
+      <div class="g"><label>Início do Contrato</label><input type="date" id="fini" oninput="calcProp()"></div>
+      <div class="g"><label>Fim do Contrato</label><input type="date" id="ffim"></div>
+      <div class="g"><label>Índice de Reajuste</label><select id="find"><option value="IGP-M">IGP-M</option><option value="IPCA">IPCA</option><option value="INPC">INPC</option><option value="Fixo">Percentual Fixo</option></select></div>
+      <div class="g"><label>Multa por Atraso (%)</label><input type="number" id="fmul" value="2" step="0.1"></div>
+      <div class="g"><label>Caução (R$)</label><input type="number" id="fcau" placeholder="0,00" step="0.01"></div>
+      <div class="g"><label>Caução retida por</label><select id="fcautp"><option value="imob">Imobiliária</option><option value="prop">Proprietário</option></select></div>
+      <div id="propbox" style="display:none" class="ff"></div>
+      <div class="fsec">📦 Cobranças Automáticas</div>
+      <div class="g ff" style="background:var(--sf2);border-radius:var(--rs);padding:11px;border:1px solid var(--bd)">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--te);text-transform:none;letter-spacing:0"><input type="checkbox" id="fgc" checked style="width:15px;height:15px;accent-color:var(--ac2)"> Gerar cobranças mensais automaticamente</label>
+        <div style="font-size:12px;color:var(--dm);margin-top:5px;line-height:1.5">O 1º aluguel será gerado para o mês seguinte ao início do contrato, com valor proporcional se necessário. Os demais meses terão valor integral.</div>
+      </div>
+      <div class="fsec">📝 Observações</div>
+      <div class="g ff"><textarea id="fobs" placeholder="Fiador, cláusulas especiais..."></textarea></div>
+    </div>
+    <div style="margin-top:13px">
+      <div class="fsec" style="display:block;margin-bottom:8px">📁 Documentos Adicionais</div>
+      <div id="dexl"></div>
+      <div class="uz" style="padding:11px"><input type="file" id="dex" accept=".pdf,image/*" multiple onchange="addDE(this)"><div style="font-size:12px;color:var(--dm)">＋ RG, renda, vistoria, fotos...</div></div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mc')">Cancelar</button><button class="btn bp" onclick="saveContract()">✓ Salvar Contrato</button></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: NOVA COBRANÇA -->
+<div class="mo" id="mcb">
+<div class="md">
+  <div class="mh"><div><h2>Nova Cobrança</h2></div><button class="mx" onclick="cM('mcb')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g ff"><label>Contrato / Inquilino</label><select id="cbcon" onchange="fillCV()"></select></div>
+      <div class="g"><label>Tipo</label>
+        <select id="cbtp" onchange="fillCD()">
+          <option value="Aluguel">🏠 Aluguel</option>
+          <optgroup label="── IPTU / Taxas ──">
+            <option value="IPTU Apto">🏛️ IPTU Apartamento</option>
+            <option value="IPTU Vagas">🅿️ IPTU Vagas</option>
+            <option value="IPTU Completo">🏛️ IPTU Completo (Apto+Vagas)</option>
+            <option value="Taxa Lixo Apto">🗑️ Taxa de Lixo – Apto</option>
+            <option value="Taxa Lixo Vagas">🗑️ Taxa de Lixo – Vagas</option>
+          </optgroup>
+          <optgroup label="── Outras Taxas ──">
+            <option value="Condomínio">🏢 Condomínio</option>
+            <option value="Seguro">🛡️ Seguro</option>
+            <option value="Pintura">🎨 Taxa de Pintura</option>
+            <option value="Caução">🔒 Caução</option>
+            <option value="Reembolso">💸 Reembolso</option>
+            <option value="Outro">📌 Outro</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="g"><label>Mês de Referência</label><input type="month" id="cbmes" oninput="fillCD()"></div>
+      <div class="g"><label>Valor (R$)</label><input type="number" id="cbval" step="0.01" placeholder="0,00"></div>
+      <div class="g"><label>Vencimento</label><input type="date" id="cbvnc"></div>
+      <div class="g"><label>Parcelas (IPTU em 10x, etc.)</label><input type="number" id="cbparc" value="1" min="1" max="120" oninput="fillCD()"></div>
+      <div class="g ff"><label>Descrição</label><input type="text" id="cbdsc" placeholder="Descrição da cobrança..."></div>
+      <div id="repbox" class="g ff"></div>
+      <div class="g ff"><label>Comprovante / Documento (opcional)</label>
+        <div class="uz" style="padding:10px"><input type="file" id="cbfile" accept=".pdf,image/*"><div style="font-size:12px;color:var(--dm)">＋ Anexar boleto ou documento</div></div>
+        <div id="cbfn" style="margin-top:4px;font-size:11px;color:var(--ac2)"></div>
+      </div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mcb')">Cancelar</button><button class="btn bp" onclick="saveCob()">✓ Salvar</button></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: CONFIRMAR PAGO -->
+<div class="mo" id="mpago">
+<div class="md" style="max-width:440px">
+  <div class="mh"><div><h2>Confirmar Pagamento</h2></div><button class="mx" onclick="cM('mpago')">✕</button></div>
+  <div class="mb">
+    <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:11px 13px;margin-bottom:15px;font-size:13px;line-height:1.6" id="pinfo"></div>
+    <div class="fg">
+      <div class="g"><label>Data do Pagamento</label><input type="date" id="pdt"></div>
+      <div class="g"><label>Valor Pago (R$)</label><input type="number" id="pvl" step="0.01"></div>
+      <div class="g ff"><label>Comprovante (opcional)</label>
+        <div class="uz" style="padding:9px"><input type="file" id="pfile" accept=".pdf,image/*"><div style="font-size:12px;color:var(--dm)">＋ Anexar comprovante</div></div>
+        <div id="pfn" style="margin-top:4px;font-size:11px;color:var(--ac2)"></div>
+      </div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mpago')">Cancelar</button><button class="btn bk" onclick="confirmPago()">✓ Confirmar Pago</button></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: OS -->
+<div class="mo" id="mos">
+<div class="md">
+  <div class="mh"><div><h2>Nova Ordem de Serviço</h2></div><button class="mx" onclick="cM('mos')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g ff"><label>Contrato / Imóvel</label><select id="oscon"></select></div>
+      <div class="g ff"><label>Descrição</label><textarea id="osdsc" placeholder="Descreva o problema..."></textarea></div>
+      <div class="g"><label>Prioridade</label><select id="osp"><option>Baixa</option><option selected>Normal</option><option>Alta</option><option>Urgente</option></select></div>
+      <div class="g"><label>Data</label><input type="date" id="osdt"></div>
+      <div class="g"><label>Custo Estimado (R$)</label><input type="number" id="oscu" placeholder="0,00" step="0.01"></div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mos')">Cancelar</button><button class="btn bp" onclick="saveOS()">✓ Abrir OS</button></div>
+  </div>
+</div>
+</div>
+
+<script>
+// ══════════════════ STATE ══════════════════
+const KEY='ig5';
+let D={c:[],cb:[],o:[]};
+let cobFiltro='todas',cobPagoId=null,pdfB64=null,docsExtras=[];
+
+function load(){try{const s=localStorage.getItem(KEY);if(s){const p=JSON.parse(s);D.c=p.c||[];D.cb=p.cb||[];D.o=p.o||[];}}catch(e){D={c:[],cb:[],o:[]};}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({c:D.c,cb:D.cb,o:D.o}));}catch(e){alert('Aviso: limite de armazenamento atingido. Alguns documentos em base64 são grandes — considere remover arquivos antigos.');}}
+load();
+
+// ══════════════════ UTILS ══════════════════
+const R=(v)=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const FD=(d)=>{if(!d)return'–';try{const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`;}catch(e){return d;}};
+const TD=()=>new Date().toISOString().split('T')[0];
+const UID=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const DA=(d)=>{if(!d)return 9999;try{return Math.ceil((new Date(d+'T12:00:00')-new Date())/(1000*60*60*24));}catch(e){return 9999;}};
+const MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MF=(m)=>{if(!m)return'–';const[y,mn]=m.split('-');return mn?`${MN[+mn-1]}/${y}`:'–';};
+
+function stCon(c){const d=DA(c.fim);if(d>90)return{l:'Vigente',cl:'cg'};if(d>30)return{l:`Vence ${d}d`,cl:'cy'};if(d>0)return{l:`Vence ${d}d`,cl:'cr'};if(d<=0)return{l:'Vencido',cl:'cr'};return{l:'Vigente',cl:'cg'};}
+function stCob(c){if(c.pago)return{l:'Pago',cl:'cg'};const d=DA(c.venc);if(d<0)return{l:'Atrasado',cl:'cr'};return{l:'Pendente',cl:'cy'};}
+
+function tpCl(t){
+  if(!t)return'ta';
+  if(t==='Aluguel')return'ta';
+  if(t.startsWith('IPTU')||t.startsWith('Taxa Lixo'))return'ti';
+  if(t==='Condomínio')return'tc';
+  if(t==='Seguro')return'ts';
+  if(t==='Pintura')return'tp';
+  if(t==='Caução')return'cp';
+  return'tou';
+}
+
+// Regras de repasse
+function calcRepasse(tp, valor, primMes, adm){
+  if(!adm) return {imob:0, prop:valor, tipo:'sem_adm'};
+  if(tp==='Pintura') return {imob:valor, prop:0, tipo:'pintura'};
+  if(tp==='Caução') return {imob:valor, prop:0, tipo:'caucao'};
+  if(tp==='Aluguel'){
+    if(primMes){const im=Math.round(valor*0.5*100)/100;return{imob:im,prop:valor-im,tipo:'primeiro'};}
+    const im=Math.round(valor*0.1*100)/100;return{imob:im,prop:valor-im,tipo:'normal'};
+  }
+  // IPTU, Condomínio, Seguro, etc → repasse integral ao proprietário
+  return {imob:0, prop:valor, tipo:'repasse'};
+}
+
+function badges(){
+  const pend=D.cb.filter(c=>!c.pago).length;
+  document.getElementById('bdgC').textContent=pend;
+  document.getElementById('bdgC').style.display=pend?'':'none';
+  const os=D.o.filter(o=>o.status!=='Concluído').length;
+  document.getElementById('bdgO').textContent=os;
+  document.getElementById('bdgO').style.display=os?'':'none';
+  const vA=D.c.some(c=>{const d=DA(c.fim);return d>=0&&d<=90;})||D.cb.some(c=>!c.pago&&DA(c.venc)<0);
+  document.getElementById('bdgV').style.display=vA?'':'none';
+}
+
+// ══════════════════ NAV ══════════════════
+const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato'};
+function go(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(e=>e.classList.remove('on'));
+  document.getElementById('view-'+v).classList.add('on');
+  document.getElementById('ttl').textContent=TITLES[v]||v;
+  const ni=document.querySelectorAll('.ni');
+  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,vencimentos:4,ordens:5};
+  if(m[v]!==undefined)ni[m[v]].classList.add('on');
+  if(v==='dashboard')renderDash();
+  if(v==='contratos')renderContratos();
+  if(v==='cobrancas')renderCobrancas();
+  if(v==='repasse')renderRepasse();
+  if(v==='vencimentos')renderVenc();
+  if(v==='ordens')renderOS();
+  cSB();
+}
+function tSB(){document.getElementById('sb').classList.toggle('on');document.getElementById('ovm').classList.toggle('on');}
+function cSB(){document.getElementById('sb').classList.remove('on');document.getElementById('ovm').classList.remove('on');}
+function oM(id){document.getElementById(id).classList.add('on');}
+function cM(id){document.getElementById(id).classList.remove('on');}
+
+// ══════════════════ DASHBOARD ══════════════════
+function renderDash(){
+  const tot=D.c.length,pend=D.cb.filter(c=>!c.pago).length,atr=D.cb.filter(c=>!c.pago&&DA(c.venc)<0).length;
+  const rec=D.cb.filter(c=>c.pago).reduce((a,b)=>a+(+b.valorPago||+b.valor||0),0);
+  const aReceber=D.cb.filter(c=>c.pago).reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  document.getElementById('stats').innerHTML=`
+    <div class="sc bl"><div class="slb">Contratos Ativos</div><div class="sv">${tot}</div><div class="ss">imóveis</div></div>
+    <div class="sc gr"><div class="slb">Receita Recebida</div><div class="sv" style="font-size:18px">${R(rec)}</div><div class="ss">total histórico</div></div>
+    <div class="sc pu"><div class="slb">A Repassar Proprietários</div><div class="sv" style="font-size:18px">${R(aReceber)}</div><div class="ss">valor acumulado</div></div>
+    <div class="sc ye"><div class="slb">Pendentes</div><div class="sv">${pend}</div><div class="ss">${atr} atrasadas</div></div>
+  `;
+  const allV=[
+    ...D.c.filter(c=>c.fim).map(c=>({tp:'C',lbl:c.inquilino,sub:(c.endereco||'').substring(0,36),data:c.fim,d:DA(c.fim),id:c.id})),
+    ...D.cb.filter(c=>!c.pago&&c.venc).map(c=>({tp:'$',lbl:c.descricao||'Cobrança',sub:c.inquilino||'',data:c.venc,d:DA(c.venc),id:c.id}))
+  ].sort((a,b)=>a.d-b.d).slice(0,6);
+  document.getElementById('dv').innerHTML=allV.length?allV.map(v=>{
+    const cl=v.d<0?'cr':v.d<=30?'cr':v.d<=90?'wa':'ok';
+    return`<div class="vi" onclick="${v.tp==='C'?`detail('${v.id}')`:``}">
+      <div class="vd ${cl}"><div class="n">${Math.abs(v.d)}</div><div class="l">${v.d<0?'atrás':'dias'}</div></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${v.lbl}</div><div style="font-size:11px;color:var(--dm)">${v.sub}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--dm)">${FD(v.data)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">${v.tp==='C'?'CONTRATO':'COBRANÇA'}</span></div>
+    </div>`;
+  }).join(''):`<div class="empty" style="padding:26px"><div class="ei">📅</div><p>Nenhum vencimento próximo</p></div>`;
+  const pends=D.cb.filter(c=>!c.pago).sort((a,b)=>DA(a.venc)-DA(b.venc)).slice(0,5);
+  document.getElementById('dp').innerHTML=pends.length?pends.map(c=>{
+    const s=stCob(c);
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 17px;border-bottom:1px solid rgba(48,54,61,.3)">
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.descricao||'Cobrança'}</div><div style="font-size:11px;color:var(--dm)">${c.inquilino||''}</div></div>
+      <div style="text-align:right"><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">${R(c.valor)}</div><span class="chip ${s.cl}" style="font-size:10px">${s.l}</span></div>
+    </div>`;
+  }).join(''):`<div class="empty" style="padding:26px"><div class="ei">✅</div><p>Nenhuma pendência</p></div>`;
+  badges();
+}
+
+// ══════════════════ CONTRATOS ══════════════════
+function renderContratos(){
+  const q=(document.getElementById('sc')||{}).value?.toLowerCase()||'';
+  const fl=D.c.filter(c=>!q||[c.inquilino,c.proprietario,c.endereco].some(x=>x?.toLowerCase().includes(q)));
+  const el=document.getElementById('tc');
+  if(!fl.length){el.innerHTML=`<div class="empty"><div class="ei">📋</div><h3>Nenhum contrato${q?' encontrado':''}</h3><p>Clique em "+ Novo Contrato" para começar</p></div>`;return;}
+  el.innerHTML=`<table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Proprietário</th><th>Valor</th><th>Término</th><th>Status</th><th></th></tr></thead>
+  <tbody>${fl.map(c=>{const s=stCon(c);return`<tr style="cursor:pointer" onclick="detail('${c.id}')">
+    <td><div style="font-weight:500">${c.inquilino||'–'}</div><div style="font-size:11px;color:var(--dm)">${c.emailInq||c.telInq||''}</div></td>
+    <td style="color:var(--dm);max-width:165px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.endereco||'–'}</td>
+    <td style="color:var(--dm)">${c.proprietario||'–'}</td>
+    <td style="font-family:'Syne',sans-serif;font-weight:700">${R(c.valor)}</td>
+    <td style="color:var(--dm)">${FD(c.fim)}</td>
+    <td><span class="chip ${s.cl}">${s.l}</span></td>
+    <td><button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button></td>
+  </tr>`;}).join('')}</tbody></table>`;
+}
+
+// ══════════════════ DETALHE ══════════════════
+function detail(id){
+  const c=D.c.find(x=>x.id===id);if(!c)return;
+  const s=stCon(c);
+  let prog=0;
+  if(c.inicio&&c.fim){try{prog=Math.min(100,Math.max(0,Math.round((new Date()-new Date(c.inicio+'T12:00:00'))/(new Date(c.fim+'T12:00:00')-new Date(c.inicio+'T12:00:00'))*100)));}catch(e){}}
+  const cobs=D.cb.filter(x=>x.contratoId===id).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+  const os=D.o.filter(x=>x.contratoId===id);
+  const docs=c.docs||[];
+
+  document.getElementById('det').innerHTML=`
+  <div>
+    <div class="card">
+      <div class="ch">📋 Dados do Contrato <span class="chip ${s.cl}">${s.l}</span></div>
+      <div class="cb">
+        ${IR('Inquilino',c.inquilino)}${IR('CPF/CNPJ',c.cpfInq)}${IR('Telefone',c.telInq)}${IR('E-mail',c.emailInq,'b')}
+        ${IR('Proprietário',c.proprietario)}${IR('CPF/CNPJ',c.cpfProp)}${IR('Telefone',c.telProp)}${IR('E-mail',c.emailProp,'b')}
+        ${IR('Endereço',c.endereco)}
+        <div class="ir"><span class="il">Valor Aluguel</span><span class="iv" style="color:var(--gn);font-family:'Syne',sans-serif;font-weight:700;font-size:15px">${R(c.valor)}</span></div>
+        ${IR('Vencimento','Todo dia '+(c.diaVenc||'–'))}${IR('Índice',c.indice)}${IR('Multa',c.multa+'%')}
+        ${c.caucao?`<div class="ir"><span class="il">Caução</span><span class="iv">${R(c.caucao)} — retida pela ${c.caucaoTp==='imob'?'Imobiliária':'Proprietário'}</span></div>`:''}
+        ${IR('Administrado',c.adm==='sim'?'Sim (imobiliária administra)':'Não')}
+        ${IR('Início',FD(c.inicio))}${IR('Término',FD(c.fim))}
+        ${prog?`<div style="margin-top:10px"><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Progresso · ${prog}%</div><div class="pw"><div class="pb" style="width:${prog}%"></div></div></div>`:''}
+        ${c.obs?`<div style="margin-top:10px;padding:9px;background:var(--sf2);border-radius:8px;font-size:12px;color:var(--dm);line-height:1.5">${c.obs}</div>`:''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch">💰 Cobranças <button class="btn bg bsm" onclick="openNCobCon('${id}')">＋ Nova</button></div>
+      <div class="cb" style="padding:0 17px">
+        ${cobs.length?cobs.map(cb=>cobItem(cb,true)).join(''):`<div class="empty" style="padding:20px"><p>Nenhuma cobrança registrada</p></div>`}
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch">🔧 Ordens de Serviço <button class="btn bg bsm" onclick="openNOSCon('${id}')">＋ Nova OS</button></div>
+      <div class="cb" style="padding:0 17px">
+        ${os.length?os.map(o=>`<div class="ci">
+          <div style="flex:1"><div style="font-size:13px;font-weight:500">${o.desc}</div><div style="font-size:11px;color:var(--dm)">${FD(o.data)} · ${o.prior}</div></div>
+          <span class="chip ${o.status==='Concluído'?'cg':o.status==='Em Andamento'?'cy':'cr'}">${o.status}</span>
+          ${o.status!=='Concluído'?`<button class="btn bk bsm" style="margin-left:8px" onclick="doneOS('${o.id}','${id}')">✓</button>`:''}
+        </div>`).join(''):`<div class="empty" style="padding:20px"><p>Nenhuma OS</p></div>`}
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <div class="ch">📁 Documentos</div>
+      <div class="cb" style="padding:7px 17px">
+        ${docs.map(d=>`<div class="di"><div class="dic ${d.type?.startsWith('image')?'img':''}">${d.type?.startsWith('image')?'🖼️':'📄'}</div><div style="flex:1;overflow:hidden"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</div><div style="font-size:11px;color:var(--dm)">${d.tag||'Documento'} · ${d.date}</div></div><button class="btn bg bsm" onclick="viewDoc('${id}','${d.name}')">👁</button></div>`).join('')}
+        <div class="uz" style="padding:10px;margin-top:7px"><input type="file" accept=".pdf,image/*" multiple onchange="addDocToCon('${id}',this)"><div style="font-size:12px;color:var(--dm)">＋ Adicionar documento</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch">🔄 Repasse ao Proprietário</div>
+      <div class="cb">
+        ${repasseCard(id)}
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch">📅 Histórico</div>
+      <div class="cb">
+        <div class="tl">
+          <div class="tli"><div class="tld g"></div><div class="tlt">${FD(c.criadoEm||c.inicio)}</div><div class="tlx">Contrato cadastrado</div></div>
+          ${cobs.filter(cb=>cb.pago).sort((a,b)=>new Date(b.dataPago)-new Date(a.dataPago)).map(cb=>`<div class="tli"><div class="tld g"></div><div class="tlt">${FD(cb.dataPago)}</div><div class="tlx">Pagamento · ${R(cb.valorPago||cb.valor)}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <button class="btn bd2" style="width:100%;justify-content:center;padding:9px" onclick="delContract('${id}')">🗑 Excluir Contrato</button>
+  </div>`;
+  go('detalhe');
+}
+
+function IR(l,v,s=''){return`<div class="ir"><span class="il">${l}</span><span class="iv" ${s==='b'?'style="word-break:break-all"':''}>${v||'–'}</span></div>`;}
+
+function repasseCard(cid){
+  const c=D.c.find(x=>x.id===cid);
+  const cobs=D.cb.filter(x=>x.contratoId===cid&&x.pago&&x.repasse);
+  if(!c?.adm||c.adm==='nao') return '<div style="font-size:13px;color:var(--dm)">Contrato não administrado pela imobiliária.</div>';
+  if(!cobs.length) return '<div style="font-size:13px;color:var(--dm)">Nenhum pagamento registrado ainda.</div>';
+  const totalProp=cobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const totalImob=cobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+  return`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:11px;text-align:center">
+        <div style="font-size:11px;color:var(--dm);margin-bottom:3px">Proprietário recebe</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--gn)">${R(totalProp)}</div>
+      </div>
+      <div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;padding:11px;text-align:center">
+        <div style="font-size:11px;color:var(--dm);margin-bottom:3px">Imobiliária retém</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--ac2)">${R(totalImob)}</div>
+      </div>
+    </div>
+    <table class="rtable">
+      <thead><tr><th>Descrição</th><th>Valor Total</th><th>Proprietário</th><th>Imobiliária</th><th>Regra</th></tr></thead>
+      <tbody>${cobs.map(cb=>{
+        const rp=cb.repasse;
+        const regra=rp.tipo==='primeiro'?'1º mês (50/50)':rp.tipo==='normal'?'Mensal (10/90)':rp.tipo==='pintura'?'Pintura (100% imob)':rp.tipo==='caucao'?'Caução (imob)':'Repasse';
+        return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+// ══════════════════ REPASSE VIEW ══════════════════
+function renderRepasse(){
+  const el=document.getElementById('repasse-content');
+  if(!D.c.length){el.innerHTML=`<div class="empty"><div class="ei">🔄</div><h3>Nenhum contrato</h3><p>Cadastre contratos para ver os repasses</p></div>`;return;}
+  el.innerHTML=D.c.map(c=>{
+    const cobs=D.cb.filter(x=>x.contratoId===c.id&&x.pago&&x.repasse);
+    const totalProp=cobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+    const totalImob=cobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+    const pendProp=D.cb.filter(x=>x.contratoId===c.id&&!x.pago&&x.repasse).reduce((a,b)=>a+(b.repasse?.prop||0),0);
+    return`<div class="card" style="margin-bottom:15px">
+      <div class="ch" style="cursor:pointer" onclick="detail('${c.id}')">
+        <div><div style="font-weight:700">${c.inquilino||'–'}</div><div style="font-size:12px;color:var(--dm);font-weight:400">${(c.endereco||'').substring(0,50)}</div></div>
+        <button class="btn bg bsm">Ver detalhe →</button>
+      </div>
+      <div class="cb">
+        ${c.adm==='nao'?`<div style="font-size:13px;color:var(--dm)">Não administrado pela imobiliária.</div>`:`
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+          <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:11px;text-align:center">
+            <div style="font-size:10px;color:var(--dm);margin-bottom:3px">PROPRIETÁRIO (pago)</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--gn)">${R(totalProp)}</div>
+          </div>
+          <div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;padding:11px;text-align:center">
+            <div style="font-size:10px;color:var(--dm);margin-bottom:3px">IMOBILIÁRIA (retido)</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--ac2)">${R(totalImob)}</div>
+          </div>
+          <div style="background:var(--yd);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:11px;text-align:center">
+            <div style="font-size:10px;color:var(--dm);margin-bottom:3px">PENDENTE (a repassar)</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--ye)">${R(pendProp)}</div>
+          </div>
+        </div>
+        ${cobs.length?`<table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Proprietário</th><th>Imobiliária</th><th>Regra</th></tr></thead><tbody>
+        ${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'1º mês 50/50':rp.tipo==='normal'?'Mensal 10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';return`<tr><td>${MF(cb.mes)}</td><td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</td><td style="font-weight:600">${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}
+        </tbody></table>`:`<div style="font-size:13px;color:var(--dm)">Nenhum pagamento confirmado ainda.</div>`}
+        `}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════ COBRANÇAS ══════════════════
+function fCob(f,el){cobFiltro=f;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el?.classList.add('on');renderCobrancas();}
+
+function cobItem(cb, inDetail=false){
+  const s=stCob(cb);
+  const m=(cb.mes||'').split('-');
+  const rp=cb.repasse;
+  return`<div class="ci" id="ci-${cb.id}">
+    <div class="cbg"><div class="m">${m[1]?MN[+m[1]-1]:'–'}</div><div class="y">${m[0]||''}</div></div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">${R(cb.valor)}</span>
+        <span class="tt ${tpCl(cb.tipo)}">${cb.tipo||'Aluguel'}</span>
+        ${cb.proporcional?`<span style="font-size:10px;color:var(--ye);font-weight:600">PROP.</span>`:''}
+      </div>
+      <div style="font-size:12px;color:var(--dm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</div>
+      <div style="font-size:11px;color:var(--dmr);margin-top:1px">Vence: ${FD(cb.venc)}</div>
+      ${rp?`<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">
+        ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop)}</span>`:''}
+        ${rp.imob>0?`<span class="rep rep-im">Imob: ${R(rp.imob)}</span>`:''}
+      </div>`:''}
+      ${cb.fileData?`<div style="margin-top:4px"><span style="font-size:11px;color:var(--ac2);cursor:pointer;text-decoration:underline dotted" onclick="viewCobFile('${cb.id}','doc')">📎 ${cb.fileName||'Documento'}</span></div>`:''}
+      ${cb.pagoFile?`<div style="margin-top:2px"><span style="font-size:11px;color:var(--gn);cursor:pointer;text-decoration:underline dotted" onclick="viewCobFile('${cb.id}','pago')">✅ Comprovante</span></div>`:''}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+      <span class="chip ${s.cl}">${s.l}</span>
+      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<span style="font-size:11px;color:var(--dm)">Pago ${FD(cb.dataPago)}</span>`}
+      <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
+    </div>
+  </div>`;
+}
+
+function renderCobrancas(){
+  let list=[...D.cb];
+  if(cobFiltro==='pendente')list=list.filter(c=>!c.pago&&DA(c.venc)>=0);
+  else if(cobFiltro==='pago')list=list.filter(c=>c.pago);
+  else if(cobFiltro==='atrasado')list=list.filter(c=>!c.pago&&DA(c.venc)<0);
+  list.sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+  const el=document.getElementById('tcb');
+  if(!list.length){el.innerHTML=`<div class="empty"><div class="ei">💰</div><h3>Nenhuma cobrança</h3><p>Cadastre um contrato ou registre manualmente</p></div>`;return;}
+
+  // GROUP by contract
+  const byContract={};
+  list.forEach(c=>{const key=c.contratoId||'avulso';if(!byContract[key])byContract[key]=[];byContract[key].push(c);});
+
+  el.innerHTML=Object.entries(byContract).map(([cid,cobs])=>{
+    const con=D.c.find(x=>x.id===cid);
+    return`<div style="border-bottom:2px solid var(--bd)">
+      <div style="padding:10px 13px;background:var(--sf2);display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-weight:600;font-size:13px">${con?.inquilino||'Sem contrato'}</div><div style="font-size:11px;color:var(--dm)">${(con?.endereco||'').substring(0,50)}</div></div>
+        <div style="font-size:12px;color:var(--dm)">Aluguel: ${R(con?.valor||0)}</div>
+      </div>
+      <div style="padding:0 13px">${cobs.map(cb=>cobItem(cb)).join('')}</div>
+    </div>`;
+  }).join('');
+  badges();
+}
+
+function delCob(id, cid){
+  if(!confirm('Excluir esta cobrança?'))return;
+  D.cb=D.cb.filter(c=>c.id!==id);
+  save();
+  renderCobrancas();renderDash();
+  if(cid&&document.getElementById('view-detalhe').classList.contains('on')) detail(cid);
+}
+
+// ══════════════════ PAGO ══════════════════
+function openPago(id){
+  cobPagoId=id;
+  const c=D.cb.find(x=>x.id===id);
+  document.getElementById('pinfo').innerHTML=`<strong>${c?.descricao||'Cobrança'}</strong><br>Valor: ${R(c?.valor)} · Venc.: ${FD(c?.venc)}`;
+  document.getElementById('pdt').value=TD();
+  document.getElementById('pvl').value=c?.valor||'';
+  document.getElementById('pfn').textContent='';
+  document.getElementById('pfile').value='';
+  oM('mpago');
+}
+async function confirmPago(){
+  const i=D.cb.findIndex(c=>c.id===cobPagoId);if(i<0)return;
+  const cb=D.cb[i];
+  cb.pago=true;cb.dataPago=document.getElementById('pdt').value;cb.valorPago=document.getElementById('pvl').value;
+  const pf=document.getElementById('pfile').files[0];
+  if(pf){cb.pagoFile=await toB64(pf);cb.pagoFileName=pf.name;cb.pagoFileType=pf.type;}
+  save();cM('mpago');renderCobrancas();renderDash();
+  if(document.getElementById('view-detalhe').classList.contains('on')&&cb.contratoId) detail(cb.contratoId);
+  if(document.getElementById('view-vencimentos').classList.contains('on')) renderVenc();
+}
+function viewCobFile(id,which){
+  const c=D.cb.find(x=>x.id===id);if(!c)return;
+  const data=which==='pago'?c.pagoFile:c.fileData;
+  const type=which==='pago'?c.pagoFileType:c.fileType;
+  if(!data)return;window.open(`data:${type||'application/pdf'};base64,${data}`,'_blank');
+}
+
+// ══════════════════ VENCIMENTOS ══════════════════
+function renderVenc(){
+  const vc=document.getElementById('vvc');
+  const cons=[...D.c].filter(c=>c.fim).sort((a,b)=>DA(a.fim)-DA(b.fim));
+  vc.innerHTML=cons.length?cons.map(c=>{
+    const d=DA(c.fim);const cl=d>90?'ok':d>30?'wa':'cr';
+    return`<div class="vi" onclick="detail('${c.id}')">
+      <div class="vd ${d<0?'pa':cl}"><div class="n">${Math.abs(d)}</div><div class="l">${d<0?'atrás':'dias'}</div></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.inquilino}</div><div style="font-size:11px;color:var(--dm)">${(c.endereco||'').substring(0,32)}</div></div>
+      <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span class="chip ${stCon(c).cl}" style="font-size:10px">${stCon(c).l}</span></div>
+    </div>`;
+  }).join(''):`<div class="empty" style="padding:36px"><div class="ei">📋</div><p>Nenhum contrato</p></div>`;
+
+  const vcb=document.getElementById('vvb');
+  const cbs=D.cb.filter(c=>!c.pago&&c.venc).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+  vcb.innerHTML=cbs.length?cbs.map(c=>{
+    const d=DA(c.venc);const cl=d>15?'ok':d>5?'wa':'cr';
+    return`<div class="vi">
+      <div class="vd ${d<0?'cr':cl}"><div class="n">${Math.abs(d)}</div><div class="l">${d<0?'atrás':'dias'}</div></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:5px"><span style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">${c.descricao||'Cobrança'}</span><span class="tt ${tpCl(c.tipo)}">${c.tipo||'Aluguel'}</span></div>
+        <div style="font-size:11px;color:var(--dm)">${c.inquilino||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">${R(c.valor)}</div>
+        <button class="btn bk bsm" style="margin-top:3px" onclick="openPago('${c.id}')">✓ Pago</button>
+      </div>
+    </div>`;
+  }).join(''):`<div class="empty" style="padding:36px"><div class="ei">✅</div><p>Sem cobranças pendentes</p></div>`;
+}
+
+// ══════════════════ ORDENS ══════════════════
+function renderOS(){
+  const el=document.getElementById('to');
+  if(!D.o.length){el.innerHTML=`<div class="empty"><div class="ei">🔧</div><h3>Nenhuma OS</h3></div>`;return;}
+  el.innerHTML=`<table><thead><tr><th>Imóvel</th><th>Descrição</th><th>Prioridade</th><th>Data</th><th>Custo</th><th>Status</th><th></th></tr></thead>
+  <tbody>${D.o.map(o=>`<tr><td style="font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(o.endereco||'').substring(0,28)||'–'}</td><td style="color:var(--dm)">${o.desc}</td><td><span class="chip ${o.prior==='Urgente'?'cr':o.prior==='Alta'?'cy':'cb2'}">${o.prior}</span></td><td style="color:var(--dm)">${FD(o.data)}</td><td>${o.custo?R(o.custo):'–'}</td><td><span class="chip ${o.status==='Concluído'?'cg':o.status==='Em Andamento'?'cy':'cr'}">${o.status}</span></td><td>${o.status!=='Concluído'?`<button class="btn bk bsm" onclick="doneOS('${o.id}',null)">✓ Concluir</button>`:'✓'}</td></tr>`).join('')}</tbody></table>`;
+  badges();
+}
+function doneOS(id,cid){const o=D.o.find(x=>x.id===id);if(o){o.status='Concluído';save();renderOS();}if(cid)detail(cid);}
+
+// ══════════════════ PROPORCIONAL ══════════════════
+function calcProp(){
+  const ini=document.getElementById('fini').value;
+  const val=parseFloat(document.getElementById('fval').value)||0;
+  const box=document.getElementById('propbox');
+  if(!ini||!val){box.style.display='none';return;}
+  const d=new Date(ini+'T12:00:00');
+  const dia=d.getDate();
+  // 1º aluguel é sempre no mês seguinte
+  const proxMes=new Date(d.getFullYear(),d.getMonth()+1,1);
+  const diasNoProxMes=new Date(proxMes.getFullYear(),proxMes.getMonth()+1,0).getDate();
+  let msg='';
+  if(dia===1){
+    msg=`O contrato começa no dia 1º, então o 1º aluguel (${MN[proxMes.getMonth()]}/${proxMes.getFullYear()}) será o valor integral: <strong>${R(val)}</strong>.`;
+  } else {
+    // proporcional: dias restantes no mês de início + dias do mês seguinte até o fim
+    // Na prática: proporcional = (dias_restantes_no_mes_inicio / dias_mes_inicio) * valor
+    const diasNoMesIni=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    const diasRestantes=diasNoMesIni-dia; // dias que ficou no mês de início (sem contar o dia do início)
+    const valorProp=Math.round((val/diasNoMesIni)*diasRestantes*100)/100;
+    msg=`Contrato inicia dia <strong>${dia}</strong>. O 1º aluguel será cobrado em <strong>${MN[proxMes.getMonth()]}/${proxMes.getFullYear()}</strong> com valor proporcional: ${diasRestantes} dias restantes de ${diasNoMesIni} = <strong>${R(valorProp)}</strong>. Do 2º mês em diante: <strong>${R(val)}</strong>.`;
+  }
+  box.style.display='block';
+  box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}</div>`;
+}
+
+// ══════════════════ GERAR COBRANÇAS AUTO ══════════════════
+function gerarCobs(c){
+  if(!c.inicio||!c.fim||!c.valor)return;
+  const dia=parseInt(c.diaVenc)||10;
+  const ini=new Date(c.inicio+'T12:00:00');
+  const fim=new Date(c.fim+'T12:00:00');
+  const adm=c.adm==='sim';
+
+  // 1º mês: sempre o mês SEGUINTE ao início
+  let primMes=true;
+  let cur=new Date(ini.getFullYear(),ini.getMonth()+1,1); // primeiro dia do mês seguinte
+
+  while(cur<=fim){
+    const y=cur.getFullYear(),m=cur.getMonth();
+    const mesRef=`${y}-${String(m+1).padStart(2,'0')}`;
+    const vencData=new Date(y,m,dia);
+    if(vencData>fim)break;
+
+    let valor=c.valor;
+    let prop=false;
+    let descExtra='';
+
+    if(primMes){
+      const diaIni=ini.getDate();
+      if(diaIni!==1){
+        const diasNoMesIni=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();
+        const diasRestantes=diasNoMesIni-diaIni;
+        valor=Math.round((c.valor/diasNoMesIni)*diasRestantes*100)/100;
+        prop=true;
+        descExtra=` (${diasRestantes}/${diasNoMesIni} dias)`;
+      }
+      primMes=false;
+    }
+
+    const repasse=calcRepasse('Aluguel',valor,!primMes&&cur.getTime()===new Date(ini.getFullYear(),ini.getMonth()+1,1).getTime(),adm);
+    // Note: primeiro mês gerado é sempre primMes
+    const isFirst=(cur.getFullYear()===ini.getFullYear()&&cur.getMonth()===ini.getMonth()+1)||(cur.getFullYear()===ini.getFullYear()+1&&ini.getMonth()===11&&cur.getMonth()===0);
+    const rep2=calcRepasse('Aluguel',valor,isFirst,adm);
+
+    D.cb.push({
+      id:UID(),contratoId:c.id,inquilino:c.inquilino,endereco:c.endereco,
+      tipo:'Aluguel',mes:mesRef,
+      descricao:`Aluguel ${MN[m]}/${y}${descExtra}`,
+      valor,proporcional:prop,
+      venc:vencData.toISOString().split('T')[0],
+      pago:false,repasse:rep2
+    });
+    cur=new Date(y,m+1,1);
+  }
+}
+
+// ══════════════════ NOVO CONTRATO ══════════════════
+function openNC(){
+  clearForm();pdfB64=null;docsExtras=[];
+  document.getElementById('dexl').innerHTML='';
+  document.getElementById('aibox').style.display='none';
+  document.getElementById('propbox').style.display='none';
+  oM('mc');
+}
+function clearForm(){
+  ['fen','finq','finqc','finqt','finqe','fprn','fprc','fprt','fpre','fval','fdv','fini','ffim','fobs','fcau'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('fmul').value='2';document.getElementById('find').value='IGP-M';document.getElementById('pdfin').value='';document.getElementById('fgc').checked=true;document.getElementById('fadm').value='sim';
+}
+async function saveContract(){
+  const inq=document.getElementById('finq').value.trim();
+  if(!inq){alert('Informe o nome do inquilino');return;}
+  const docs=[];
+  if(pdfB64) docs.push({name:pdfB64.name,tag:'Contrato',date:TD(),data:pdfB64.data,type:pdfB64.type});
+  docsExtras.forEach(d=>docs.push(d));
+  const c={
+    id:UID(),inquilino:inq,
+    cpfInq:document.getElementById('finqc').value,telInq:document.getElementById('finqt').value,emailInq:document.getElementById('finqe').value,
+    proprietario:document.getElementById('fprn').value,cpfProp:document.getElementById('fprc').value,telProp:document.getElementById('fprt').value,emailProp:document.getElementById('fpre').value,
+    endereco:document.getElementById('fen').value,
+    valor:parseFloat(document.getElementById('fval').value)||0,
+    diaVenc:parseInt(document.getElementById('fdv').value)||10,
+    inicio:document.getElementById('fini').value,fim:document.getElementById('ffim').value,
+    indice:document.getElementById('find').value,multa:parseFloat(document.getElementById('fmul').value)||2,
+    caucao:parseFloat(document.getElementById('fcau').value)||0,
+    caucaoTp:document.getElementById('fcautp').value,
+    adm:document.getElementById('fadm').value,
+    obs:document.getElementById('fobs').value,
+    docs,criadoEm:TD()
+  };
+  D.c.push(c);
+  if(document.getElementById('fgc').checked) gerarCobs(c);
+  save();cM('mc');renderContratos();renderDash();go('contratos');
+}
+
+// ══════════════════ PDF IA ══════════════════
+async function readPDF(input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('aibox').style.display='block';
+  document.getElementById('ait').innerHTML='🤖 Lendo o contrato...';
+  document.getElementById('aim').innerHTML='<div class="ail"><div class="sp"></div> Extraindo dados...</div>';
+  const b64=await toB64(file);pdfB64={data:b64,type:file.type,name:file.name};
+  try{
+    const ci=file.type==='application/pdf'?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}:{type:'image',source:{type:'base64',media_type:file.type,data:b64}};
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',max_tokens:1000,
+      system:`Extraia dados de contratos de aluguel brasileiros. Retorne SOMENTE JSON sem markdown:
+{"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"obs":""}`,
+      messages:[{role:'user',content:[ci,{type:'text',text:'Extraia os dados deste contrato.'}]}]
+    })});
+    const data=await resp.json();
+    const txt=data.content?.map(i=>i.text||'').join('').trim();
+    const p=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    const F=(id,v)=>{if(v!=null&&v!==''&&v!==0){const e=document.getElementById(id);if(e)e.value=v;}};
+    F('finq',p.inquilino);F('finqc',p.cpfInq);F('finqt',p.telInq);F('finqe',p.emailInq);
+    F('fprn',p.proprietario);F('fprc',p.cpfProp);F('fprt',p.telProp);F('fpre',p.emailProp);
+    F('fen',p.endereco);F('fval',p.valor);F('fdv',p.diaVenc);F('fini',p.inicio);F('ffim',p.fim);F('fmul',p.multa);F('fobs',p.obs);F('fcau',p.caucao);
+    if(p.indice){const e=document.getElementById('find');if(e)e.value=p.indice;}
+    calcProp();
+    document.getElementById('ait').innerHTML='✅ Dados extraídos! Revise antes de salvar.';
+    document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Verifique os campos abaixo.</span>';
+  }catch(e){
+    document.getElementById('ait').innerHTML='⚠️ Não foi possível extrair';
+    document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Preencha manualmente.</span>';
+  }
+}
+
+// ══════════════════ DOCS ══════════════════
+function gtag(n){n=n.toLowerCase();if(n.includes('rg')||n.includes('cpf'))return'RG/CPF';if(n.includes('renda')||n.includes('holerite'))return'Comprovante de Renda';if(n.includes('foto'))return'Foto do Imóvel';if(n.includes('vistoria')||n.includes('laudo'))return'Laudo de Vistoria';return'Documento';}
+async function addDE(input){
+  for(const f of input.files){const b64=await toB64(f);docsExtras.push({name:f.name,tag:gtag(f.name),date:TD(),data:b64,type:f.type});}
+  document.getElementById('dexl').innerHTML=docsExtras.map((d,i)=>`<div class="di" style="padding:7px 0"><div class="dic ${d.type?.startsWith('image')?'img':''}">${d.type?.startsWith('image')?'🖼️':'📄'}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${d.name}</div><div style="font-size:11px;color:var(--dm)">${d.tag}</div></div><button class="btn bg bsm" onclick="docsExtras.splice(${i},1);this.closest('.di').remove()">✕</button></div>`).join('');
+}
+async function addDocToCon(cid,input){
+  const c=D.c.find(x=>x.id===cid);if(!c)return;if(!c.docs)c.docs=[];
+  for(const f of input.files){const b64=await toB64(f);c.docs.push({name:f.name,tag:gtag(f.name),date:TD(),data:b64,type:f.type});}
+  save();detail(cid);
+}
+function viewDoc(cid,name){const c=D.c.find(x=>x.id===cid);const d=c?.docs?.find(x=>x.name===name);if(!d)return;window.open(`data:${d.type||'application/pdf'};base64,${d.data}`,'_blank');}
+
+// ══════════════════ NOVA COBRANÇA ══════════════════
+function openNCob(){
+  document.getElementById('cbcon').innerHTML=D.c.map(c=>`<option value="${c.id}">${c.inquilino} – ${(c.endereco||'').substring(0,24)}</option>`).join('');
+  document.getElementById('cbmes').value=new Date().toISOString().substring(0,7);
+  document.getElementById('cbvnc').value='';document.getElementById('cbval').value='';
+  document.getElementById('cbdsc').value='';document.getElementById('cbtp').value='Aluguel';
+  document.getElementById('cbparc').value='1';document.getElementById('cbfile').value='';
+  document.getElementById('cbfn').textContent='';
+  fillCD();oM('mcb');
+}
+function openNCobCon(cid){openNCob();document.getElementById('cbcon').value=cid;fillCV();}
+function fillCV(){
+  const cid=document.getElementById('cbcon').value;
+  const c=D.c.find(x=>x.id===cid);
+  if(c&&document.getElementById('cbtp').value==='Aluguel') document.getElementById('cbval').value=c.valor;
+  updateRepBox();
+}
+function fillCD(){
+  const tp=document.getElementById('cbtp').value,mes=document.getElementById('cbmes').value,parc=parseInt(document.getElementById('cbparc').value)||1;
+  const[y,m]=mes.split('-');const ml=m?`${MN[+m-1]}/${y}`:'';
+  const descs={Aluguel:`Aluguel ${ml}`,'IPTU Apto':parc>1?`IPTU Apto ${y} parcela 1/${parc}`:`IPTU Apto ${y}`,'IPTU Vagas':parc>1?`IPTU Vagas ${y} parcela 1/${parc}`:`IPTU Vagas ${y}`,'IPTU Completo':parc>1?`IPTU ${y} parcela 1/${parc}`:`IPTU ${y}`,'Taxa Lixo Apto':parc>1?`Taxa Lixo Apto ${y} parcela 1/${parc}`:`Taxa Lixo Apto ${y}`,'Taxa Lixo Vagas':parc>1?`Taxa Lixo Vagas ${y} parcela 1/${parc}`:`Taxa Lixo Vagas ${y}`,Condomínio:`Condomínio ${ml}`,Seguro:`Seguro ${y}`,Pintura:`Taxa de Pintura`,Caução:'Caução',Reembolso:'Reembolso',Outro:''};
+  document.getElementById('cbdsc').value=descs[tp]||'';
+  if(tp==='Aluguel')fillCV();
+  updateRepBox();
+}
+function updateRepBox(){
+  const cid=document.getElementById('cbcon').value;
+  const c=D.c.find(x=>x.id===cid);
+  const tp=document.getElementById('cbtp').value;
+  const val=parseFloat(document.getElementById('cbval').value)||0;
+  const box=document.getElementById('repbox');
+  if(!c||!val){box.innerHTML='';return;}
+  const cobs=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
+  const isFirst=cobs.length===0;
+  const rp=calcRepasse(tp,val,isFirst,c.adm==='sim');
+  if(rp.tipo==='sem_adm'){box.innerHTML='';return;}
+  box.innerHTML=`<label>Repasse calculado</label><div class="ibox ibox-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    ${rp.prop>0?`<span>🏦 Proprietário: <strong>${R(rp.prop)}</strong></span>`:''}
+    ${rp.imob>0?`<span>🏢 Imobiliária: <strong>${R(rp.imob)}</strong></span>`:''}
+    <span style="font-size:11px;opacity:.7">${rp.tipo==='primeiro'?'1º mês (50/50)':rp.tipo==='normal'?'Mensal (10/90)':rp.tipo==='pintura'?'100% imobiliária':rp.tipo==='caucao'?'retido imobiliária':'repasse integral'}</span>
+  </div>`;
+}
+document.getElementById('cbfile').addEventListener('change',function(){document.getElementById('cbfn').textContent=this.files[0]?`📎 ${this.files[0].name}`:''});
+document.getElementById('pfile').addEventListener('change',function(){document.getElementById('pfn').textContent=this.files[0]?`📎 ${this.files[0].name}`:''});
+document.getElementById('cbval').addEventListener('input',updateRepBox);
+
+async function saveCob(){
+  const cid=document.getElementById('cbcon').value;
+  const c=D.c.find(x=>x.id===cid);
+  const parc=parseInt(document.getElementById('cbparc').value)||1;
+  const baseVal=parseFloat(document.getElementById('cbval').value)||0;
+  const baseMes=document.getElementById('cbmes').value;
+  const baseVnc=document.getElementById('cbvnc').value;
+  const tp=document.getElementById('cbtp').value;
+  let fData=null,fName=null,fType=null;
+  const fi=document.getElementById('cbfile').files[0];
+  if(fi){fData=await toB64(fi);fName=fi.name;fType=fi.type;}
+  const cobsAlug=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
+  const isFirst=cobsAlug.length===0;
+
+  for(let p=0;p<parc;p++){
+    const[y,mo]=baseMes.split('-').map(Number);
+    const nm=new Date(y,mo-1+p,1);
+    const mesRef=`${nm.getFullYear()}-${String(nm.getMonth()+1).padStart(2,'0')}`;
+    let dsc=document.getElementById('cbdsc').value;
+    if(parc>1){dsc=dsc.replace(/parcela \d+\//,`parcela ${p+1}/`).replace(/ 1\//,` ${p+1}/`);}
+    let vncDate=baseVnc;
+    if(p>0&&baseVnc){const bv=new Date(baseVnc+'T12:00:00');vncDate=new Date(bv.getFullYear(),bv.getMonth()+p,bv.getDate()).toISOString().split('T')[0];}
+    const rp=calcRepasse(tp,baseVal,isFirst&&p===0,c?.adm==='sim');
+    D.cb.push({
+      id:UID(),contratoId:cid,inquilino:c?.inquilino||'',endereco:c?.endereco||'',
+      tipo:tp,mes:mesRef,descricao:dsc,valor:baseVal,venc:vncDate,pago:false,repasse:rp,
+      fileData:p===0?fData:null,fileName:p===0?fName:null,fileType:p===0?fType:null
+    });
+  }
+  save();cM('mcb');renderCobrancas();renderDash();
+}
+
+// ══════════════════ OS ══════════════════
+function openNOS(){
+  document.getElementById('oscon').innerHTML=D.c.map(c=>`<option value="${c.id}">${c.inquilino} – ${(c.endereco||'').substring(0,24)}</option>`).join('');
+  document.getElementById('osdt').value=TD();oM('mos');
+}
+function openNOSCon(cid){openNOS();document.getElementById('oscon').value=cid;}
+function saveOS(){
+  const cid=document.getElementById('oscon').value;const c=D.c.find(x=>x.id===cid);
+  D.o.push({id:UID(),contratoId:cid,endereco:c?.endereco||'',desc:document.getElementById('osdsc').value,prior:document.getElementById('osp').value,data:document.getElementById('osdt').value,custo:parseFloat(document.getElementById('oscu').value)||0,status:'Aberto'});
+  save();cM('mos');renderOS();
+}
+
+// ══════════════════ EXCLUIR ══════════════════
+function delContract(id){
+  if(!confirm('Excluir este contrato? Cobranças e OS vinculadas também serão removidas.'))return;
+  D.c=D.c.filter(c=>c.id!==id);D.cb=D.cb.filter(c=>c.contratoId!==id);D.o=D.o.filter(o=>o.contratoId!==id);
+  save();go('contratos');
+}
+
+// ══════════════════ HELPER ══════════════════
+function toB64(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.readAsDataURL(file);});}
+
+// ══════════════════ INIT ══════════════════
+document.getElementById('osdt').value=TD();
+renderDash();
+</script>
+</body>
+</html>
