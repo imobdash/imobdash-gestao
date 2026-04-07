@@ -303,6 +303,14 @@ tbody td{padding:9px 12px;font-size:13px;}
       <div style="font-size:12px;color:var(--dm);margin-top:2px">ou clique para selecionar · PDF ou imagem</div>
     </div>
     <div id="pdfname" style="font-size:12px;color:var(--ac2);margin-bottom:8px;display:none"></div>
+    <div id="apikey-box" style="margin-bottom:10px;padding:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:var(--rs);display:none">
+      <div style="font-size:11px;font-weight:600;color:var(--ye);margin-bottom:6px">🔑 API Key Anthropic necessária para leitura fora do Claude.ai</div>
+      <div style="display:flex;gap:7px">
+        <input type="password" id="apikey-input" placeholder="sk-ant-api03-..." style="flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:monospace;font-size:12px;padding:7px 10px;outline:none;">
+        <button class="btn bg bsm" onclick="saveApiKey()">Salvar</button>
+      </div>
+      <div style="font-size:11px;color:var(--dm);margin-top:5px">Obtenha em <a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--ac2)">console.anthropic.com/keys</a> · Salvo localmente no seu navegador.</div>
+    </div>
     <button class="btn bg" id="btnAI" style="margin-bottom:11px;display:none" onclick="runAI()">🤖 Ler PDF com IA</button>
     <div class="aib" id="aibox" style="display:none"><div class="ait" id="ait">🤖 Lendo...</div><div id="aim"></div></div>
     <div class="fg">
@@ -1123,8 +1131,28 @@ function openNC(){
   document.getElementById('propbox').style.display='none';
   document.getElementById('pdfname').style.display='none';
   document.getElementById('btnAI').style.display='none';
+  // Show API key box when outside claude.ai
+  const isClaudeAI=window.location.hostname.includes('claude.ai');
+  const akbox=document.getElementById('apikey-box');
+  if(!isClaudeAI){
+    akbox.style.display='block';
+    const saved=getApiKey();
+    if(saved)document.getElementById('apikey-input').placeholder='✅ API key salva — pronta para uso';
+  } else {
+    akbox.style.display='none';
+  }
   oM('mc');
 }
+function saveApiKey(){
+  const k=document.getElementById('apikey-input').value.trim();
+  if(!k){alert('Cole sua API key');return;}
+  localStorage.setItem('ig_apikey',k);
+  document.getElementById('apikey-input').value='';
+  document.getElementById('apikey-input').placeholder='✅ Salva! Pronta para uso.';
+  setTimeout(()=>{document.getElementById('apikey-input').placeholder='sk-ant-api03-...';},3000);
+}
+function getApiKey(){return localStorage.getItem('ig_apikey')||'';}
+
 function clearForm(){
   ['fen','finq','finqc','finqt','finqe','fprn','fprc','fprt','fpre','fval','fdv','fini','ffim','fobs','fcau'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('fmul').value='2';
@@ -1167,7 +1195,15 @@ async function runAI(){
   try{
     const isPDF=pdfFile.type==='application/pdf';
     const ci=isPDF?{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}}:{type:'image',source:{type:'base64',media_type:pdfFile.type,data:pdfB64}};
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    const apiKey=getApiKey();
+    const headers={'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+    if(apiKey)headers['x-api-key']=apiKey;
+    if(!apiKey&&!window.location.hostname.includes('claude.ai')){
+      document.getElementById('ait').innerHTML='⚠️ API key não configurada';
+      document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Cole sua API key no campo acima e clique em Salvar, depois tente novamente.</span>';
+      return;
+    }
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify({
       model:'claude-sonnet-4-20250514',max_tokens:1000,
       system:`Extraia dados de contratos de aluguel. Retorne SOMENTE JSON sem markdown:
 {"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"obs":""}`,
