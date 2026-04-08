@@ -482,7 +482,11 @@ tr:hover td{background:rgba(255,255,255,.018);}
 // ══════════════════════════════════════════
 const SUPA_URL='https://vmupdkaxgylycryimisb.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtdXBka2F4Z3lseWNyeWltaXNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTQ2NTYsImV4cCI6MjA5MTIzMDY1Nn0.kJg8RhMx1MqLsGbgMu4wX8iU229veU13K4v1INwZS-M';
-const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{
+  auth:{
+    lock:async(name,acquireTimeout,fn)=>fn()
+  }
+});
 
 // ══════════════════════════════════════════
 // STATE
