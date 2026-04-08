@@ -1,101 +1,90 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ImobGestão – Eduardo Souza</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ImobGestão</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{
-  --bg:#0d1117;--sf:#161b22;--sf2:#1f2937;--bd:#30363d;
-  --ac:#2563eb;--ac2:#3b82f6;--ag:rgba(37,99,235,.14);
-  --gn:#22c55e;--gd:rgba(34,197,94,.12);
-  --ye:#f59e0b;--yd:rgba(245,158,11,.12);
-  --re:#ef4444;--rd:rgba(239,68,68,.12);
-  --pu:#a855f7;--pd:rgba(168,85,247,.12);
-  --or:#f97316;--od:rgba(249,115,22,.12);
-  --te:#e6edf3;--dm:#8b949e;--dmr:#484f58;
-  --r:12px;--rs:8px;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--te);min-height:100vh;font-size:14px;}
-.app{display:flex;min-height:100vh;}
-.sidebar{width:224px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s;overflow-y:auto;}
-.logo{padding:18px 18px 13px;border-bottom:1px solid var(--bd);}
-.logo .br{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-.3px;}
-.logo .dot{color:var(--ac2);}.logo .su{font-size:11px;color:var(--dm);margin-top:2px;}
-nav{flex:1;padding:8px 0;}
-.ns{padding:6px 15px 3px;font-size:10px;font-weight:600;letter-spacing:1px;color:var(--dmr);text-transform:uppercase;}
-.ni{display:flex;align-items:center;gap:9px;padding:8px 17px;cursor:pointer;color:var(--dm);font-size:13px;transition:all .15s;border-left:2px solid transparent;}
-.ni:hover{color:var(--te);background:var(--sf2);}
-.ni.on{color:var(--ac2);background:var(--ag);border-left-color:var(--ac2);font-weight:500;}
-.ni .ic{font-size:14px;width:18px;text-align:center;}
-.bdg{margin-left:auto;font-size:10px;font-weight:700;border-radius:20px;padding:1px 6px;color:#fff;}
-.sfoot{padding:13px 16px;border-top:1px solid var(--bd);}
-.main{margin-left:224px;flex:1;}
-.topbar{background:var(--sf);border-bottom:1px solid var(--bd);padding:0 22px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
-.ttl{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;}
-.content{padding:20px 22px;}
-/* BTN */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
-.bp{background:var(--ac);color:#fff;}.bp:hover{background:var(--ac2);}
-.bg{background:transparent;color:var(--dm);border:1px solid var(--bd);}.bg:hover{color:var(--te);background:var(--sf2);}
-.bd2{background:var(--rd);color:var(--re);border:1px solid rgba(239,68,68,.25);}.bd2:hover{background:rgba(239,68,68,.22);}
-.bk{background:var(--gd);color:var(--gn);border:1px solid rgba(34,197,94,.25);}.bk:hover{background:rgba(34,197,94,.22);}
-.bsm{padding:4px 9px;font-size:12px;}
+:root{--bg:#0d1117;--sf:#161b22;--sf2:#21262d;--bd:#30363d;--te:#e6edf3;--dm:#8b949e;--dmr:#6e7681;--ac:#3b82f6;--ac2:#60a5fa;--ag:rgba(37,99,235,.1);--gn:#22c55e;--gd:rgba(34,197,94,.1);--ye:#f59e0b;--yd:rgba(245,158,11,.1);--re:#ef4444;--rd:rgba(239,68,68,.1);--or:#f97316;--r:10px;--rs:7px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--te);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+/* SIDEBAR */
+.sidebar{background:var(--sf);border-right:1px solid var(--bd);position:fixed;top:0;left:0;bottom:0;width:220px;display:flex;flex-direction:column;z-index:100;transition:transform .25s;}
+.logo{padding:20px 18px 14px;border-bottom:1px solid var(--bd);}
+.br{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.3px;}
+.dot{color:var(--ac2);}
+.su{font-size:11px;color:var(--dm);margin-top:2px;}
+nav{flex:1;padding:10px 8px;overflow-y:auto;}
+.ns{font-size:10px;font-weight:700;color:var(--dmr);text-transform:uppercase;letter-spacing:.6px;padding:12px 10px 4px;}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rs);cursor:pointer;color:var(--dm);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:1px;}
+.ni:hover{background:var(--sf2);color:var(--te);}
+.ni.on{background:var(--ag);color:var(--ac2);}
+.ic{width:18px;text-align:center;font-size:14px;}
+.bdg{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;font-size:10px;font-weight:700;padding:0 5px;margin-left:auto;}
+.sfoot{padding:12px 14px;border-top:1px solid var(--bd);}
+/* MAIN */
+.main{margin-left:220px;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{padding:14px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--sf);position:sticky;top:0;z-index:50;}
+.ttl{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;}
+.content{padding:22px 24px;flex:1;}
+/* VIEWS */
 .view{display:none;}.view.on{display:block;}
-/* STATS GRID */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
-.stats2{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
-.sc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;}
-.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
-.sc.bl::before{background:var(--ac2);}.sc.gr::before{background:var(--gn);}
-.sc.ye::before{background:var(--ye);}.sc.re::before{background:var(--re);}.sc.pu::before{background:var(--pu);}
-.sc.or::before{background:var(--or);}
-.slb{font-size:10px;color:var(--dm);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:4px;}
-.sv{font-family:'Syne',sans-serif;font-weight:700;font-size:22px;line-height:1.1;}
-.ss{font-size:11px;color:var(--dm);margin-top:3px;}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
+.stats2{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
+.sc{padding:14px 16px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf);}
+.sc.bl{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.06);}
+.sc.gr{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06);}
+.sc.pu{border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.06);}
+.sc.ye{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06);}
+.sc.or{border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.06);}
+.sc.re{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06);}
+.slb{font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;}
+.sv{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;line-height:1.1;}
+.ss{font-size:11px;color:var(--dmr);margin-top:3px;}
 /* CARDS */
-.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:13px;}
-.ch{padding:11px 16px;border-bottom:1px solid var(--bd);font-family:'Syne',sans-serif;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:space-between;}
-.cb{padding:13px 16px;}
-/* TABLE */
-.tw{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;}
-.th2{padding:11px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:14px;}
+.ch{padding:13px 16px;border-bottom:1px solid var(--bd);font-family:'Syne',sans-serif;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
+.cb{padding:12px 16px;}
+.tw{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:14px;}
+.th2{padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
 .th2 h3{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
-.sb{display:flex;align-items:center;gap:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:5px 10px;}
-.sb input{background:none;border:none;outline:none;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;width:155px;}
-.sb input::placeholder{color:var(--dmr);}
+/* TABLE */
 table{width:100%;border-collapse:collapse;}
-thead tr{background:var(--sf2);}
-thead th{padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
-tbody tr{border-top:1px solid var(--bd);transition:background .1s;}
-tbody tr:hover{background:rgba(255,255,255,.018);}
-tbody td{padding:9px 12px;font-size:13px;}
+th{font-size:11px;color:var(--dm);font-weight:600;text-align:left;padding:9px 14px;border-bottom:1px solid var(--bd);}
+td{padding:10px 14px;border-bottom:1px solid rgba(48,54,61,.5);font-size:13px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.018);}
 /* CHIPS */
 .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
-.cg{background:var(--gd);color:var(--gn);}.cy{background:var(--yd);color:var(--ye);}.cr{background:var(--rd);color:var(--re);}
-.cb2{background:var(--ag);color:var(--ac2);}.cp{background:var(--pd);color:var(--pu);}.co{background:var(--od);color:var(--or);}
+.cg{background:var(--gd);color:var(--gn);}.cy{background:var(--yd);color:var(--ye);}.cr{background:var(--rd);color:var(--re);}.cb2{background:var(--ag);color:var(--ac2);}
 /* TYPE TAGS */
-.tt{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px;}
-.ta{background:var(--ag);color:var(--ac2);}.ti{background:var(--pd);color:var(--pu);}.tc{background:var(--yd);color:var(--ye);}
-.ts{background:var(--gd);color:var(--gn);}.tp{background:var(--od);color:var(--or);}.tou{background:rgba(139,148,158,.12);color:var(--dm);}
-.rep{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;}
-.rep-im{background:rgba(37,99,235,.15);color:var(--ac2);}.rep-pr{background:rgba(34,197,94,.12);color:var(--gn);}
-/* ALERT ITEMS */
-.alrt{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(48,54,61,.3);}
-.alrt:last-child{border-bottom:none;}
+.tt{display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;}
+.ta{background:rgba(37,99,235,.15);color:var(--ac2);}.ti{background:rgba(245,158,11,.15);color:var(--ye);}.tc{background:rgba(124,58,237,.15);color:#a78bfa;}.ts{background:rgba(34,197,94,.15);color:var(--gn);}.tp{background:rgba(249,115,22,.15);color:var(--or);}.cp{background:rgba(239,68,68,.15);color:var(--re);}.tou{background:rgba(139,148,158,.15);color:var(--dm);}
+/* ALERTA */
+.alrt{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid rgba(48,54,61,.3);}.alrt:last-child{border-bottom:none;}
 .alrt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
-.alrt-dot.alta{background:var(--re);box-shadow:0 0 6px var(--re);}
-.alrt-dot.media{background:var(--ye);}
-.alrt-dot.baixa{background:var(--ac2);}
-/* FASE COBRANÇA */
-.fase{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;}
-.fase-ok{background:var(--gd);color:var(--gn);}
-.fase-lembrete{background:var(--ag);color:var(--ac2);}
-.fase-leve{background:var(--yd);color:var(--ye);}
-.fase-firme{background:rgba(249,115,22,.15);color:var(--or);}
-.fase-critica{background:var(--rd);color:var(--re);}
+.alrt-dot.alta{background:var(--re);}.alrt-dot.media{background:var(--ye);}.alrt-dot.baixa{background:var(--gn);}
+/* FASE */
+.fase{display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;}
+.fase-lembrete{background:rgba(37,99,235,.15);color:var(--ac2);}.fase-leve{background:rgba(245,158,11,.15);color:var(--ye);}.fase-firme{background:rgba(249,115,22,.15);color:var(--or);}.fase-critica{background:rgba(239,68,68,.15);color:var(--re);}
+/* REP */
+.rep{font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;}
+.rep-pr{background:var(--gd);color:var(--gn);}.rep-im{background:var(--ag);color:var(--ac2);}
+/* BTNS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rs);border:1px solid transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all .15s;}
+.bp{background:var(--ac);color:#fff;border-color:var(--ac);}.bp:hover{background:#2563eb;}
+.bg{background:var(--sf2);color:var(--te);border-color:var(--bd);}.bg:hover{border-color:var(--ac2);color:var(--ac2);}
+.bk{background:var(--gd);color:var(--gn);border-color:rgba(34,197,94,.3);}.bk:hover{background:rgba(34,197,94,.2);}
+.bd2{background:var(--rd);color:var(--re);border-color:rgba(239,68,68,.3);}.bd2:hover{background:rgba(239,68,68,.2);}
+.bsm{padding:4px 9px;font-size:12px;}
+/* SEARCH */
+.sb{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dm);}
+.sb input{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 10px;outline:none;width:180px;}
+.sb input:focus{border-color:var(--ac2);}
 /* MODAL */
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px);}
 .mo.on{display:flex;}
@@ -117,7 +106,7 @@ tbody td{padding:9px 12px;font-size:13px;}
 .fg textarea{resize:vertical;min-height:56px;}
 .fa{display:flex;gap:9px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);}
 .fsec{grid-column:1/-1;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--dm);text-transform:uppercase;letter-spacing:.5px;padding-top:5px;border-top:1px solid var(--bd);margin-top:2px;}
-/* UPLOAD — FIXED for outside Claude */
+/* UPLOAD */
 .uz{border:2px dashed var(--bd);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--sf2);position:relative;overflow:hidden;}
 .uz:hover{border-color:var(--ac2);background:var(--ag);}
 .uz input[type=file]{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0;}
@@ -184,7 +173,47 @@ tbody td{padding:9px 12px;font-size:13px;}
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="auth-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
+  <div style="width:100%;max-width:400px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:30px;color:var(--te)">Imob<span style="color:var(--ac2)">.</span>Gestão</div>
+      <div style="font-size:13px;color:var(--dm);margin-top:5px">Gestão Inteligente de Imóveis</div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:20px">Acesse sua conta</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">E-mail</label>
+          <input type="email" id="auth-email" placeholder="seu@email.com" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--ac2)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')document.getElementById('auth-password').focus()">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Senha</label>
+          <input type="password" id="auth-password" placeholder="••••••••" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--ac2)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')login()">
+        </div>
+        <div id="auth-error" style="display:none;font-size:12px;padding:8px 10px;border-radius:6px;line-height:1.5"></div>
+        <button id="auth-btn-login" onclick="login()" class="btn bp" style="width:100%;justify-content:center;padding:11px;font-size:14px">Entrar</button>
+        <div style="display:flex;gap:8px">
+          <button id="auth-btn-signup" onclick="signup()" class="btn bg" style="flex:1;justify-content:center">Criar Conta</button>
+          <button onclick="forgotPassword()" class="btn bg" style="flex:1;justify-content:center">Esqueci Senha</button>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--dmr)">🔒 Seus dados são privados e sincronizados em qualquer dispositivo.</div>
+  </div>
+</div>
+
+<!-- ══════════════ LOADING SCREEN ══════════════ -->
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9998">
+  <div style="text-align:center">
+    <div class="sp" style="width:32px;height:32px;border-width:3px;margin:0 auto 14px"></div>
+    <div style="font-size:13px;color:var(--dm)">Carregando seus dados...</div>
+  </div>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div class="app" id="main-app" style="display:none">
 
 <aside class="sidebar" id="sb">
   <div class="logo"><div class="br">Imob<span class="dot">.</span>Gestão</div><div class="su">Gestão Inteligente</div></div>
@@ -203,8 +232,12 @@ tbody td{padding:9px 12px;font-size:13px;}
   </nav>
   <div class="sfoot">
     <div style="display:flex;align-items:center;gap:9px">
-      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#7c3aed);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:#fff;flex-shrink:0">ES</div>
-      <div><div style="font-size:12px;font-weight:500">Eduardo Souza</div><div style="font-size:10px;color:var(--dm)">Corretor · Vila Velha</div></div>
+      <div id="user-initials" style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#7c3aed);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:#fff;flex-shrink:0">?</div>
+      <div style="flex:1;min-width:0">
+        <div id="user-email" style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Carregando...</div>
+        <div style="font-size:10px;color:var(--dm)">ImobGestão</div>
+      </div>
+      <button onclick="logout()" title="Sair da conta" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:16px;padding:3px;flex-shrink:0;line-height:1" onmouseover="this.style.color='var(--re)'" onmouseout="this.style.color='var(--dm)'">⏻</button>
     </div>
   </div>
 </aside>
@@ -289,7 +322,7 @@ tbody td{padding:9px 12px;font-size:13px;}
 
   </div>
 </main>
-</div>
+</div><!-- fim #main-app -->
 
 <!-- MODAL: NOVO CONTRATO -->
 <div class="mo" id="mc">
@@ -309,7 +342,7 @@ tbody td{padding:9px 12px;font-size:13px;}
         <input type="password" id="apikey-input" placeholder="sk-ant-api03-..." style="flex:1;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:monospace;font-size:12px;padding:7px 10px;outline:none;">
         <button class="btn bg bsm" id="btnSaveKey" onclick="saveApiKey()">Salvar</button>
       </div>
-      <div style="font-size:11px;color:var(--dm);margin-top:5px">Obtenha em <a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--ac2)">console.anthropic.com/keys</a> · Salvo localmente no seu navegador.</div>
+      <div style="font-size:11px;color:var(--dm);margin-top:5px">Obtenha em <a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--ac2)">console.anthropic.com/keys</a></div>
     </div>
     <button class="btn bg" id="btnAI" style="margin-bottom:11px;display:none" onclick="runAI()">🤖 Ler PDF com IA</button>
     <div class="aib" id="aibox" style="display:none"><div class="ait" id="ait">🤖 Lendo...</div><div id="aim"></div></div>
@@ -357,7 +390,7 @@ tbody td{padding:9px 12px;font-size:13px;}
         <div style="font-size:12px;color:var(--dm)">＋ RG, renda, vistoria, fotos...</div>
       </div>
     </div>
-    <div class="fa"><button class="btn bg" onclick="cM('mc')">Cancelar</button><button class="btn bp" onclick="saveContract()">✓ Salvar Contrato</button></div>
+    <div class="fa"><button class="btn bg" onclick="cM('mc')">Cancelar</button><button class="btn bp" id="btnSaveContract" onclick="saveContract()">✓ Salvar Contrato</button></div>
   </div>
 </div>
 </div>
@@ -394,16 +427,6 @@ tbody td{padding:9px 12px;font-size:13px;}
       <div class="g"><label>Vencimento</label><input type="date" id="cbvnc"></div>
       <div class="g"><label>Parcelas</label><input type="number" id="cbparc" value="1" min="1" max="120" oninput="fillCD()"></div>
       <div class="g ff"><label>Descrição</label><input type="text" id="cbdsc"></div>
-      <div class="g ff" id="destino-box">
-        <label>Destino do Dinheiro</label>
-        <select id="cbdestino" onchange="updateRepBox()">
-          <option value="auto">Automático (conforme regra)</option>
-          <option value="prop">100% Proprietário</option>
-          <option value="imob">100% Imobiliária</option>
-          <option value="split5050">50% Proprietário / 50% Imobiliária</option>
-          <option value="split1090">10% Imobiliária / 90% Proprietário</option>
-        </select>
-      </div>
       <div id="repbox" class="g ff"></div>
       <div class="g ff">
         <label>Comprovante (opcional)</label>
@@ -411,7 +434,7 @@ tbody td{padding:9px 12px;font-size:13px;}
         <div id="cbfn" style="margin-top:4px;font-size:11px;color:var(--ac2)"></div>
       </div>
     </div>
-    <div class="fa"><button class="btn bg" onclick="cM('mcb')">Cancelar</button><button class="btn bp" onclick="saveCob()">✓ Salvar</button></div>
+    <div class="fa"><button class="btn bg" onclick="cM('mcb')">Cancelar</button><button class="btn bp" id="btnSaveCob" onclick="saveCob()">✓ Salvar</button></div>
   </div>
 </div>
 </div>
@@ -431,7 +454,7 @@ tbody td{padding:9px 12px;font-size:13px;}
         <div id="pfn" style="margin-top:4px;font-size:11px;color:var(--ac2)"></div>
       </div>
     </div>
-    <div class="fa"><button class="btn bg" onclick="cM('mpago')">Cancelar</button><button class="btn bk" onclick="confirmPago()">✓ Confirmar Pago</button></div>
+    <div class="fa"><button class="btn bg" onclick="cM('mpago')">Cancelar</button><button class="btn bk" id="btnConfPago" onclick="confirmPago()">✓ Confirmar Pago</button></div>
   </div>
 </div>
 </div>
@@ -448,22 +471,212 @@ tbody td{padding:9px 12px;font-size:13px;}
       <div class="g"><label>Data</label><input type="date" id="osdt"></div>
       <div class="g"><label>Custo (R$)</label><input type="number" id="oscu" placeholder="0,00" step="0.01"></div>
     </div>
-    <div class="fa"><button class="btn bg" onclick="cM('mos')">Cancelar</button><button class="btn bp" onclick="saveOS()">✓ Abrir OS</button></div>
+    <div class="fa"><button class="btn bg" onclick="cM('mos')">Cancelar</button><button class="btn bp" id="btnSaveOS" onclick="saveOS()">✓ Abrir OS</button></div>
   </div>
 </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════════════
+const SUPA_URL='https://vmupdkaxgylycryimisb.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtdXBka2F4Z3lseWNyeWltaXNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTQ2NTYsImV4cCI6MjA5MTIzMDY1Nn0.kJg8RhMx1MqLsGbgMu4wX8iU229veU13K4v1INwZS-M';
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+
+// ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
-const KEY='ig6';
 let D={c:[],cb:[],o:[]};
+let currentUser=null;
 let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
 
-function load(){try{const s=localStorage.getItem(KEY);if(s){const p=JSON.parse(s);D.c=p.c||[];D.cb=p.cb||[];D.o=p.o||[];}}catch(e){D={c:[],cb:[],o:[]};}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({c:D.c,cb:D.cb,o:D.o}));}catch(e){alert('Armazenamento cheio — remova documentos PDF antigos para liberar espaço.');}}
-load();
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+function showAuthScreen(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('main-app').style.display='none';
+}
+async function showApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('loading-screen').style.display='flex';
+  document.getElementById('main-app').style.display='none';
+  const email=currentUser?.email||'';
+  const initials=email.substring(0,2).toUpperCase()||'?';
+  document.getElementById('user-initials').textContent=initials;
+  document.getElementById('user-email').textContent=email;
+  await loadAll();
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('main-app').style.display='';
+  renderDash();
+  badges();
+}
+function showAuthError(msg,isOk=false){
+  const el=document.getElementById('auth-error');
+  el.textContent=msg;
+  el.style.background=isOk?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)';
+  el.style.border=isOk?'1px solid rgba(34,197,94,.3)':'1px solid rgba(239,68,68,.3)';
+  el.style.color=isOk?'var(--gn)':'var(--re)';
+  el.style.display='block';
+}
+async function login(){
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  if(!email||!password){showAuthError('Preencha e-mail e senha.');return;}
+  const btn=document.getElementById('auth-btn-login');
+  btn.disabled=true;btn.textContent='Entrando...';
+  const{error}=await sb.auth.signInWithPassword({email,password});
+  if(error){
+    showAuthError(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message);
+    btn.disabled=false;btn.textContent='Entrar';
+  }
+}
+async function signup(){
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  if(!email||!password){showAuthError('Preencha e-mail e senha.');return;}
+  if(password.length<6){showAuthError('Senha precisa ter ao menos 6 caracteres.');return;}
+  const btn=document.getElementById('auth-btn-signup');
+  btn.disabled=true;btn.textContent='Criando...';
+  const{data,error}=await sb.auth.signUp({email,password});
+  btn.disabled=false;btn.textContent='Criar Conta';
+  if(error){showAuthError(error.message);return;}
+  if(data?.session){/* auto-confirmed */}
+  else{showAuthError('✅ Conta criada! Verifique seu e-mail para confirmar o cadastro.',true);}
+}
+async function forgotPassword(){
+  const email=document.getElementById('auth-email').value.trim();
+  if(!email){showAuthError('Informe o e-mail para recuperar a senha.');return;}
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  if(error)showAuthError(error.message);
+  else showAuthError('✅ E-mail de recuperação enviado!',true);
+}
+async function logout(){
+  if(!confirm('Sair da conta?'))return;
+  await sb.auth.signOut();
+  D={c:[],cb:[],o:[]};
+  currentUser=null;
+}
+
+// Auth state listener
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(session?.user){
+    currentUser=session.user;
+    if(document.getElementById('auth-screen').style.display!=='none'||document.getElementById('loading-screen').style.display==='flex'||document.getElementById('main-app').style.display==='none'){
+      await showApp();
+    }
+  } else {
+    currentUser=null;
+    D={c:[],cb:[],o:[]};
+    showAuthScreen();
+  }
+});
+
+// Initial session check
+(async()=>{
+  const{data:{session}}=await sb.auth.getSession();
+  if(session?.user){
+    currentUser=session.user;
+    await showApp();
+  } else {
+    showAuthScreen();
+  }
+})();
+
+// ══════════════════════════════════════════
+// DATA MAPPING
+// ══════════════════════════════════════════
+function rowToContrato(row){
+  return{
+    id:row.id,
+    inquilino:row.inquilino,
+    cpfInq:row.inq_cpf,
+    telInq:row.inq_tel,
+    emailInq:row.inq_email,
+    proprietario:row.proprietario,
+    cpfProp:row.prop_cpf,
+    telProp:row.prop_tel,
+    emailProp:row.prop_email,
+    endereco:row.endereco,
+    adm:row.administrado?'sim':'nao',
+    valor:Number(row.valor||0),
+    diaVenc:row.dia_venc||10,
+    inicio:row.inicio,
+    fim:row.fim,
+    indice:row.indice,
+    multa:Number(row.multa_pct||2),
+    caucao:Number(row.caucao||0),
+    caucaoTp:row.caucao_tp,
+    obs:row.observacoes,
+    criadoEm:row.created_at?.split('T')[0],
+    docs:[]
+  };
+}
+function rowToCobranca(row){
+  const repasse=row.repasse_tipo?{
+    imob:Number(row.repasse_imob||0),
+    prop:Number(row.repasse_prop||0),
+    tipo:row.repasse_tipo
+  }:null;
+  return{
+    id:row.id,
+    contratoId:row.contrato_id,
+    tipo:row.tipo||'Aluguel',
+    descricao:row.descricao,
+    mes:row.mes,
+    valor:Number(row.valor||0),
+    venc:row.venc,
+    pago:row.pago||false,
+    dataPago:row.data_pago,
+    valorPago:row.valor_pago!=null?Number(row.valor_pago):null,
+    repasse,
+    inquilino:row.inquilino,
+    endereco:row.endereco,
+    comprovantePath:row.comprovante_path
+  };
+}
+function rowToOS(row){
+  return{
+    id:row.id,
+    contratoId:row.contrato_id,
+    desc:row.descricao,
+    prior:row.prioridade||'Normal',
+    status:row.status||'Aberta',
+    data:row.data,
+    custo:Number(row.custo||0),
+    endereco:row.endereco
+  };
+}
+function rowToDoc(row){
+  return{
+    id:row.id,
+    contratoId:row.contrato_id,
+    name:row.nome,
+    tag:row.tag,
+    date:row.created_at?.split('T')[0],
+    storage_path:row.storage_path,
+    type:row.mime_type
+  };
+}
+
+// ══════════════════════════════════════════
+// LOAD ALL DATA
+// ══════════════════════════════════════════
+async function loadAll(){
+  const[r1,r2,r3,r4]=await Promise.all([
+    sb.from('contratos').select('*').order('created_at',{ascending:false}),
+    sb.from('cobrancas').select('*').order('venc',{ascending:true}),
+    sb.from('ordens_servico').select('*').order('created_at',{ascending:false}),
+    sb.from('documentos').select('*').order('created_at',{ascending:false})
+  ]);
+  D.c=(r1.data||[]).map(rowToContrato);
+  D.cb=(r2.data||[]).map(rowToCobranca);
+  D.o=(r3.data||[]).map(rowToOS);
+  const allDocs=(r4.data||[]).map(rowToDoc);
+  D.c.forEach(c=>{c.docs=allDocs.filter(d=>d.contratoId===c.id);});
+}
 
 // ══════════════════════════════════════════
 // UTILS
@@ -476,13 +689,15 @@ const DA=(d)=>{if(!d)return 9999;try{return Math.ceil((new Date(d+'T12:00:00')-n
 const MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const MF=(m)=>{if(!m)return'–';const[y,mn]=m.split('-');return mn?`${MN[+mn-1]}/${y}`:'–';};
 const toB64=(file)=>new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.readAsDataURL(file);});
+function b64ToBlob(b64,type){const bytes=atob(b64);const arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type});}
+function safeName(n){return n.replace(/[^a-z0-9.\-_]/gi,'_');}
 
 function stCon(c){const d=DA(c.fim);if(d>90)return{l:'Vigente',cl:'cg'};if(d>30)return{l:`Vence ${d}d`,cl:'cy'};if(d>0)return{l:`Vence ${d}d`,cl:'cr'};return{l:'Vencido',cl:'cr'};}
 function stCob(c){if(c.pago)return{l:'Pago',cl:'cg'};const d=DA(c.venc);if(d<0)return{l:'Atrasado',cl:'cr'};return{l:'Pendente',cl:'cy'};}
 function tpCl(t){if(!t||t==='Aluguel')return'ta';if(t.startsWith('IPTU')||t.startsWith('Taxa'))return'ti';if(t==='Condomínio')return'tc';if(t==='Seguro')return'ts';if(t==='Pintura')return'tp';if(t==='Caução')return'cp';return'tou';}
 
 // ══════════════════════════════════════════
-// 5. RÉGUA DE COBRANÇA
+// RÉGUA DE COBRANÇA
 // ══════════════════════════════════════════
 function getFase(cb){
   if(cb.pago)return{label:'Pago',cls:'fase-ok'};
@@ -495,7 +710,7 @@ function getFase(cb){
 }
 
 // ══════════════════════════════════════════
-// 3. INADIMPLÊNCIA POR INQUILINO
+// INADIMPLÊNCIA
 // ══════════════════════════════════════════
 function calcInadimplencia(cid){
   const alug=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
@@ -507,48 +722,40 @@ function calcInadimplencia(cid){
 }
 
 // ══════════════════════════════════════════
-// 1. PREVISÃO DE CAIXA
+// PREVISÃO DE CAIXA
 // ══════════════════════════════════════════
 function calcCaixaProj(){
   const hoje=new Date();
   const em30=new Date(hoje);em30.setDate(em30.getDate()+30);
-  // A Receber 30 dias: cobranças com venc nos próximos 30 dias OU sem venc definido
-  const pend30=D.cb.filter(c=>!c.pago&&(!c.venc||new Date(c.venc+'T12:00:00')<=em30));
-  const aReceber=pend30.reduce((a,b)=>a+(b.valor||0),0);
-  const aRepassar=pend30.reduce((a,b)=>a+(b.repasse?.prop||0),0);
-  const liquido=pend30.reduce((a,b)=>a+(b.repasse?.imob||0),0);
-  // ticket médio
+  const pend=D.cb.filter(c=>!c.pago&&c.venc&&new Date(c.venc+'T12:00:00')<=em30);
+  const aReceber=pend.reduce((a,b)=>a+(b.valor||0),0);
+  const aRepassar=pend.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const liquido=pend.reduce((a,b)=>a+(b.repasse?.imob||0),0);
   const alugPagos=D.cb.filter(c=>c.pago&&c.tipo==='Aluguel');
   const ticket=alugPagos.length?alugPagos.reduce((a,b)=>a+(+b.valorPago||+b.valor||0),0)/alugPagos.length:0;
-  // inadimplência geral (conta quem não pagou e passou do venc)
   const totAlug=D.cb.filter(c=>c.tipo==='Aluguel').length;
-  const atrAlug=D.cb.filter(c=>c.tipo==='Aluguel'&&!c.pago&&c.venc&&DA(c.venc)<0).length;
+  const atrAlug=D.cb.filter(c=>c.tipo==='Aluguel'&&!c.pago&&DA(c.venc)<0).length;
   const pctInad=totAlug?Math.round(atrAlug/totAlug*100):0;
   return{aReceber,aRepassar,liquido,ticket,pctInad,atrAlug,totAlug};
 }
 
 // ══════════════════════════════════════════
-// 2. ALERTAS INTELIGENTES
+// ALERTAS
 // ══════════════════════════════════════════
 function gerarAlertas(){
   const alertas=[];
-  // Cobranças atrasadas
   const atrasadas=D.cb.filter(c=>!c.pago&&DA(c.venc)<0);
   if(atrasadas.length)alertas.push({prioridade:'alta',msg:`${atrasadas.length} cobrança(s) em atraso`,acao:'cobrancas'});
-  // Contratos vencendo em 60 dias
   D.c.forEach(c=>{const d=DA(c.fim);if(d>=0&&d<=60)alertas.push({prioridade:d<=30?'alta':'media',msg:`Contrato de ${c.inquilino} vence em ${d} dias`,acao:'detalhe',id:c.id});});
-  // Inquilinos com múltiplos atrasos
   D.c.forEach(c=>{const ind=calcInadimplencia(c.id);if(ind.atrasos>=2)alertas.push({prioridade:'alta',msg:`${c.inquilino} tem ${ind.atrasos} atrasos (${ind.pct}% inadimplência)`,acao:'detalhe',id:c.id});});
-  // Documentos incompletos
   D.c.forEach(c=>{const ck=checkDocs(c);if(ck.status==='critico')alertas.push({prioridade:'media',msg:`Documentos críticos faltando em ${c.inquilino}`,acao:'detalhe',id:c.id});});
-  // Cobranças em fase crítica
   const criticas=D.cb.filter(c=>!c.pago&&DA(c.venc)<=-10);
   if(criticas.length)alertas.push({prioridade:'alta',msg:`${criticas.length} cobrança(s) em fase crítica (10+ dias)`,acao:'cobrancas'});
   return alertas.sort((a,b)=>({alta:0,media:1,baixa:2}[a.prioridade]-{alta:0,media:1,baixa:2}[b.prioridade]));
 }
 
 // ══════════════════════════════════════════
-// 6. CHECKLIST DE DOCUMENTOS
+// CHECKLIST DOCS
 // ══════════════════════════════════════════
 const DOCS_OBR=['Contrato','RG/CPF','Comprovante de Renda','Laudo de Vistoria'];
 function checkDocs(c){
@@ -560,7 +767,7 @@ function checkDocs(c){
 }
 
 // ══════════════════════════════════════════
-// 10. SUGESTÕES AUTOMÁTICAS
+// SUGESTÕES
 // ══════════════════════════════════════════
 function gerarSugestoes(){
   const s=[];
@@ -577,25 +784,14 @@ function gerarSugestoes(){
 // ══════════════════════════════════════════
 // REPASSE
 // ══════════════════════════════════════════
-function calcRepasse(tp,valor,primMes,adm,valorBase){
-  // valorBase = valor integral do contrato (para calcular % correto no 1º mês proporcional)
+function calcRepasse(tp,valor,primMes,adm){
   if(!adm)return{imob:0,prop:valor,tipo:'sem_adm'};
   if(tp==='Pintura')return{imob:valor,prop:0,tipo:'pintura'};
   if(tp==='Caução')return{imob:valor,prop:0,tipo:'caucao'};
   if(tp==='Aluguel'){
-    if(primMes){
-      // 50% é calculado sobre o valor INTEGRAL do contrato, não sobre o proporcional
-      const base=valorBase||valor;
-      const im=Math.round(base*.5*100)/100;
-      // o que a imob retém não pode ser mais que o valor total cobrado
-      const imFinal=Math.min(im,valor);
-      return{imob:imFinal,prop:valor-imFinal,tipo:'primeiro',valorBase:base};
-    }
+    if(primMes){const im=Math.round(valor*.5*100)/100;return{imob:im,prop:valor-im,tipo:'primeiro'};}
     const im=Math.round(valor*.1*100)/100;return{imob:im,prop:valor-im,tipo:'normal'};
   }
-  // Reembolso: 100% vai ao proprietário por padrão (é um repasse)
-  if(tp==='Reembolso')return{imob:0,prop:valor,tipo:'reembolso'};
-  // IPTU, Condomínio, Seguro, Taxas → 100% proprietário
   return{imob:0,prop:valor,tipo:'repasse'};
 }
 
@@ -614,7 +810,7 @@ function badges(){
 }
 
 // ══════════════════════════════════════════
-// 8. GRÁFICO DE RECEITA
+// GRÁFICO
 // ══════════════════════════════════════════
 function renderChart(){
   const hoje=new Date();
@@ -669,7 +865,6 @@ function renderDash(){
   const tot=D.c.length;
   const pend=D.cb.filter(c=>!c.pago).length;
   const recTotal=D.cb.filter(c=>c.pago).reduce((a,b)=>a+(+b.valorPago||+b.valor||0),0);
-
   document.getElementById('stats').innerHTML=`
     <div class="sc bl"><div class="slb">Contratos Ativos</div><div class="sv">${tot}</div><div class="ss">imóveis gerenciados</div></div>
     <div class="sc gr"><div class="slb">Receita Total</div><div class="sv" style="font-size:17px">${R(recTotal)}</div><div class="ss">histórico recebido</div></div>
@@ -682,15 +877,11 @@ function renderDash(){
     <div class="sc gr"><div class="slb">Receita Líquida Proj.</div><div class="sv" style="font-size:17px">${R(proj.liquido)}</div><div class="ss">para imobiliária</div></div>
     <div class="sc ye"><div class="slb">Pendentes</div><div class="sv">${pend}</div><div class="ss">${D.cb.filter(c=>!c.pago&&DA(c.venc)<0).length} atrasadas</div></div>
   `;
-
-  // Sugestões
   const sug=gerarSugestoes();
-  const sb=document.getElementById('sugestoes-box');
+  const sb2=document.getElementById('sugestoes-box');
   if(sug.length){
-    sb.innerHTML=`<div class="card" style="margin-bottom:13px;border-color:rgba(37,99,235,.3)"><div class="ch" style="color:var(--ac2)">🤖 Sugestões do Sistema</div><div class="cb" style="display:flex;flex-direction:column;gap:7px">${sug.map(s=>`<div style="font-size:13px;color:var(--te);padding:6px 10px;background:var(--sf2);border-radius:6px;border-left:3px solid var(--ac2)">${s}</div>`).join('')}</div></div>`;
-  } else sb.innerHTML='';
-
-  // Alertas
+    sb2.innerHTML=`<div class="card" style="margin-bottom:13px;border-color:rgba(37,99,235,.3)"><div class="ch" style="color:var(--ac2)">🤖 Sugestões do Sistema</div><div class="cb" style="display:flex;flex-direction:column;gap:7px">${sug.map(s=>`<div style="font-size:13px;color:var(--te);padding:6px 10px;background:var(--sf2);border-radius:6px;border-left:3px solid var(--ac2)">${s}</div>`).join('')}</div></div>`;
+  } else sb2.innerHTML='';
   const alrt=gerarAlertas();
   const al=document.getElementById('alertas-list');
   al.innerHTML=alrt.length?alrt.map(a=>`<div class="alrt">
@@ -698,10 +889,7 @@ function renderDash(){
     <div style="flex:1"><div style="font-size:13px">${a.msg}</div><div style="font-size:11px;color:var(--dm);text-transform:uppercase;font-weight:600;margin-top:2px">${a.prioridade}</div></div>
     ${a.acao==='detalhe'&&a.id?`<button class="btn bg bsm" onclick="detail('${a.id}')">Ver →</button>`:a.acao==='cobrancas'?`<button class="btn bg bsm" onclick="go('cobrancas')">Ver →</button>`:''}
   </div>`).join(''):`<div class="empty" style="padding:20px"><div class="ei">✅</div><p>Nenhum alerta</p></div>`;
-
   renderChart();
-
-  // Vencimentos
   const allV=[
     ...D.c.filter(c=>c.fim).map(c=>({tp:'C',lbl:c.inquilino,sub:(c.endereco||'').substring(0,36),data:c.fim,d:DA(c.fim),id:c.id})),
     ...D.cb.filter(c=>!c.pago&&c.venc).map(c=>({tp:'$',lbl:c.descricao||'Cobrança',sub:c.inquilino||'',data:c.venc,d:DA(c.venc),id:c.id}))
@@ -714,7 +902,6 @@ function renderDash(){
       <div style="text-align:right"><div style="font-size:11px;color:var(--dm)">${FD(v.data)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">${v.tp==='C'?'CONTRATO':'COBRANÇA'}</span></div>
     </div>`;
   }).join(''):`<div class="empty" style="padding:22px"><div class="ei">📅</div><p>Nenhum vencimento</p></div>`;
-
   const pends=D.cb.filter(c=>!c.pago).sort((a,b)=>DA(a.venc)-DA(b.venc)).slice(0,5);
   document.getElementById('dp').innerHTML=pends.length?pends.map(c=>{
     const s=stCob(c);const f=getFase(c);
@@ -725,7 +912,6 @@ function renderDash(){
       <div style="text-align:right"><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">${R(c.valor)}</div><span class="chip ${s.cl}" style="font-size:10px">${s.l}</span></div>
     </div>`;
   }).join(''):`<div class="empty" style="padding:22px"><div class="ei">✅</div><p>Nenhuma pendência</p></div>`;
-
   badges();
 }
 
@@ -771,7 +957,6 @@ function detail(id){
   const os=D.o.filter(x=>x.contratoId===id);
   const docs=c.docs||[];
   const riscoCl=ind.risco==='Alto'?'cr':ind.risco==='Médio'?'cy':'cg';
-
   document.getElementById('det').innerHTML=`
   <div>
     <div class="card">
@@ -806,7 +991,7 @@ function detail(id){
       <div class="cb" style="padding:0 16px">
         ${os.length?os.map(o=>`<div class="ci">
           <div style="flex:1"><div style="font-size:13px;font-weight:500">${o.desc}</div><div style="font-size:11px;color:var(--dm)">${FD(o.data)} · ${o.prior}</div></div>
-          <span class="chip ${o.status==='Concluído'?'cg':o.status==='Em Andamento'?'cy':'cr'}">${o.status}</span>
+          <span class="chip ${o.status==='Concluído'?'cg':o.status==='Em andamento'?'cy':'cr'}">${o.status}</span>
           ${o.status!=='Concluído'?`<button class="btn bk bsm" style="margin-left:8px" onclick="doneOS('${o.id}','${id}')">✓</button>`:''}
         </div>`).join(''):`<div class="empty" style="padding:20px"><p>Nenhuma OS</p></div>`}
       </div>
@@ -847,7 +1032,7 @@ function detail(id){
 function ir(l,v,s=''){return`<div class="ir"><span class="il">${l}</span><span class="iv" ${s==='b'?'style="word-break:break-all"':''}>${v||'–'}</span></div>`;}
 
 // ══════════════════════════════════════════
-// 3. INADIMPLÊNCIA VIEW
+// INADIMPLÊNCIA VIEW
 // ══════════════════════════════════════════
 function renderInadimplencia(){
   const el=document.getElementById('inadimplencia-content');
@@ -879,7 +1064,7 @@ function renderInadimplencia(){
 }
 
 // ══════════════════════════════════════════
-// 7. REPASSE VIEW
+// REPASSE VIEW
 // ══════════════════════════════════════════
 function repasseCard(cid){
   const c=D.c.find(x=>x.id===cid);
@@ -899,7 +1084,7 @@ function repasseCard(cid){
     </div>
   </div>
   <table class="rtable"><thead><tr><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th></tr></thead>
-  <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'1º mês 50/50':rp.tipo==='normal'?'Mensal 10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='reembolso'?'Reembolso':rp.tipo==='manual'?'Manual':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
+  <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
 }
 
 function renderRepasse(){
@@ -933,7 +1118,7 @@ function renderRepasse(){
           </div>
         </div>
         ${cobs.length?`<table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th></tr></thead>
-        <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'1º mês 50/50':rp.tipo==='normal'?'Mensal 10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='reembolso'?'Reembolso':rp.tipo==='manual'?'Manual':'Repasse';
+        <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';
         return`<tr><td>${MF(cb.mes)}</td><td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</td><td style="font-weight:600">${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}
         </tbody></table>`:'<div style="font-size:13px;color:var(--dm)">Nenhum pagamento ainda.</div>'}
       `}
@@ -959,7 +1144,6 @@ function cobItem(cb,inDetail=false){
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:${atrasadoForte?'var(--re)':'var(--te)'}">${R(cb.valor)}</span>
         <span class="tt ${tpCl(cb.tipo)}">${cb.tipo||'Aluguel'}</span>
-        ${cb.proporcional?`<span style="font-size:10px;color:var(--ye);font-weight:600">PROP.</span>`:''}
         ${f.cls?`<span class="fase ${f.cls}">${f.label}</span>`:''}
       </div>
       <div style="font-size:12px;color:var(--dm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</div>
@@ -968,8 +1152,7 @@ function cobItem(cb,inDetail=false){
         ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop)}</span>`:''}
         ${rp.imob>0?`<span class="rep rep-im">Imob: ${R(rp.imob)}</span>`:''}
       </div>`:''}
-      ${cb.fileData?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--ac2);cursor:pointer" onclick="viewCobFile('${cb.id}','doc')">📎 ${cb.fileName||'Doc'}</span></div>`:''}
-      ${cb.pagoFile?`<div><span style="font-size:11px;color:var(--gn);cursor:pointer" onclick="viewCobFile('${cb.id}','pago')">✅ Comprovante</span></div>`:''}
+      ${cb.comprovantePath?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--gn);cursor:pointer" onclick="viewCobFile('${cb.id}')">✅ Comprovante</span></div>`:''}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
@@ -1007,10 +1190,12 @@ function renderCobrancas(){
   badges();
 }
 
-function delCob(id,cid){
+async function delCob(id,cid){
   if(!confirm('Excluir esta cobrança?'))return;
+  const{error}=await sb.from('cobrancas').delete().eq('id',id);
+  if(error){alert('Erro ao excluir: '+error.message);return;}
   D.cb=D.cb.filter(c=>c.id!==id);
-  save();renderCobrancas();renderDash();
+  renderCobrancas();renderDash();
   if(cid&&document.getElementById('view-detalhe').classList.contains('on'))detail(cid);
 }
 
@@ -1030,18 +1215,31 @@ function openPago(id){
 async function confirmPago(){
   const i=D.cb.findIndex(c=>c.id===cobPagoId);if(i<0)return;
   const cb=D.cb[i];
-  cb.pago=true;cb.dataPago=document.getElementById('pdt').value;cb.valorPago=document.getElementById('pvl').value;
+  const dataPago=document.getElementById('pdt').value;
+  const valorPago=parseFloat(document.getElementById('pvl').value)||cb.valor;
+  const btn=document.getElementById('btnConfPago');
+  btn.disabled=true;btn.textContent='Salvando...';
+  let comprovantePath=cb.comprovantePath||null;
   const pf=document.getElementById('pfile').files[0];
-  if(pf){cb.pagoFile=await toB64(pf);cb.pagoFileName=pf.name;cb.pagoFileType=pf.type;}
-  save();cM('mpago');renderCobrancas();renderDash();
+  if(pf){
+    const path=`${currentUser.id}/${cb.id}/pago_${safeName(pf.name)}`;
+    const{error:upErr}=await sb.storage.from('documentos').upload(path,pf,{upsert:true});
+    if(!upErr)comprovantePath=path;
+  }
+  const{error}=await sb.from('cobrancas').update({pago:true,data_pago:dataPago,valor_pago:valorPago,comprovante_path:comprovantePath}).eq('id',cobPagoId);
+  btn.disabled=false;btn.textContent='✓ Confirmar Pago';
+  if(error){alert('Erro: '+error.message);return;}
+  cb.pago=true;cb.dataPago=dataPago;cb.valorPago=valorPago;
+  if(comprovantePath)cb.comprovantePath=comprovantePath;
+  cM('mpago');renderCobrancas();renderDash();
   if(document.getElementById('view-detalhe').classList.contains('on')&&cb.contratoId)detail(cb.contratoId);
   if(document.getElementById('view-vencimentos').classList.contains('on'))renderVenc();
 }
-function viewCobFile(id,which){
-  const c=D.cb.find(x=>x.id===id);if(!c)return;
-  const data=which==='pago'?c.pagoFile:c.fileData;
-  const type=which==='pago'?c.pagoFileType:c.fileType;
-  if(!data)return;window.open(`data:${type||'application/pdf'};base64,${data}`,'_blank');
+async function viewCobFile(id){
+  const c=D.cb.find(x=>x.id===id);
+  if(!c?.comprovantePath)return;
+  const{data}=await sb.storage.from('documentos').createSignedUrl(c.comprovantePath,120);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
 }
 
 // ══════════════════════════════════════════
@@ -1057,7 +1255,6 @@ function renderVenc(){
       <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span class="chip ${stCon(c).cl}" style="font-size:10px">${stCon(c).l}</span></div>
     </div>`;
   }).join(''):`<div class="empty" style="padding:34px"><div class="ei">📋</div><p>Nenhum contrato</p></div>`;
-
   const cbs=D.cb.filter(c=>!c.pago&&c.venc).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
   document.getElementById('vvb').innerHTML=cbs.length?cbs.map(c=>{
     const d=DA(c.venc);const f=getFase(c);
@@ -1094,12 +1291,19 @@ function renderOS(){
     <td><span class="chip ${o.prior==='Urgente'?'cr':o.prior==='Alta'?'cy':'cb2'}">${o.prior}</span></td>
     <td style="color:var(--dm)">${FD(o.data)}</td>
     <td>${o.custo?R(o.custo):'–'}</td>
-    <td><span class="chip ${o.status==='Concluído'?'cg':o.status==='Em Andamento'?'cy':'cr'}">${o.status}</span></td>
+    <td><span class="chip ${o.status==='Concluído'?'cg':o.status==='Em andamento'?'cy':'cr'}">${o.status}</span></td>
     <td>${o.status!=='Concluído'?`<button class="btn bk bsm" onclick="doneOS('${o.id}',null)">✓</button>`:'✓'}</td>
   </tr>`).join('')}</tbody></table>`;
   badges();
 }
-function doneOS(id,cid){const o=D.o.find(x=>x.id===id);if(o){o.status='Concluído';save();renderOS();}if(cid)detail(cid);}
+async function doneOS(id,cid){
+  const{error}=await sb.from('ordens_servico').update({status:'Concluído'}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  const o=D.o.find(x=>x.id===id);
+  if(o)o.status='Concluído';
+  renderOS();
+  if(cid)detail(cid);
+}
 
 // ══════════════════════════════════════════
 // PROPORCIONAL
@@ -1119,9 +1323,9 @@ function calcProp(){
 }
 
 // ══════════════════════════════════════════
-// GERAR COBRANÇAS AUTO
+// GERAR COBRANÇAS AUTO (Supabase)
 // ══════════════════════════════════════════
-function gerarCobs(c){
+async function gerarCobsSupabase(c,userId){
   if(!c.inicio||!c.fim||!c.valor)return;
   const dia=parseInt(c.diaVenc)||10;
   const ini=new Date(c.inicio+'T12:00:00');
@@ -1129,22 +1333,35 @@ function gerarCobs(c){
   const adm=c.adm==='sim';
   let primMes=true;
   let cur=new Date(ini.getFullYear(),ini.getMonth()+1,1);
+  const cobsToInsert=[];
   while(cur<=fim){
     const y=cur.getFullYear(),m=cur.getMonth();
     const mesRef=`${y}-${String(m+1).padStart(2,'0')}`;
     const vencData=new Date(y,m,dia);
     if(vencData>fim)break;
-    let valor=c.valor,prop=false,descExtra='';
-    if(primMes){const diaIni=ini.getDate();if(diaIni!==1){const dm=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();const dr=dm-diaIni;valor=Math.round((c.valor/dm)*dr*100)/100;prop=true;descExtra=` (${dr}/${dm} dias)`;}}
+    let valor=c.valor,descExtra='';
+    if(primMes){const diaIni=ini.getDate();if(diaIni!==1){const dm=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();const dr=dm-diaIni;valor=Math.round((c.valor/dm)*dr*100)/100;descExtra=` (${dr}/${dm} dias)`;}}
     const isFirst=primMes;primMes=false;
-    const rep=calcRepasse('Aluguel',valor,isFirst,adm,c.valor);
-    D.cb.push({id:UID(),contratoId:c.id,inquilino:c.inquilino,endereco:c.endereco,tipo:'Aluguel',mes:mesRef,descricao:`Aluguel ${MN[m]}/${y}${descExtra}`,valor,proporcional:prop,venc:vencData.toISOString().split('T')[0],pago:false,repasse:rep,valorBase:c.valor});
+    const rep=calcRepasse('Aluguel',valor,isFirst,adm);
+    cobsToInsert.push({
+      user_id:userId,contrato_id:c.id,
+      inquilino:c.inquilino,endereco:c.endereco,
+      tipo:'Aluguel',mes:mesRef,
+      descricao:`Aluguel ${MN[m]}/${y}${descExtra}`,
+      valor,venc:vencData.toISOString().split('T')[0],
+      pago:false,
+      repasse_imob:rep.imob,repasse_prop:rep.prop,repasse_tipo:rep.tipo
+    });
     cur=new Date(y,m+1,1);
+  }
+  if(cobsToInsert.length){
+    const{data:newCobs}=await sb.from('cobrancas').insert(cobsToInsert).select();
+    if(newCobs)D.cb.push(...newCobs.map(rowToCobranca));
   }
 }
 
 // ══════════════════════════════════════════
-// NOVO CONTRATO — FIXED FILE UPLOAD
+// API KEY / AI
 // ══════════════════════════════════════════
 function getApiKey(){return localStorage.getItem('ig_apikey')||'';}
 function saveApiKey(){
@@ -1152,26 +1369,21 @@ function saveApiKey(){
   if(!k||!k.startsWith('sk-')){alert('Cole uma API key válida (começa com sk-ant-)');return;}
   localStorage.setItem('ig_apikey',k);
   const inp=document.getElementById('apikey-input');
-  inp.value='';
-  inp.placeholder='✅ Salva e pronta para uso!';
-  inp.style.borderColor='var(--gn)';
-  inp.style.color='var(--gn)';
+  inp.value='';inp.placeholder='✅ Salva e pronta para uso!';
+  inp.style.borderColor='var(--gn)';inp.style.color='var(--gn)';
 }
 function renderApiKeyStatus(){
   const saved=getApiKey();
   const inp=document.getElementById('apikey-input');
   if(!inp)return;
   inp.value='';
-  if(saved){
-    inp.placeholder='✅ API key salva — pronta para uso';
-    inp.style.borderColor='var(--gn)';
-    inp.style.color='var(--gn)';
-  } else {
-    inp.placeholder='sk-ant-api03-...';
-    inp.style.borderColor='';
-    inp.style.color='';
-  }
+  if(saved){inp.placeholder='✅ API key salva — pronta para uso';inp.style.borderColor='var(--gn)';inp.style.color='var(--gn)';}
+  else{inp.placeholder='sk-ant-api03-...';inp.style.borderColor='';inp.style.color='';}
 }
+
+// ══════════════════════════════════════════
+// NOVO CONTRATO
+// ══════════════════════════════════════════
 function openNC(){
   clearForm();pdfFile=null;pdfB64=null;docsExtras=[];
   document.getElementById('dexl').innerHTML='';
@@ -1181,15 +1393,10 @@ function openNC(){
   document.getElementById('btnAI').style.display='none';
   const isClaudeAI=window.location.hostname.includes('claude.ai');
   const akbox=document.getElementById('apikey-box');
-  if(!isClaudeAI){
-    akbox.style.display='block';
-    renderApiKeyStatus();
-  } else {
-    akbox.style.display='none';
-  }
+  if(!isClaudeAI){akbox.style.display='block';renderApiKeyStatus();}
+  else{akbox.style.display='none';}
   oM('mc');
 }
-
 function clearForm(){
   ['fen','finq','finqc','finqt','finqe','fprn','fprc','fprt','fpre','fval','fdv','fini','ffim','fobs','fcau'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('fmul').value='2';
@@ -1198,18 +1405,14 @@ function clearForm(){
   document.getElementById('fadm').value='sim';
   document.getElementById('pdfin').value='';
 }
-
-// File input handler — fixed for outside Claude
 document.getElementById('pdfin').addEventListener('change',function(e){
-  const file=e.target.files[0];
-  if(!file)return;
+  const file=e.target.files[0];if(!file)return;
   pdfFile=file;
   document.getElementById('pdfname').textContent=`📄 ${file.name}`;
   document.getElementById('pdfname').style.display='block';
   document.getElementById('btnAI').style.display='inline-flex';
   document.getElementById('aibox').style.display='none';
 });
-
 document.getElementById('dex').addEventListener('change',function(e){
   const files=Array.from(e.target.files);
   files.forEach(async f=>{
@@ -1218,14 +1421,12 @@ document.getElementById('dex').addEventListener('change',function(e){
     document.getElementById('dexl').innerHTML=docsExtras.map((d,i)=>`<div class="di" style="padding:6px 0"><div class="dic ${d.type?.startsWith('image')?'img':''}">${d.type?.startsWith('image')?'🖼️':'📄'}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${d.name}</div><div style="font-size:11px;color:var(--dm)">${d.tag}</div></div><button class="btn bg bsm" onclick="docsExtras.splice(${i},1);this.closest('.di').remove()">✕</button></div>`).join('');
   });
 });
-
 document.getElementById('cbfile').addEventListener('change',function(){document.getElementById('cbfn').textContent=this.files[0]?`📎 ${this.files[0].name}`:''});
 document.getElementById('pfile').addEventListener('change',function(){document.getElementById('pfn').textContent=this.files[0]?`📎 ${this.files[0].name}`:''});
 document.getElementById('cbval').addEventListener('input',updateRepBox);
 
 async function runAI(){
   if(!pdfFile)return;
-  // Auto-save key if typed in field but Salvar not clicked
   const inputEl=document.getElementById('apikey-input');
   const typed=inputEl?.value?.trim();
   if(typed&&typed.startsWith('sk-')){localStorage.setItem('ig_apikey',typed);inputEl.value='';}
@@ -1241,17 +1442,15 @@ async function runAI(){
     if(apiKey)headers['x-api-key']=apiKey;
     if(!apiKey&&!window.location.hostname.includes('claude.ai')){
       document.getElementById('ait').innerHTML='⚠️ API key não configurada';
-      document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Cole sua API key no campo acima e clique em Salvar, depois tente novamente.</span>';
+      document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Cole sua API key no campo acima e clique em Salvar.</span>';
       return;
     }
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify({
-      model:'claude-opus-4-5',max_tokens:1000,
-      system:`Extraia dados de contratos de aluguel. Retorne SOMENTE JSON sem markdown:
-{"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"obs":""}`,
+      model:'claude-sonnet-4-20250514',max_tokens:1000,
+      system:`Extraia dados de contratos de aluguel. Retorne SOMENTE JSON sem markdown:\n{"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"obs":""}`,
       messages:[{role:'user',content:[ci,{type:'text',text:'Extraia os dados deste contrato.'}]}]
     })});
     const data=await resp.json();
-    if(!resp.ok)throw new Error('API '+resp.status+': '+(data?.error?.message||JSON.stringify(data)));
     const txt=data.content?.map(i=>i.text||'').join('').trim();
     const p=JSON.parse(txt.replace(/```json|```/g,'').trim());
     const F=(id,v)=>{if(v!=null&&v!==''&&v!==0){const e=document.getElementById(id);if(e)e.value=v;}};
@@ -1263,36 +1462,71 @@ async function runAI(){
     document.getElementById('ait').innerHTML='✅ Dados extraídos! Revise antes de salvar.';
     document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Verifique os campos abaixo.</span>';
   }catch(e){
-    document.getElementById('ait').innerHTML='⚠️ Erro ao chamar a IA';
-    document.getElementById('aim').innerHTML='<span style="color:var(--re);font-size:12px">'+e.message+'</span><br><span style="color:var(--dm);font-size:12px">Preencha manualmente ou verifique sua API key.</span>';
-    console.error('AI error:',e);
+    document.getElementById('ait').innerHTML='⚠️ Não foi possível extrair automaticamente';
+    document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Preencha manualmente.</span>';
   }
 }
 
 async function saveContract(){
   const inq=document.getElementById('finq').value.trim();
   if(!inq){alert('Informe o nome do inquilino');return;}
-  const docs=[];
-  if(pdfFile&&pdfB64)docs.push({name:pdfFile.name,tag:'Contrato',date:TD(),data:pdfB64,type:pdfFile.type});
-  else if(pdfFile){const b64=await toB64(pdfFile);docs.push({name:pdfFile.name,tag:'Contrato',date:TD(),data:b64,type:pdfFile.type});}
-  docsExtras.forEach(d=>docs.push(d));
-  const c={
-    id:UID(),inquilino:inq,
-    cpfInq:document.getElementById('finqc').value,telInq:document.getElementById('finqt').value,emailInq:document.getElementById('finqe').value,
-    proprietario:document.getElementById('fprn').value,cpfProp:document.getElementById('fprc').value,telProp:document.getElementById('fprt').value,emailProp:document.getElementById('fpre').value,
+  const btn=document.getElementById('btnSaveContract');
+  btn.disabled=true;btn.textContent='Salvando...';
+  const userId=currentUser.id;
+  const ini=document.getElementById('fini').value;
+  const fim=document.getElementById('ffim').value;
+  const{data:newCon,error}=await sb.from('contratos').insert({
+    user_id:userId,
     endereco:document.getElementById('fen').value,
+    administrado:document.getElementById('fadm').value==='sim',
+    inquilino:inq,
+    inq_cpf:document.getElementById('finqc').value||null,
+    inq_tel:document.getElementById('finqt').value||null,
+    inq_email:document.getElementById('finqe').value||null,
+    proprietario:document.getElementById('fprn').value||null,
+    prop_cpf:document.getElementById('fprc').value||null,
+    prop_tel:document.getElementById('fprt').value||null,
+    prop_email:document.getElementById('fpre').value||null,
     valor:parseFloat(document.getElementById('fval').value)||0,
-    diaVenc:parseInt(document.getElementById('fdv').value)||10,
-    inicio:document.getElementById('fini').value,fim:document.getElementById('ffim').value,
-    indice:document.getElementById('find').value,multa:parseFloat(document.getElementById('fmul').value)||2,
-    caucao:parseFloat(document.getElementById('fcau').value)||0,caucaoTp:document.getElementById('fcautp').value,
-    adm:document.getElementById('fadm').value,
-    obs:document.getElementById('fobs').value,
-    docs,criadoEm:TD()
-  };
-  D.c.push(c);
-  if(document.getElementById('fgc').checked)gerarCobs(c);
-  save();cM('mc');renderContratos();renderDash();go('contratos');
+    dia_venc:parseInt(document.getElementById('fdv').value)||10,
+    inicio:ini||null,fim:fim||null,
+    indice:document.getElementById('find').value,
+    multa_pct:parseFloat(document.getElementById('fmul').value)||2,
+    caucao:parseFloat(document.getElementById('fcau').value)||0,
+    caucao_tp:document.getElementById('fcautp').value,
+    observacoes:document.getElementById('fobs').value||null,
+    gerar_cob:document.getElementById('fgc').checked
+  }).select().single();
+  btn.disabled=false;btn.textContent='✓ Salvar Contrato';
+  if(error){alert('Erro ao salvar contrato: '+error.message);return;}
+  const c=rowToContrato(newCon);
+  c.docs=[];
+  D.c.unshift(c);
+  // Upload PDF contrato
+  if(pdfFile){
+    const ext=pdfFile.name.split('.').pop();
+    const path=`${userId}/${newCon.id}/contrato.${ext}`;
+    const{error:upErr}=await sb.storage.from('documentos').upload(path,pdfFile);
+    if(!upErr){
+      const{data:doc}=await sb.from('documentos').insert({user_id:userId,contrato_id:newCon.id,nome:pdfFile.name,tag:'Contrato',storage_path:path,tamanho:pdfFile.size,mime_type:pdfFile.type}).select().single();
+      if(doc)c.docs.push(rowToDoc(doc));
+    }
+  }
+  // Upload docs extras
+  for(const d of docsExtras){
+    const path=`${userId}/${newCon.id}/${Date.now()}_${safeName(d.name)}`;
+    const blob=b64ToBlob(d.data,d.type);
+    const{error:upErr}=await sb.storage.from('documentos').upload(path,blob);
+    if(!upErr){
+      const{data:doc}=await sb.from('documentos').insert({user_id:userId,contrato_id:newCon.id,nome:d.name,tag:d.tag,storage_path:path,tamanho:blob.size,mime_type:d.type}).select().single();
+      if(doc)c.docs.push(rowToDoc(doc));
+    }
+  }
+  // Gerar cobranças
+  if(document.getElementById('fgc').checked){
+    await gerarCobsSupabase(c,userId);
+  }
+  cM('mc');renderContratos();renderDash();go('contratos');
 }
 
 // ══════════════════════════════════════════
@@ -1301,15 +1535,35 @@ async function saveContract(){
 function gtag(n){n=n.toLowerCase();if(n.includes('rg')||n.includes('cpf')||n.includes('identidade'))return'RG/CPF';if(n.includes('renda')||n.includes('holerite')||n.includes('contra'))return'Comprovante de Renda';if(n.includes('foto'))return'Foto do Imóvel';if(n.includes('vistoria')||n.includes('laudo'))return'Laudo de Vistoria';if(n.includes('contrato')||n.includes('loc'))return'Contrato';return'Documento';}
 
 async function addDocToCon(cid,input){
-  const c=D.c.find(x=>x.id===cid);if(!c)return;if(!c.docs)c.docs=[];
-  for(const f of Array.from(input.files)){const b64=await toB64(f);c.docs.push({name:f.name,tag:gtag(f.name),date:TD(),data:b64,type:f.type});}
-  save();detail(cid);
+  const c=D.c.find(x=>x.id===cid);if(!c)return;
+  if(!c.docs)c.docs=[];
+  for(const f of Array.from(input.files)){
+    const path=`${currentUser.id}/${cid}/${Date.now()}_${safeName(f.name)}`;
+    const{error:upErr}=await sb.storage.from('documentos').upload(path,f);
+    if(!upErr){
+      const{data:doc}=await sb.from('documentos').insert({user_id:currentUser.id,contrato_id:cid,nome:f.name,tag:gtag(f.name),storage_path:path,tamanho:f.size,mime_type:f.type}).select().single();
+      if(doc)c.docs.push(rowToDoc(doc));
+    }
+  }
+  detail(cid);
 }
-function viewDoc(cid,name){const c=D.c.find(x=>x.id===cid);const d=c?.docs?.find(x=>x.name===name);if(!d)return;window.open(`data:${d.type||'application/pdf'};base64,${d.data}`,'_blank');}
-function viewDocByTag(cid,tag){const c=D.c.find(x=>x.id===cid);const d=(c?.docs||[]).find(x=>(x.tag||'').includes(tag));if(!d)return;window.open(`data:${d.type||'application/pdf'};base64,${d.data}`,'_blank');}
+async function viewDoc(cid,name){
+  const c=D.c.find(x=>x.id===cid);
+  const d=(c?.docs||[]).find(x=>x.name===name);
+  if(!d?.storage_path)return;
+  const{data}=await sb.storage.from('documentos').createSignedUrl(d.storage_path,120);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
+}
+async function viewDocByTag(cid,tag){
+  const c=D.c.find(x=>x.id===cid);
+  const d=(c?.docs||[]).find(x=>(x.tag||'').includes(tag));
+  if(!d?.storage_path)return;
+  const{data}=await sb.storage.from('documentos').createSignedUrl(d.storage_path,120);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
+}
 
 // ══════════════════════════════════════════
-// COBRANÇAS
+// COBRANÇAS — NOVA
 // ══════════════════════════════════════════
 function openNCob(){
   document.getElementById('cbcon').innerHTML=D.c.map(c=>`<option value="${c.id}">${c.inquilino} – ${(c.endereco||'').substring(0,22)}</option>`).join('');
@@ -1318,7 +1572,6 @@ function openNCob(){
   document.getElementById('cbdsc').value='';document.getElementById('cbtp').value='Aluguel';
   document.getElementById('cbparc').value='1';document.getElementById('cbfile').value='';
   document.getElementById('cbfn').textContent='';
-  document.getElementById('cbdestino').value='auto';
   fillCD();oM('mcb');
 }
 function openNCobCon(cid){openNCob();document.getElementById('cbcon').value=cid;fillCV();}
@@ -1336,30 +1589,21 @@ function fillCD(){
   if(tp==='Aluguel')fillCV();
   updateRepBox();
 }
-function calcRepasseOverride(tp,val,isFirst,adm,destino){
-  if(destino==='prop')return{imob:0,prop:val,tipo:'manual'};
-  if(destino==='imob')return{imob:val,prop:0,tipo:'manual'};
-  if(destino==='split5050'){const im=Math.round(val*.5*100)/100;return{imob:im,prop:val-im,tipo:'manual'};}
-  if(destino==='split1090'){const im=Math.round(val*.1*100)/100;return{imob:im,prop:val-im,tipo:'manual'};}
-  return calcRepasse(tp,val,isFirst,adm);
-}
 function updateRepBox(){
   const cid=document.getElementById('cbcon').value;
   const c=D.c.find(x=>x.id===cid);
   const tp=document.getElementById('cbtp').value;
   const val=parseFloat(document.getElementById('cbval').value)||0;
-  const destino=document.getElementById('cbdestino')?.value||'auto';
   const box=document.getElementById('repbox');
   if(!c||!val){box.innerHTML='';return;}
   const cobsAlug=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
   const isFirst=cobsAlug.length===0;
-  const rp=calcRepasseOverride(tp,val,isFirst,c.adm==='sim',destino);
+  const rp=calcRepasse(tp,val,isFirst,c.adm==='sim');
   if(rp.tipo==='sem_adm'){box.innerHTML='';return;}
-  const tipoLabel={primeiro:'1º mês — 50% Imob',normal:'Mensal — 10/90',pintura:'100% Imobiliária',caucao:'Caução — retido Imob',reembolso:'Reembolso — Proprietário',repasse:'Repasse integral — Proprietário',manual:'Destino manual'};
   box.innerHTML=`<label>Repasse calculado</label><div class="ibox ibox-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
     ${rp.prop>0?`<span>🏦 Proprietário: <strong>${R(rp.prop)}</strong></span>`:''}
     ${rp.imob>0?`<span>🏢 Imobiliária: <strong>${R(rp.imob)}</strong></span>`:''}
-    <span style="font-size:11px;opacity:.7">${tipoLabel[rp.tipo]||rp.tipo}</span>
+    <span style="font-size:11px;opacity:.7">${rp.tipo==='primeiro'?'1º mês (50/50)':rp.tipo==='normal'?'Mensal (10/90)':rp.tipo==='pintura'?'100% imob':rp.tipo==='caucao'?'Retido imob':'Integral'}</span>
   </div>`;
 }
 async function saveCob(){
@@ -1370,11 +1614,11 @@ async function saveCob(){
   const baseMes=document.getElementById('cbmes').value;
   const baseVnc=document.getElementById('cbvnc').value;
   const tp=document.getElementById('cbtp').value;
-  let fData=null,fName=null,fType=null;
-  const fi=document.getElementById('cbfile').files[0];
-  if(fi){fData=await toB64(fi);fName=fi.name;fType=fi.type;}
   const cobsAlug=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
   const isFirst=cobsAlug.length===0;
+  const btn=document.getElementById('btnSaveCob');
+  btn.disabled=true;btn.textContent='Salvando...';
+  const cobsToInsert=[];
   for(let p=0;p<parc;p++){
     const[y,mo]=baseMes.split('-').map(Number);
     const nm=new Date(y,mo-1+p,1);
@@ -1383,38 +1627,74 @@ async function saveCob(){
     if(parc>1){dsc=dsc.replace(/parcela \d+\//,`parcela ${p+1}/`).replace(/ 1\//,` ${p+1}/`);}
     let vncDate=baseVnc;
     if(p>0&&baseVnc){const bv=new Date(baseVnc+'T12:00:00');vncDate=new Date(bv.getFullYear(),bv.getMonth()+p,bv.getDate()).toISOString().split('T')[0];}
-    const destino=document.getElementById('cbdestino')?.value||'auto';
-    const cobsAlugSave=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
-    const rp=calcRepasseOverride(tp,baseVal,(cobsAlugSave.length===0)&&p===0,c?.adm==='sim',destino);
-    D.cb.push({id:UID(),contratoId:cid,inquilino:c?.inquilino||'',endereco:c?.endereco||'',tipo:tp,mes:mesRef,descricao:dsc,valor:baseVal,venc:vncDate,pago:false,repasse:rp,fileData:p===0?fData:null,fileName:p===0?fName:null,fileType:p===0?fType:null});
+    const rp=calcRepasse(tp,baseVal,isFirst&&p===0,c?.adm==='sim');
+    cobsToInsert.push({
+      user_id:currentUser.id,contrato_id:cid,
+      inquilino:c?.inquilino||'',endereco:c?.endereco||'',
+      tipo:tp,mes:mesRef,descricao:dsc,valor:baseVal,
+      venc:vncDate||null,pago:false,
+      repasse_imob:rp.imob,repasse_prop:rp.prop,repasse_tipo:rp.tipo
+    });
   }
-  save();cM('mcb');renderCobrancas();renderDash();
+  const{data:newCobs,error}=await sb.from('cobrancas').insert(cobsToInsert).select();
+  btn.disabled=false;btn.textContent='✓ Salvar';
+  if(error){alert('Erro: '+error.message);return;}
+  // Upload file to first cobrança
+  const fi=document.getElementById('cbfile').files[0];
+  if(fi&&newCobs&&newCobs[0]){
+    const path=`${currentUser.id}/${newCobs[0].id}/${safeName(fi.name)}`;
+    const{error:upErr}=await sb.storage.from('documentos').upload(path,fi);
+    if(!upErr){
+      await sb.from('cobrancas').update({comprovante_path:path}).eq('id',newCobs[0].id);
+      newCobs[0].comprovante_path=path;
+    }
+  }
+  if(newCobs)D.cb.push(...newCobs.map(rowToCobranca));
+  cM('mcb');renderCobrancas();renderDash();
 }
 
 // ══════════════════════════════════════════
-// OS
+// OS — NOVA
 // ══════════════════════════════════════════
 function openNOS(){
   document.getElementById('oscon').innerHTML=D.c.map(c=>`<option value="${c.id}">${c.inquilino} – ${(c.endereco||'').substring(0,22)}</option>`).join('');
-  document.getElementById('osdt').value=TD();oM('mos');
+  document.getElementById('osdt').value=TD();
+  document.getElementById('osdsc').value='';
+  document.getElementById('oscu').value='';
+  oM('mos');
 }
 function openNOSCon(cid){openNOS();document.getElementById('oscon').value=cid;}
-function saveOS(){
-  const cid=document.getElementById('oscon').value;const c=D.c.find(x=>x.id===cid);
-  D.o.push({id:UID(),contratoId:cid,endereco:c?.endereco||'',desc:document.getElementById('osdsc').value,prior:document.getElementById('osp').value,data:document.getElementById('osdt').value,custo:parseFloat(document.getElementById('oscu').value)||0,status:'Aberto'});
-  save();cM('mos');renderOS();
+async function saveOS(){
+  const cid=document.getElementById('oscon').value;
+  const c=D.c.find(x=>x.id===cid);
+  const btn=document.getElementById('btnSaveOS');
+  btn.disabled=true;btn.textContent='Salvando...';
+  const{data:newOS,error}=await sb.from('ordens_servico').insert({
+    user_id:currentUser.id,
+    contrato_id:cid||null,
+    endereco:c?.endereco||'',
+    descricao:document.getElementById('osdsc').value,
+    prioridade:document.getElementById('osp').value,
+    data:document.getElementById('osdt').value||null,
+    custo:parseFloat(document.getElementById('oscu').value)||0,
+    status:'Aberta'
+  }).select().single();
+  btn.disabled=false;btn.textContent='✓ Abrir OS';
+  if(error){alert('Erro: '+error.message);return;}
+  D.o.unshift(rowToOS(newOS));
+  cM('mos');renderOS();
 }
 
 // ══════════════════════════════════════════
-// EXCLUIR — FIXED
+// EXCLUIR CONTRATO
 // ══════════════════════════════════════════
-function delContract(id){
+async function delContract(id){
   if(!confirm('Excluir este contrato?\n\nTodas as cobranças e ordens de serviço vinculadas também serão removidas.'))return;
+  const{error}=await sb.from('contratos').delete().eq('id',id);
+  if(error){alert('Erro ao excluir: '+error.message);return;}
   D.c=D.c.filter(c=>c.id!==id);
   D.cb=D.cb.filter(c=>c.contratoId!==id);
   D.o=D.o.filter(o=>o.contratoId!==id);
-  save();
-  // Navigate away from detail view
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
   go('contratos');
 }
@@ -1423,7 +1703,6 @@ function delContract(id){
 // INIT
 // ══════════════════════════════════════════
 document.getElementById('osdt').value=TD();
-renderDash();
 </script>
 </body>
 </html>
