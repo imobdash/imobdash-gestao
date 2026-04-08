@@ -493,6 +493,7 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{
 // ══════════════════════════════════════════
 let D={c:[],cb:[],o:[]};
 let currentUser=null;
+let _loadingApp=false;
 let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
 
 // ══════════════════════════════════════════
@@ -511,7 +512,27 @@ async function showApp(){
   const initials=email.substring(0,2).toUpperCase()||'?';
   document.getElementById('user-initials').textContent=initials;
   document.getElementById('user-email').textContent=email;
-  await loadAll();
+  try{
+    await Promise.race([
+      loadAll(),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout ao carregar dados — verifique sua conexão.')),15000))
+    ]);
+  }catch(e){
+    console.error('Erro ao carregar dados:',e);
+    // Mostra app mesmo com erro (dados vazios), e exibe aviso
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('main-app').style.display='';
+    renderDash();
+    badges();
+    setTimeout(()=>{
+      const t=document.createElement('div');
+      t.style.cssText='position:fixed;bottom:20px;right:20px;background:#ef4444;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:9999;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+      t.textContent='⚠️ Falha ao carregar dados: '+(e.message||'erro desconhecido')+'. Atualize a página para tentar novamente.';
+      document.body.appendChild(t);
+      setTimeout(()=>t.remove(),8000);
+    },100);
+    return;
+  }
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('main-app').style.display='';
   renderDash();
@@ -568,17 +589,24 @@ async function logout(){
 sb.auth.onAuthStateChange(async(event,session)=>{
   if(event==='INITIAL_SESSION'){
     if(session?.user){
+      if(_loadingApp)return;
+      _loadingApp=true;
       currentUser=session.user;
       await showApp();
+      _loadingApp=false;
     } else {
       showAuthScreen();
     }
   } else if(event==='SIGNED_IN'){
     if(!currentUser||currentUser.id!==session.user.id){
+      if(_loadingApp)return;
+      _loadingApp=true;
       currentUser=session.user;
       await showApp();
+      _loadingApp=false;
     }
   } else if(event==='SIGNED_OUT'){
+    _loadingApp=false;
     currentUser=null;
     D={c:[],cb:[],o:[]};
     showAuthScreen();
@@ -671,6 +699,10 @@ async function loadAll(){
     sb.from('ordens_servico').select('*').order('created_at',{ascending:false}),
     sb.from('documentos').select('*').order('created_at',{ascending:false})
   ]);
+  if(r1.error){console.error('contratos:',r1.error);throw new Error('Erro na tabela contratos: '+r1.error.message);}
+  if(r2.error){console.error('cobrancas:',r2.error);throw new Error('Erro na tabela cobranças: '+r2.error.message);}
+  if(r3.error){console.error('ordens_servico:',r3.error);throw new Error('Erro na tabela OS: '+r3.error.message);}
+  if(r4.error){console.error('documentos:',r4.error);throw new Error('Erro na tabela documentos: '+r4.error.message);}
   D.c=(r1.data||[]).map(rowToContrato);
   D.cb=(r2.data||[]).map(rowToCobranca);
   D.o=(r3.data||[]).map(rowToOS);
