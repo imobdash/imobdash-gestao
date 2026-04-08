@@ -171,7 +171,82 @@ tr:hover td{background:rgba(255,255,255,.018);}
 /* RESPONSIVE */
 .hm{display:none;align-items:center;justify-content:center;width:34px;height:34px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:18px;}
 .ovm{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;}.ovm.on{display:block;}
-@media(max-width:900px){.sidebar{transform:translateX(-100%);}.sidebar.on{transform:translateX(0);}.main{margin-left:0;}.stats,.stats2{grid-template-columns:1fr 1fr;}.dg{grid-template-columns:1fr;}.fg{grid-template-columns:1fr;}.hm{display:flex;}}
+/* Wrappers para tabelas rolarem lateralmente no mobile */
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+/* FAB: botão flutuante Novo Contrato (mobile only) */
+.fab{display:none;position:fixed;bottom:80px;right:18px;z-index:90;width:52px;height:52px;border-radius:50%;background:var(--ac);color:#fff;border:none;cursor:pointer;font-size:24px;box-shadow:0 4px 18px rgba(37,99,235,.5);align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;}
+.fab:active{transform:scale(.93);box-shadow:0 2px 8px rgba(37,99,235,.4);}
+/* Bottom nav (mobile only) */
+.bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--sf);border-top:1px solid var(--bd);z-index:100;padding:0 4px;align-items:stretch;}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--dm);border:none;background:none;font-family:'DM Sans',sans-serif;padding:4px 2px;border-radius:8px;position:relative;transition:color .15s;}
+.bni.on{color:var(--ac2);}
+.bni-ic{font-size:20px;line-height:1;}
+.bni-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+.bni-bdg{position:absolute;top:4px;right:calc(50% - 18px);min-width:16px;height:16px;border-radius:8px;font-size:9px;font-weight:700;background:var(--re);color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+
+/* ── TABLET (≤ 1024px) ── */
+@media(max-width:1024px){
+  .stats,.stats2{grid-template-columns:repeat(3,1fr);}
+}
+/* ── MOBILE (≤ 900px) ── */
+@media(max-width:900px){
+  /* Sidebar vira gaveta lateral */
+  .sidebar{transform:translateX(-220px);box-shadow:none;}
+  .sidebar.on{transform:translateX(0);box-shadow:4px 0 30px rgba(0,0,0,.4);}
+  .main{margin-left:0;padding-bottom:62px;}/* espaço para bottom nav */
+  .topbar{padding:10px 14px;}
+  .content{padding:14px 12px;}
+  /* Stats: 2 colunas em tablet */
+  .stats,.stats2{grid-template-columns:1fr 1fr;gap:9px;}
+  /* Detail grid: coluna única */
+  .dg{grid-template-columns:1fr;}
+  /* Forms: coluna única */
+  .fg{grid-template-columns:1fr;}
+  /* Grids 2 cols do dashboard → 1 col */
+  .dash-grid{grid-template-columns:1fr!important;}
+  /* Hamb. visível */
+  .hm{display:flex;}
+  /* Botão "+ Novo" some do topbar */
+  .btn-nc-topbar{display:none;}
+  /* FAB aparece */
+  .fab{display:flex;}
+  /* Bottom nav aparece */
+  .bnav{display:flex;}
+  /* Modal: ocupa a tela toda e desliza de baixo */
+  .mo{padding:0;align-items:flex-end;}
+  .md{border-radius:20px 20px 0 0;max-height:90vh;animation:mslide .25s ease;}
+  .mdw{max-width:100%;}
+  @keyframes mslide{from{opacity:0;transform:translateY(40px);}to{opacity:1;transform:none;}}
+  /* Tabelas: scroll horizontal */
+  .tw table,.card table,.tbl-scroll table{min-width:520px;}
+  .tw,.card{overflow-x:auto;}
+  /* Topbar: título menor */
+  .ttl{font-size:15px;}
+  /* Cobranças tab: botão vai abaixo das tabs */
+  #view-cobrancas > div:first-child{flex-direction:column;align-items:flex-start;}
+  /* Vencimentos: cols → 1 col */
+  #view-vencimentos > div{grid-template-columns:1fr!important;}
+  /* Sc (stat card) padding menor */
+  .sc{padding:10px 12px;}
+  .sv{font-size:18px;}
+  /* Repasse summary grid → 2 colunas */
+}
+/* ── PHONE (≤ 480px) ── */
+@media(max-width:480px){
+  .stats,.stats2{grid-template-columns:1fr 1fr;gap:7px;}
+  .sc{padding:9px 10px;}
+  .slb{font-size:10px;}
+  .sv{font-size:16px;}
+  .content{padding:10px 8px;}
+  .topbar{padding:9px 10px;}
+  /* Repasse mini-cards → 2x2 */
+  .rep-summary-grid{grid-template-columns:1fr 1fr!important;}
+  /* Cobranças: layout mais compacto */
+  .ci{gap:7px;}
+  .cbg{min-width:34px;}
+  /* rtable colunas: scroll */
+  .rtable{min-width:560px;}
+}
 </style>
 </head>
 <body>
@@ -254,7 +329,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <button id="theme-toggle" onclick="toggleTheme()" title="Alternar tema" style="background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--dm);cursor:pointer;font-size:16px;padding:5px 9px;line-height:1;transition:all .15s" onmouseover="this.style.color='var(--te)'" onmouseout="this.style.color='var(--dm)'">☀️</button>
-      <button class="btn bp" onclick="openNC()">＋ Novo Contrato</button>
+      <button class="btn bp btn-nc-topbar" onclick="openNC()">＋ Novo Contrato</button>
     </div>
   </div>
   <div class="content">
@@ -264,7 +339,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="stats" id="stats"></div>
       <div class="stats2" id="stats2"></div>
       <div id="sugestoes-box" style="margin-bottom:14px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="dash-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
         <div class="card" style="margin-bottom:0">
           <div class="ch">🔔 Alertas Inteligentes</div>
           <div id="alertas-list"></div>
@@ -274,7 +349,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
           <div class="cb"><div class="chart-bar" id="chart-receita"></div></div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="dash-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="tw"><div class="th2"><h3>📅 Vencimentos</h3><button class="btn bg bsm" onclick="go('vencimentos')">Ver →</button></div><div id="dv"></div></div>
         <div class="tw"><div class="th2"><h3>💸 Cobranças a Vencer</h3><button class="btn bg bsm" onclick="go('cobrancas')">Ver →</button></div><div id="dp"></div></div>
       </div>
@@ -328,6 +403,31 @@ tr:hover td{background:rgba(255,255,255,.018);}
 
   </div>
 </main>
+
+<!-- FAB mobile -->
+<button class="fab" onclick="openNC()" title="Novo Contrato">＋</button>
+
+<!-- BOTTOM NAV mobile -->
+<nav class="bnav" id="bnav">
+  <button class="bni on" id="bni-dashboard" onclick="go('dashboard');bniActive('dashboard')">
+    <span class="bni-ic">⬛</span><span class="bni-lbl">Home</span>
+  </button>
+  <button class="bni" id="bni-contratos" onclick="go('contratos');bniActive('contratos')">
+    <span class="bni-ic">📋</span><span class="bni-lbl">Contratos</span>
+  </button>
+  <button class="bni" id="bni-cobrancas" onclick="go('cobrancas');bniActive('cobrancas')">
+    <span class="bni-ic">💰</span><span class="bni-lbl">Cobranças</span>
+    <span class="bni-bdg" id="bniC" style="display:none">0</span>
+  </button>
+  <button class="bni" id="bni-repasse" onclick="go('repasse');bniActive('repasse')">
+    <span class="bni-ic">🔄</span><span class="bni-lbl">Repasse</span>
+  </button>
+  <button class="bni" id="bni-vencimentos" onclick="go('vencimentos');bniActive('vencimentos')">
+    <span class="bni-ic">📅</span><span class="bni-lbl">Agenda</span>
+    <span class="bni-bdg" id="bniV" style="display:none">!</span>
+  </button>
+</nav>
+
 </div><!-- fim #main-app -->
 
 <!-- MODAL: NOVO CONTRATO -->
@@ -943,6 +1043,11 @@ function badges(){
   bdgO.textContent=os;bdgO.style.display=os?'':'none';
   const vA=D.c.some(c=>{const d=DA(c.fim);return d>=0&&d<=90;})||D.cb.some(c=>!c.pago&&DA(c.venc)<0);
   document.getElementById('bdgV').style.display=vA?'':'none';
+  // Bottom nav badges
+  const bniC=document.getElementById('bniC');
+  if(bniC){bniC.textContent=pend;bniC.style.display=pend?'flex':'none';}
+  const bniV=document.getElementById('bniV');
+  if(bniV)bniV.style.display=vA?'flex':'none';
 }
 
 // ══════════════════════════════════════════
@@ -979,6 +1084,7 @@ function go(v){
   const ni=document.querySelectorAll('.ni');
   const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6};
   if(m[v]!==undefined)ni[m[v]]?.classList.add('on');
+  bniActive(v);
   if(v==='dashboard')renderDash();
   if(v==='contratos')renderContratos();
   if(v==='cobrancas')renderCobrancas();
@@ -990,6 +1096,11 @@ function go(v){
 }
 function tSB(){document.getElementById('sb').classList.toggle('on');document.getElementById('ovm').classList.toggle('on');}
 function cSB(){document.getElementById('sb').classList.remove('on');document.getElementById('ovm').classList.remove('on');}
+function bniActive(v){
+  document.querySelectorAll('.bni').forEach(b=>b.classList.remove('on'));
+  const el=document.getElementById('bni-'+v);
+  if(el)el.classList.add('on');
+}
 function oM(id){document.getElementById(id).classList.add('on');}
 function cM(id){document.getElementById(id).classList.remove('on');}
 
@@ -1057,7 +1168,7 @@ function renderContratos(){
   const fl=D.c.filter(c=>!q||[c.inquilino,c.proprietario,c.endereco].some(x=>x?.toLowerCase().includes(q)));
   const el=document.getElementById('tc');
   if(!fl.length){el.innerHTML=`<div class="empty"><div class="ei">📋</div><h3>Nenhum contrato${q?' encontrado':''}</h3><p>Clique em "+ Novo Contrato"</p></div>`;return;}
-  el.innerHTML=`<table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Proprietário</th><th>Valor</th><th>Risco</th><th>Docs</th><th>Status</th><th></th></tr></thead>
+  el.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Proprietário</th><th>Valor</th><th>Risco</th><th>Docs</th><th>Status</th><th></th></tr></thead>
   <tbody>${fl.map(c=>{
     const s=stCon(c);
     const ind=calcInadimplencia(c.id);
@@ -1074,7 +1185,7 @@ function renderContratos(){
       <td><span class="chip ${s.cl}">${s.l}</span></td>
       <td><button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button></td>
     </tr>`;
-  }).join('')}</tbody></table>`;
+  }).join('')}</tbody></table></div>`;
 }
 
 // ══════════════════════════════════════════
@@ -1174,7 +1285,7 @@ function renderInadimplencia(){
   const dados=D.c.map(c=>{const ind=calcInadimplencia(c.id);return{c,ind};}).sort((a,b)=>b.ind.pct-a.ind.pct);
   el.innerHTML=`<div class="tw">
     <div class="th2"><h3>Análise de Inadimplência por Contrato</h3></div>
-    <table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Aluguéis</th><th>Atrasados</th><th>Inadimplência</th><th>Risco</th><th></th></tr></thead>
+    <div class="tbl-scroll"><table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Aluguéis</th><th>Atrasados</th><th>Inadimplência</th><th>Risco</th><th></th></tr></thead>
     <tbody>${dados.map(({c,ind})=>{
       const riscoCl=ind.risco==='Alto'?'cr':ind.risco==='Médio'?'cy':'cg';
       return`<tr>
@@ -1193,7 +1304,7 @@ function renderInadimplencia(){
         <td><span class="chip ${riscoCl}">${ind.risco}</span></td>
         <td><button class="btn bg bsm" onclick="detail('${c.id}')">Ver →</button></td>
       </tr>`;
-    }).join('')}</tbody></table>
+    }).join('')}</tbody></table></div>
   </div>`;
 }
 
@@ -1255,7 +1366,7 @@ function renderRepasse(){
       </div>
       ${collapsed?'':(`<div style="padding:14px 16px">
       ${c.adm==='nao'?'<div style="font-size:13px;color:var(--dm)">Não administrado.</div>':`
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:11px">
+        <div class="rep-summary-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:11px">
           <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px;text-align:center">
             <div style="font-size:10px;color:var(--dm);margin-bottom:2px">PROP. RECEBIDO</div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--gn)">${R(totalProp)}</div>
@@ -1274,11 +1385,11 @@ function renderRepasse(){
           </div>
         </div>
         ${todaCobs.length?(()=>{
-          return`${pendRep.length?`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:9px 12px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px">
-            <span style="font-size:13px;color:var(--gn)">💸 ${pendRep.length} cobrança(s) paga(s) aguardando repasse ao proprietário · ${R(pendRep.reduce((a,b)=>a+(b.repasse?.prop||0),0))}</span>
+          return`${pendRep.length?`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:9px 12px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;flex-wrap:wrap;gap:8px">
+            <span style="font-size:13px;color:var(--gn)">💸 ${pendRep.length} cobrança(s) paga(s) aguardando repasse · ${R(pendRep.reduce((a,b)=>a+(b.repasse?.prop||0),0))}</span>
             <button class="btn bk bsm" onclick="openMarcarRepasse(${JSON.stringify(pendRep.map(x=>x.id))})">Marcar Repassado</button>
           </div>`:''}
-          <table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Pgto</th><th>Repasse Prop.</th></tr></thead>
+          <div class="tbl-scroll"><table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Pgto</th><th>Repasse Prop.</th></tr></thead>
           <tbody>${todaCobs.map(cb=>{const rp=cb.repasse;
           const pgCl=cb.pago?'cg':'cy';const pgLbl=cb.pago?`Pago ${FD(cb.dataPago)||''}`:FD(cb.venc);
           const repCl=!cb.pago?'cy':cb.repasseRealizado?'cg':'cr';
@@ -1293,7 +1404,7 @@ function renderRepasse(){
             <td><span class="chip ${pgCl}" style="font-size:10px">${pgLbl}</span></td>
             <td>${cb.pago&&rp?.prop>0?`<span class="chip ${repCl}" style="font-size:10px;cursor:${!cb.repasseRealizado?'pointer':'default'}" ${!cb.repasseRealizado?`onclick="openMarcarRepasse('${cb.id}')"`:''}>${repLbl}</span>`:'<span style="font-size:11px;color:var(--dmr)">–</span>'}</td>
           </tr>`;}).join('')}
-          </tbody></table>`;
+          </tbody></table></div>`;
         })():'<div style="font-size:13px;color:var(--dm)">Nenhuma cobrança com repasse.</div>'}
       `}
       </div>`)}
@@ -1600,7 +1711,7 @@ function renderVenc(){
 function renderOS(){
   const el=document.getElementById('to');
   if(!D.o.length){el.innerHTML=`<div class="empty"><div class="ei">🔧</div><h3>Nenhuma OS</h3></div>`;return;}
-  el.innerHTML=`<table><thead><tr><th>Imóvel</th><th>Descrição</th><th>Prioridade</th><th>Data</th><th>Custo</th><th>Status</th><th></th></tr></thead>
+  el.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>Imóvel</th><th>Descrição</th><th>Prioridade</th><th>Data</th><th>Custo</th><th>Status</th><th></th></tr></thead>
   <tbody>${D.o.map(o=>`<tr>
     <td style="font-weight:500;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(o.endereco||'').substring(0,25)||'–'}</td>
     <td style="color:var(--dm)">${o.desc}</td>
@@ -1609,7 +1720,7 @@ function renderOS(){
     <td>${o.custo?R(o.custo):'–'}</td>
     <td><span class="chip ${o.status==='Concluído'?'cg':o.status==='Em andamento'?'cy':'cr'}">${o.status}</span></td>
     <td>${o.status!=='Concluído'?`<button class="btn bk bsm" onclick="doneOS('${o.id}',null)">✓</button>`:'✓'}</td>
-  </tr>`).join('')}</tbody></table>`;
+  </tr>`).join('')}</tbody></table></div>`;
   badges();
 }
 async function doneOS(id,cid){
