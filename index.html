@@ -175,7 +175,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
 <body>
 
 <!-- ══════════════ AUTH SCREEN ══════════════ -->
-<div id="auth-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
+<div id="auth-screen" style="position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px">
   <div style="width:100%;max-width:400px">
     <div style="text-align:center;margin-bottom:32px">
       <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:30px;color:var(--te)">Imob<span style="color:var(--ac2)">.</span>Gestão</div>
@@ -205,7 +205,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </div>
 
 <!-- ══════════════ LOADING SCREEN ══════════════ -->
-<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9998">
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9998">
   <div style="text-align:center">
     <div class="sp" style="width:32px;height:32px;border-width:3px;margin:0 auto 14px"></div>
     <div style="font-size:13px;color:var(--dm)">Carregando seus dados...</div>
@@ -560,30 +560,26 @@ async function logout(){
   currentUser=null;
 }
 
-// Auth state listener
+// Auth state listener — única fonte de verdade, sem getSession() paralelo
 sb.auth.onAuthStateChange(async(event,session)=>{
-  if(session?.user){
-    currentUser=session.user;
-    if(document.getElementById('auth-screen').style.display!=='none'||document.getElementById('loading-screen').style.display==='flex'||document.getElementById('main-app').style.display==='none'){
+  if(event==='INITIAL_SESSION'){
+    if(session?.user){
+      currentUser=session.user;
+      await showApp();
+    } else {
+      showAuthScreen();
+    }
+  } else if(event==='SIGNED_IN'){
+    if(!currentUser||currentUser.id!==session.user.id){
+      currentUser=session.user;
       await showApp();
     }
-  } else {
+  } else if(event==='SIGNED_OUT'){
     currentUser=null;
     D={c:[],cb:[],o:[]};
     showAuthScreen();
   }
 });
-
-// Initial session check
-(async()=>{
-  const{data:{session}}=await sb.auth.getSession();
-  if(session?.user){
-    currentUser=session.user;
-    await showApp();
-  } else {
-    showAuthScreen();
-  }
-})();
 
 // ══════════════════════════════════════════
 // DATA MAPPING
