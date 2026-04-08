@@ -440,6 +440,35 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </div>
 </div>
 
+<!-- MODAL: EDITAR COBRANÇA -->
+<div class="mo" id="meditcob">
+<div class="md" style="max-width:500px">
+  <div class="mh"><div><h2>Editar Cobrança</h2><p id="ecob-info" style="font-size:13px;color:var(--dm)"></p></div><button class="mx" onclick="cM('meditcob')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g"><label>Descrição</label><input type="text" id="ecob-dsc" style="width:100%"></div>
+      <div class="g"><label>Valor (R$)</label><input type="number" id="ecob-val" step="0.01" oninput="ecobRepUpdate()"></div>
+      <div class="g"><label>Vencimento</label><input type="date" id="ecob-vnc"></div>
+      <div class="g ff"><label>Para quem vai o dinheiro?</label>
+        <select id="ecob-dest" onchange="ecobDestChange()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px">
+          <option value="prop">🏦 100% Proprietário</option>
+          <option value="imob">🏢 100% Imobiliária</option>
+          <option value="div">⚖️ Dividir</option>
+        </select>
+      </div>
+      <div id="ecob-divbox" class="g ff" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Imobiliária (R$)</div><input type="number" id="ecob-imob" step="0.01" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Proprietário (R$)</div><input type="number" id="ecob-prop" step="0.01" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
+        </div>
+      </div>
+      <div id="ecob-repview" class="g ff" style="font-size:12px;color:var(--dm);padding:8px;background:var(--sf2);border-radius:7px;border:1px solid var(--bd)"></div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('meditcob')">Cancelar</button><button class="btn bp" id="btnSaveEditCob" onclick="saveEditCob()">✓ Salvar</button></div>
+  </div>
+</div>
+</div>
+
 <!-- MODAL: CONFIRMAR PAGO -->
 <div class="mo" id="mpago">
 <div class="md" style="max-width:440px">
@@ -762,7 +791,8 @@ function calcCaixaProj(){
   const em30=new Date(hoje);em30.setDate(em30.getDate()+30);
   const pend=D.cb.filter(c=>!c.pago&&c.venc&&new Date(c.venc+'T12:00:00')<=em30);
   const aReceber=pend.reduce((a,b)=>a+(b.valor||0),0);
-  const aRepassar=pend.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  // Se repasse não definido, tratar tudo como proprietário (sem_adm ou não calculado)
+  const aRepassar=pend.reduce((a,b)=>a+(b.repasse!=null?b.repasse.prop:(b.valor||0)),0);
   const liquido=pend.reduce((a,b)=>a+(b.repasse?.imob||0),0);
   const alugPagos=D.cb.filter(c=>c.pago&&c.tipo==='Aluguel');
   const ticket=alugPagos.length?alugPagos.reduce((a,b)=>a+(+b.valorPago||+b.valor||0),0)/alugPagos.length:0;
@@ -1124,11 +1154,14 @@ function renderRepasse(){
   const el=document.getElementById('repasse-content');
   if(!D.c.length){el.innerHTML=`<div class="empty"><div class="ei">🔄</div><h3>Nenhum contrato</h3></div>`;return;}
   el.innerHTML=D.c.map(c=>{
-    const cobs=D.cb.filter(x=>x.contratoId===c.id&&x.pago&&x.repasse);
-    const pendCobs=D.cb.filter(x=>x.contratoId===c.id&&!x.pago&&x.repasse);
-    const totalProp=cobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
-    const totalImob=cobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+    // Todas cobranças com repasse definido (pagas + pendentes)
+    const todaCobs=D.cb.filter(x=>x.contratoId===c.id&&x.repasse).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+    const pagCobs=todaCobs.filter(x=>x.pago);
+    const pendCobs=todaCobs.filter(x=>!x.pago);
+    const totalProp=pagCobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+    const totalImob=pagCobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
     const pendProp=pendCobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+    const pendImob=pendCobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
     return`<div class="card" style="margin-bottom:13px">
       <div class="ch" style="cursor:pointer" onclick="detail('${c.id}')">
         <div><div style="font-weight:700">${c.inquilino||'–'}</div><div style="font-size:12px;color:var(--dm);font-weight:400">${(c.endereco||'').substring(0,50)}</div></div>
@@ -1136,7 +1169,7 @@ function renderRepasse(){
       </div>
       <div class="cb">
       ${c.adm==='nao'?'<div style="font-size:13px;color:var(--dm)">Não administrado.</div>':`
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:11px">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:11px">
           <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px;text-align:center">
             <div style="font-size:10px;color:var(--dm);margin-bottom:2px">PROP. RECEBIDO</div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--gn)">${R(totalProp)}</div>
@@ -1146,14 +1179,29 @@ function renderRepasse(){
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ac2)">${R(totalImob)}</div>
           </div>
           <div style="background:var(--yd);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:10px;text-align:center">
-            <div style="font-size:10px;color:var(--dm);margin-bottom:2px">PENDENTE</div>
+            <div style="font-size:10px;color:var(--dm);margin-bottom:2px">PROP. PENDENTE</div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ye)">${R(pendProp)}</div>
           </div>
+          <div style="background:rgba(59,130,246,.05);border:1px solid rgba(37,99,235,.15);border-radius:9px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:var(--dm);margin-bottom:2px">IMOB. PENDENTE</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ac)">${R(pendImob)}</div>
+          </div>
         </div>
-        ${cobs.length?`<table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th></tr></thead>
-        <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';
-        return`<tr><td>${MF(cb.mes)}</td><td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</td><td style="font-weight:600">${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}
-        </tbody></table>`:'<div style="font-size:13px;color:var(--dm)">Nenhum pagamento ainda.</div>'}
+        ${todaCobs.length?`<table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th><th>Status</th></tr></thead>
+        <tbody>${todaCobs.map(cb=>{const rp=cb.repasse;
+        const regra=rp.tipo==='primeiro'?'1º mês':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='manual'?'Manual':'Repasse';
+        const statusCl=cb.pago?'cg':'cy';const statusLbl=cb.pago?'Pago':'Pendente';
+        return`<tr>
+          <td>${MF(cb.mes)}</td>
+          <td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td>
+          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</td>
+          <td style="font-weight:600">${R(cb.valor)}</td>
+          <td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td>
+          <td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td>
+          <td style="font-size:11px;color:var(--dm)">${regra}</td>
+          <td><span class="chip ${statusCl}" style="font-size:10px">${statusLbl}</span></td>
+        </tr>`;}).join('')}
+        </tbody></table>`:'<div style="font-size:13px;color:var(--dm)">Nenhuma cobrança com repasse.</div>'}
       `}
       </div>
     </div>`;
@@ -1190,6 +1238,7 @@ function cobItem(cb,inDetail=false){
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
       ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<span style="font-size:11px;color:var(--dm)">Pago ${FD(cb.dataPago)}</span>`}
+      <button class="btn bg bsm" onclick="openEditCob('${cb.id}')" title="Editar repasse">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
     </div>
   </div>`;
@@ -1230,6 +1279,90 @@ async function delCob(id,cid){
   D.cb=D.cb.filter(c=>c.id!==id);
   renderCobrancas();renderDash();
   if(cid&&document.getElementById('view-detalhe').classList.contains('on'))detail(cid);
+}
+
+// ══════════════════════════════════════════
+// EDITAR COBRANÇA
+// ══════════════════════════════════════════
+let _editCobId=null;
+function openEditCob(id){
+  const cb=D.cb.find(x=>x.id===id);
+  if(!cb)return;
+  _editCobId=id;
+  document.getElementById('ecob-info').textContent=`${cb.tipo||''} · ${FD(cb.venc)} · ${R(cb.valor)}`;
+  document.getElementById('ecob-dsc').value=cb.descricao||'';
+  document.getElementById('ecob-val').value=cb.valor||0;
+  document.getElementById('ecob-vnc').value=cb.venc||'';
+  const rp=cb.repasse;
+  const val=cb.valor||0;
+  let dest='prop';
+  if(rp){
+    if(rp.imob>=val&&rp.prop===0)dest='imob';
+    else if(rp.imob>0&&rp.prop>0)dest='div';
+  }
+  document.getElementById('ecob-dest').value=dest;
+  const divbox=document.getElementById('ecob-divbox');
+  if(dest==='div'){
+    divbox.style.display='block';
+    document.getElementById('ecob-imob').value=rp?.imob||0;
+    document.getElementById('ecob-prop').value=rp?.prop||0;
+  } else {
+    divbox.style.display='none';
+  }
+  ecobRepUpdate();
+  oM('meditcob');
+}
+function ecobDestChange(){
+  const dest=document.getElementById('ecob-dest').value;
+  const divbox=document.getElementById('ecob-divbox');
+  const val=parseFloat(document.getElementById('ecob-val').value)||0;
+  if(dest==='div'){
+    divbox.style.display='block';
+    document.getElementById('ecob-imob').value=0;
+    document.getElementById('ecob-prop').value=val;
+  } else {
+    divbox.style.display='none';
+  }
+  ecobRepUpdate();
+}
+function ecobRepUpdate(){
+  const val=parseFloat(document.getElementById('ecob-val').value)||0;
+  const dest=document.getElementById('ecob-dest').value;
+  const rv=document.getElementById('ecob-repview');
+  if(!rv)return;
+  if(dest==='prop'){rv.innerHTML=`🏦 Proprietário: <strong>${R(val)}</strong>`;return;}
+  if(dest==='imob'){rv.innerHTML=`🏢 Imobiliária: <strong>${R(val)}</strong>`;return;}
+  const imob=parseFloat(document.getElementById('ecob-imob')?.value)||0;
+  const prop=parseFloat(document.getElementById('ecob-prop')?.value)||0;
+  const diff=Math.round((val-imob-prop)*100)/100;
+  rv.innerHTML=`🏢 Imob: <strong>${R(imob)}</strong> · 🏦 Prop: <strong>${R(prop)}</strong>${Math.abs(diff)>0.01?`<span style="color:var(--re)"> · ⚠️ dif. ${R(diff)}</span>`:'<span style="color:var(--gn)"> ✓</span>'}`;
+}
+async function saveEditCob(){
+  const cb=D.cb.find(x=>x.id===_editCobId);
+  if(!cb)return;
+  const val=parseFloat(document.getElementById('ecob-val').value)||cb.valor;
+  const dest=document.getElementById('ecob-dest').value;
+  let repImob=0,repProp=val,repTipo='manual';
+  if(dest==='imob'){repImob=val;repProp=0;}
+  else if(dest==='div'){
+    repImob=parseFloat(document.getElementById('ecob-imob').value)||0;
+    repProp=parseFloat(document.getElementById('ecob-prop').value)||0;
+  }
+  const btn=document.getElementById('btnSaveEditCob');
+  btn.disabled=true;btn.textContent='Salvando...';
+  const{error}=await sb.from('cobrancas').update({
+    descricao:document.getElementById('ecob-dsc').value,
+    valor:val,
+    venc:document.getElementById('ecob-vnc').value||cb.venc,
+    repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repTipo
+  }).eq('id',_editCobId);
+  btn.disabled=false;btn.textContent='✓ Salvar';
+  if(error){alert('Erro ao salvar: '+error.message);return;}
+  const i=D.cb.findIndex(x=>x.id===_editCobId);
+  if(i>=0){
+    D.cb[i]={...D.cb[i],descricao:document.getElementById('ecob-dsc').value,valor:val,venc:document.getElementById('ecob-vnc').value||cb.venc,repasse:{imob:repImob,prop:repProp,tipo:repTipo}};
+  }
+  cM('meditcob');renderCobrancas();renderRepasse();renderDash();
 }
 
 // ══════════════════════════════════════════
@@ -1375,7 +1508,12 @@ async function gerarCobsSupabase(c,userId){
     let valor=c.valor,descExtra='';
     if(primMes){const diaIni=ini.getDate();if(diaIni!==1){const dm=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();const dr=dm-diaIni;valor=Math.round((c.valor/dm)*dr*100)/100;descExtra=` (${dr}/${dm} dias)`;}}
     const isFirst=primMes;primMes=false;
-    const rep=calcRepasse('Aluguel',valor,isFirst,adm);
+    // 1º mês: repasse da imob calculado sobre o valor CHEIO do aluguel (c.valor),
+    // mesmo que o mês seja proporcional. Prop = valor proporcional - imob.
+    const repBase=isFirst?c.valor:valor;
+    const repRaw=calcRepasse('Aluguel',repBase,isFirst,adm);
+    const repImob=Math.min(repRaw.imob,valor); // imob não pode superar o cobrado
+    const rep={imob:repImob,prop:Math.max(0,valor-repImob),tipo:repRaw.tipo};
     cobsToInsert.push({
       user_id:userId,contrato_id:c.id,
       inquilino:c.inquilino,endereco:c.endereco,
@@ -1631,13 +1769,70 @@ function updateRepBox(){
   if(!c||!val){box.innerHTML='';return;}
   const cobsAlug=D.cb.filter(x=>x.contratoId===cid&&x.tipo==='Aluguel');
   const isFirst=cobsAlug.length===0;
-  const rp=calcRepasse(tp,val,isFirst,c.adm==='sim');
+  // Para 1º mês proporcional: calcular repasse sobre valor CHEIO do aluguel
+  const repBase=(tp==='Aluguel'&&isFirst&&val<c.valor)?c.valor:val;
+  const rp=calcRepasse(tp,repBase,isFirst,c.adm==='sim');
+  // Limitar imob ao valor cobrado (proporcional pode ser menor que 50% do cheio)
+  if(rp.imob>val){rp.imob=val;rp.prop=0;}
   if(rp.tipo==='sem_adm'){box.innerHTML='';return;}
-  box.innerHTML=`<label>Repasse calculado</label><div class="ibox ibox-b" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-    ${rp.prop>0?`<span>🏦 Proprietário: <strong>${R(rp.prop)}</strong></span>`:''}
-    ${rp.imob>0?`<span>🏢 Imobiliária: <strong>${R(rp.imob)}</strong></span>`:''}
-    <span style="font-size:11px;opacity:.7">${rp.tipo==='primeiro'?'1º mês (50/50)':rp.tipo==='normal'?'Mensal (10/90)':rp.tipo==='pintura'?'100% imob':rp.tipo==='caucao'?'Retido imob':'Integral'}</span>
+  let defDest='prop';
+  if(rp.imob>=val&&rp.prop===0)defDest='imob';
+  else if(rp.imob>0&&rp.prop>0)defDest='div';
+  const regra=rp.tipo==='primeiro'?`1º mês: 50% do aluguel cheio (${R(c.valor)}) → Imob`:rp.tipo==='normal'?'Mensal: 10% imob / 90% prop':rp.tipo==='pintura'?'100% imobiliária':rp.tipo==='caucao'?'100% retido imobiliária':'Configurado manualmente';
+  const inp='width:100%;background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:6px 8px;color:var(--te);font-family:\'DM Sans\',sans-serif;font-size:13px;outline:none';
+  const sel='background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:6px 8px;color:var(--te);font-family:\'DM Sans\',sans-serif;font-size:13px;width:100%';
+  box.innerHTML=`<label>Para quem vai o dinheiro?</label>
+  <div style="padding:10px;background:var(--sf2);border-radius:8px;border:1px solid var(--bd);display:flex;flex-direction:column;gap:8px">
+    <select id="cbdest" data-val="${val}" data-imob="${rp.imob}" data-prop="${rp.prop}" onchange="onDestChange()" style="${sel}">
+      <option value="prop" ${defDest==='prop'?'selected':''}>🏦 100% Proprietário</option>
+      <option value="imob" ${defDest==='imob'?'selected':''}>🏢 100% Imobiliária</option>
+      <option value="div" ${defDest==='div'?'selected':''}>⚖️ Dividir entre ambos</option>
+    </select>
+    <div id="cbdivbox" style="display:${defDest==='div'?'grid':'none'};grid-template-columns:1fr 1fr;gap:8px">
+      <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Imobiliária (R$)</div>
+        <input type="number" id="cbrimob" step="0.01" value="${rp.imob}" oninput="onRepVal()" style="${inp}"></div>
+      <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Proprietário (R$)</div>
+        <input type="number" id="cbrprop" step="0.01" value="${rp.prop}" oninput="onRepVal()" style="${inp}"></div>
+    </div>
+    <div id="cbrepview" style="font-size:12px;color:var(--dm)">
+      ${defDest==='div'?`${rp.imob>0?`<span>🏢 Imob: <strong>${R(rp.imob)}</strong></span> `:''}${rp.prop>0?`<span>🏦 Prop: <strong>${R(rp.prop)}</strong></span>`:''}`:defDest==='imob'?`<span>🏢 Imobiliária: <strong>${R(val)}</strong></span>`:`<span>🏦 Proprietário: <strong>${R(val)}</strong></span>`}
+      <span style="opacity:.6"> · ${regra}</span>
+    </div>
   </div>`;
+}
+function onDestChange(){
+  const el=document.getElementById('cbdest');if(!el)return;
+  const val=parseFloat(el.dataset.val)||0;
+  const defImob=parseFloat(el.dataset.imob)||0;
+  const defProp=parseFloat(el.dataset.prop)||0;
+  const dest=el.value;
+  const divbox=document.getElementById('cbdivbox');
+  const rv=document.getElementById('cbrepview');
+  if(dest==='div'){
+    if(divbox){divbox.style.display='grid';document.getElementById('cbrimob').value=defImob;document.getElementById('cbrprop').value=defProp;}
+    onRepVal();
+  } else {
+    if(divbox)divbox.style.display='none';
+    if(rv)rv.innerHTML=dest==='imob'?`<span>🏢 Imobiliária: <strong>${R(val)}</strong></span>`:`<span>🏦 Proprietário: <strong>${R(val)}</strong></span>`;
+  }
+}
+function onRepVal(){
+  const val=parseFloat(document.getElementById('cbdest')?.dataset.val)||0;
+  const imob=parseFloat(document.getElementById('cbrimob')?.value)||0;
+  const prop=parseFloat(document.getElementById('cbrprop')?.value)||0;
+  const rv=document.getElementById('cbrepview');if(!rv)return;
+  const diff=Math.round((val-imob-prop)*100)/100;
+  rv.innerHTML=`${imob>0?`<span>🏢 Imob: <strong>${R(imob)}</strong></span> `:''}${prop>0?`<span>🏦 Prop: <strong>${R(prop)}</strong></span>`:''}${Math.abs(diff)>0.01?`<span style="color:var(--re)"> · ⚠️ diferença ${R(diff)}</span>`:'<span style="color:var(--gn)"> ✓</span>'}`;
+}
+function getRepFromUI(tp,val,cid){
+  const destEl=document.getElementById('cbdest');
+  if(!destEl){const rp=calcRepasse(tp,val,false,true);return rp;}
+  const dest=destEl.value;
+  if(dest==='prop')return{imob:0,prop:val,tipo:'manual'};
+  if(dest==='imob')return{imob:val,prop:0,tipo:'manual'};
+  const imob=parseFloat(document.getElementById('cbrimob')?.value)||0;
+  const prop=parseFloat(document.getElementById('cbrprop')?.value)||0;
+  return{imob,prop,tipo:'manual'};
 }
 async function saveCob(){
   const cid=document.getElementById('cbcon').value;
@@ -1660,7 +1855,8 @@ async function saveCob(){
     if(parc>1){dsc=dsc.replace(/parcela \d+\//,`parcela ${p+1}/`).replace(/ 1\//,` ${p+1}/`);}
     let vncDate=baseVnc;
     if(p>0&&baseVnc){const bv=new Date(baseVnc+'T12:00:00');vncDate=new Date(bv.getFullYear(),bv.getMonth()+p,bv.getDate()).toISOString().split('T')[0];}
-    const rp=calcRepasse(tp,baseVal,isFirst&&p===0,c?.adm==='sim');
+    // Parcela 0: usa repasse editado pelo usuário na UI; demais: auto-calculado
+    const rp=p===0?getRepFromUI(tp,baseVal,cid):calcRepasse(tp,baseVal,false,c?.adm==='sim');
     cobsToInsert.push({
       user_id:currentUser.id,contrato_id:cid,
       inquilino:c?.inquilino||'',endereco:c?.endereco||'',
