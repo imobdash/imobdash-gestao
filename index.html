@@ -8,8 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#0d1117;--sf:#161b22;--sf2:#21262d;--bd:#30363d;--te:#e6edf3;--dm:#8b949e;--dmr:#6e7681;--ac:#3b82f6;--ac2:#60a5fa;--ag:rgba(37,99,235,.1);--gn:#22c55e;--gd:rgba(34,197,94,.1);--ye:#f59e0b;--yd:rgba(245,158,11,.1);--re:#ef4444;--rd:rgba(239,68,68,.1);--or:#f97316;--r:10px;--rs:7px;}
+body.light{--bg:#f0f4f8;--sf:#ffffff;--sf2:#f5f7fa;--bd:#d0d7de;--te:#1c2128;--dm:#57606a;--dmr:#6e7781;--ac:#2563eb;--ac2:#1d4ed8;--ag:rgba(37,99,235,.08);--gn:#16a34a;--gd:rgba(22,163,74,.09);--ye:#d97706;--yd:rgba(217,119,6,.09);--re:#dc2626;--rd:rgba(220,38,38,.09);--or:#ea580c;}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--te);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+body{background:var(--bg);color:var(--te);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s;}
 .app{display:block;min-height:100vh;}
 /* SIDEBAR */
 .sidebar{background:var(--sf);border-right:1px solid var(--bd);position:fixed;top:0;left:0;bottom:0;width:220px;display:flex;flex-direction:column;z-index:100;transition:transform .25s;}
@@ -33,8 +34,9 @@ nav{flex:1;padding:10px 8px;overflow-y:auto;}
 /* VIEWS */
 .view{display:none;}.view.on{display:block;}
 /* STATS */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;}
-.stats2{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:12px;}
+.stats2{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;}
+@media(max-width:1300px){.stats,.stats2{grid-template-columns:repeat(3,1fr);}}
 .sc{padding:14px 16px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf);}
 .sc.bl{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.06);}
 .sc.gr{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.06);}
@@ -250,7 +252,10 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="hm" onclick="tSB()">☰</div>
       <div class="ttl" id="ttl">Dashboard</div>
     </div>
-    <button class="btn bp" onclick="openNC()">＋ Novo Contrato</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button id="theme-toggle" onclick="toggleTheme()" title="Alternar tema" style="background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--dm);cursor:pointer;font-size:16px;padding:5px 9px;line-height:1;transition:all .15s" onmouseover="this.style.color='var(--te)'" onmouseout="this.style.color='var(--dm)'">☀️</button>
+      <button class="btn bp" onclick="openNC()">＋ Novo Contrato</button>
+    </div>
   </div>
   <div class="content">
 
@@ -541,6 +546,20 @@ let D={c:[],cb:[],o:[]};
 let currentUser=null;
 let _loadingApp=false;
 let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
+let _repCollapsed=new Set();
+let _repInitialized=false;
+
+// ── TEMA ──
+function toggleTheme(){
+  const isLight=document.body.classList.toggle('light');
+  localStorage.setItem('ig_theme',isLight?'light':'dark');
+  document.getElementById('theme-toggle').textContent=isLight?'🌙':'☀️';
+}
+(function initTheme(){
+  const t=localStorage.getItem('ig_theme');
+  if(t==='light'){document.body.classList.add('light');
+  const btn=document.getElementById('theme-toggle');if(btn)btn.textContent='🌙';}
+})();
 
 // ══════════════════════════════════════════
 // AUTH
@@ -812,13 +831,18 @@ function calcCaixaProj(){
   const pend=D.cb.filter(c=>!c.pago);
   const aReceber=pend.reduce((a,b)=>a+(b.valor||0),0);
   const aRepassar=pend.reduce((a,b)=>a+(b.repasse!=null?b.repasse.prop:(b.valor||0)),0);
-  const liquido=pend.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+  const aReceberImob=pend.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+  // Pagos: receita prop e receita imob (histórico)
+  const pagos=D.cb.filter(c=>c.pago);
+  const receitaProp=pagos.reduce((a,b)=>a+(b.repasse!=null?b.repasse.prop:(+b.valorPago||+b.valor||0)),0);
+  const receitaImob=pagos.reduce((a,b)=>a+(b.repasse?.imob||0),0);
   const alugPagos=D.cb.filter(c=>c.pago&&c.tipo==='Aluguel');
   const ticket=alugPagos.length?alugPagos.reduce((a,b)=>a+(+b.valorPago||+b.valor||0),0)/alugPagos.length:0;
   const totAlug=D.cb.filter(c=>c.tipo==='Aluguel').length;
   const atrAlug=D.cb.filter(c=>c.tipo==='Aluguel'&&!c.pago&&DA(c.venc)<0).length;
   const pctInad=totAlug?Math.round(atrAlug/totAlug*100):0;
-  return{aReceber,aRepassar,liquido,ticket,pctInad,atrAlug,totAlug};
+  const aVencer=pend.filter(c=>DA(c.venc)>=0).length;
+  return{aReceber,aRepassar,aReceberImob,receitaProp,receitaImob,ticket,pctInad,atrAlug,totAlug,aVencer};
 }
 
 // ══════════════════════════════════════════
@@ -975,25 +999,22 @@ function cM(id){document.getElementById(id).classList.remove('on');}
 function renderDash(){
   const proj=calcCaixaProj();
   const tot=D.c.length;
-  const pend=D.cb.filter(c=>!c.pago).length;
-  const recTotal=D.cb.filter(c=>c.pago).reduce((a,b)=>a+(+b.valorPago||+b.valor||0),0);
+  const atrAlugCount=D.cb.filter(c=>!c.pago&&DA(c.venc)<0).length;
   document.getElementById('stats').innerHTML=`
     <div class="sc bl"><div class="slb">Contratos Ativos</div><div class="sv">${tot}</div><div class="ss">imóveis gerenciados</div></div>
-    <div class="sc gr"><div class="slb">Receita Total</div><div class="sv" style="font-size:17px">${R(recTotal)}</div><div class="ss">histórico recebido</div></div>
+    <div class="sc gr"><div class="slb">Receita Total</div><div class="sv" style="font-size:16px">${R(proj.receitaProp)}</div><div class="ss">proprietários receberam</div></div>
+    <div class="sc bl" style="border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.06)"><div class="slb">Receita Total Imob.</div><div class="sv" style="font-size:16px;color:var(--ac2)">${R(proj.receitaImob)}</div><div class="ss">imobiliária recebeu</div></div>
     <div class="sc pu"><div class="slb">Inadimplência</div><div class="sv" style="color:${proj.pctInad>20?'var(--re)':proj.pctInad>10?'var(--ye)':'var(--gn)'}">${proj.pctInad}%</div><div class="ss">${proj.atrAlug} em ${proj.totAlug} aluguéis</div></div>
-    <div class="sc ye"><div class="slb">Ticket Médio</div><div class="sv" style="font-size:17px">${R(proj.ticket)}</div><div class="ss">por aluguel pago</div></div>
+    <div class="sc ye"><div class="slb">Ticket Médio</div><div class="sv" style="font-size:16px">${R(proj.ticket)}</div><div class="ss">por aluguel pago</div></div>
   `;
   document.getElementById('stats2').innerHTML=`
-    <div class="sc or"><div class="slb">A Receber (Total)</div><div class="sv" style="font-size:17px">${R(proj.aReceber)}</div><div class="ss">total em aberto</div></div>
-    <div class="sc re"><div class="slb">A Repassar Prop.</div><div class="sv" style="font-size:17px">${R(proj.aRepassar)}</div><div class="ss">ao proprietário</div></div>
-    <div class="sc gr"><div class="slb">Receita Líquida Proj.</div><div class="sv" style="font-size:17px">${R(proj.liquido)}</div><div class="ss">para imobiliária</div></div>
-    <div class="sc ye"><div class="slb">Pendentes</div><div class="sv">${pend}</div><div class="ss">${D.cb.filter(c=>!c.pago&&DA(c.venc)<0).length} atrasadas</div></div>
+    <div class="sc or"><div class="slb">A Receber (Total)</div><div class="sv" style="font-size:16px">${R(proj.aReceber)}</div><div class="ss">total em aberto</div></div>
+    <div class="sc re"><div class="slb">A Repassar Prop.</div><div class="sv" style="font-size:16px">${R(proj.aRepassar)}</div><div class="ss">ao proprietário</div></div>
+    <div class="sc bl" style="border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.06)"><div class="slb">A Receber Imob.</div><div class="sv" style="font-size:16px;color:var(--ac2)">${R(proj.aReceberImob)}</div><div class="ss">imobiliária a receber</div></div>
+    <div class="sc ye"><div class="slb">A Vencer</div><div class="sv">${proj.aVencer}</div><div class="ss">${atrAlugCount} atrasadas</div></div>
+    <div class="sc re" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06)"><div class="slb">Em Atraso</div><div class="sv" style="color:var(--re)">${atrAlugCount}</div><div class="ss">cobranças vencidas</div></div>
   `;
-  const sug=gerarSugestoes();
-  const sb2=document.getElementById('sugestoes-box');
-  if(sug.length){
-    sb2.innerHTML=`<div class="card" style="margin-bottom:13px;border-color:rgba(37,99,235,.3)"><div class="ch" style="color:var(--ac2)">🤖 Sugestões do Sistema</div><div class="cb" style="display:flex;flex-direction:column;gap:7px">${sug.map(s=>`<div style="font-size:13px;color:var(--te);padding:6px 10px;background:var(--sf2);border-radius:6px;border-left:3px solid var(--ac2)">${s}</div>`).join('')}</div></div>`;
-  } else sb2.innerHTML='';
+  document.getElementById('sugestoes-box').innerHTML='';
   const alrt=gerarAlertas();
   const al=document.getElementById('alertas-list');
   al.innerHTML=alrt.length?alrt.map(a=>`<div class="alrt">
@@ -1200,11 +1221,14 @@ function repasseCard(cid){
   <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
 }
 
+function toggleRepContract(cid){if(_repCollapsed.has(cid))_repCollapsed.delete(cid);else _repCollapsed.add(cid);renderRepasse();}
+
 function renderRepasse(){
   const el=document.getElementById('repasse-content');
   if(!D.c.length){el.innerHTML=`<div class="empty"><div class="ei">🔄</div><h3>Nenhum contrato</h3></div>`;return;}
+  // Collapsar todos ao abrir pela primeira vez
+  if(!_repInitialized){D.c.forEach(c=>_repCollapsed.add(c.id));_repInitialized=true;}
   el.innerHTML=D.c.map(c=>{
-    // Todas cobranças com repasse definido (pagas + pendentes)
     const todaCobs=D.cb.filter(x=>x.contratoId===c.id&&x.repasse).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
     const pagCobs=todaCobs.filter(x=>x.pago);
     const pendCobs=todaCobs.filter(x=>!x.pago);
@@ -1212,12 +1236,24 @@ function renderRepasse(){
     const totalImob=pagCobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
     const pendProp=pendCobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
     const pendImob=pendCobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
-    return`<div class="card" style="margin-bottom:13px">
-      <div class="ch" style="cursor:pointer" onclick="detail('${c.id}')">
-        <div><div style="font-weight:700">${c.inquilino||'–'}</div><div style="font-size:12px;color:var(--dm);font-weight:400">${(c.endereco||'').substring(0,50)}</div></div>
-        <button class="btn bg bsm">Ver →</button>
+    const pendRep=pagCobs.filter(x=>x.repasse?.prop>0&&!x.repasseRealizado);
+    const collapsed=_repCollapsed.has(c.id);
+    return`<div style="border:1px solid var(--bd);border-radius:var(--r);margin-bottom:13px;background:var(--sf);overflow:hidden">
+      <div style="padding:12px 16px;background:var(--sf2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:${collapsed?'none':'1px solid var(--bd)'}" onclick="toggleRepContract('${c.id}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:12px;color:var(--dm);transition:transform .15s;display:inline-block;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
+          <div>
+            <div style="font-weight:700;font-size:14px">${c.inquilino||'–'}</div>
+            <div style="font-size:12px;color:var(--dm)">${(c.endereco||'').substring(0,50)}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${pendRep.length?`<span style="font-size:12px;color:var(--ye)">💸 ${pendRep.length} aguardando repasse</span>`:''}
+          ${c.adm==='sim'?`<span style="font-size:12px;color:var(--gn)">Prop: ${R(totalProp)}</span><span style="font-size:12px;color:var(--ac2)">Imob: ${R(totalImob)}</span>`:''}
+          <button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button>
+        </div>
       </div>
-      <div class="cb">
+      ${collapsed?'':(`<div style="padding:14px 16px">
       ${c.adm==='nao'?'<div style="font-size:13px;color:var(--dm)">Não administrado.</div>':`
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:11px">
           <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px;text-align:center">
@@ -1238,16 +1274,12 @@ function renderRepasse(){
           </div>
         </div>
         ${todaCobs.length?(()=>{
-          // Cobranças pagas com prop > 0 e não repassadas ainda
-          const pendRep=pagCobs.filter(x=>x.repasse?.prop>0&&!x.repasseRealizado);
-          const repassadoTotal=pagCobs.filter(x=>x.repasseRealizado).reduce((a,b)=>a+(b.repasse?.prop||0),0);
           return`${pendRep.length?`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:9px 12px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px">
             <span style="font-size:13px;color:var(--gn)">💸 ${pendRep.length} cobrança(s) paga(s) aguardando repasse ao proprietário · ${R(pendRep.reduce((a,b)=>a+(b.repasse?.prop||0),0))}</span>
             <button class="btn bk bsm" onclick="openMarcarRepasse(${JSON.stringify(pendRep.map(x=>x.id))})">Marcar Repassado</button>
           </div>`:''}
           <table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Pgto</th><th>Repasse Prop.</th></tr></thead>
           <tbody>${todaCobs.map(cb=>{const rp=cb.repasse;
-          const regra=rp.tipo==='primeiro'?'1º mês':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='manual'?'Manual':'Repasse';
           const pgCl=cb.pago?'cg':'cy';const pgLbl=cb.pago?`Pago ${FD(cb.dataPago)||''}`:FD(cb.venc);
           const repCl=!cb.pago?'cy':cb.repasseRealizado?'cg':'cr';
           const repLbl=!cb.pago?'–':cb.repasseRealizado?`Repassado ${FD(cb.dataRepasse)||''}`:rp?.prop>0?'Pendente':'N/A';
@@ -1264,7 +1296,7 @@ function renderRepasse(){
           </tbody></table>`;
         })():'<div style="font-size:13px;color:var(--dm)">Nenhuma cobrança com repasse.</div>'}
       `}
-      </div>
+      </div>`)}
     </div>`;
   }).join('');
 }
@@ -1509,14 +1541,34 @@ async function viewCobFile(id){
 // ══════════════════════════════════════════
 // VENCIMENTOS
 // ══════════════════════════════════════════
+function calcReajusteDate(c){
+  // Calcula a data do reajuste: início + reajusteMeses meses
+  if(!c.inicio||!c.reajusteMeses)return null;
+  try{
+    const ini=new Date(c.inicio+'T12:00:00');
+    const reaj=new Date(ini.getFullYear(),ini.getMonth()+parseInt(c.reajusteMeses),ini.getDate());
+    return reaj.toISOString().split('T')[0];
+  }catch(e){return null;}
+}
+
 function renderVenc(){
   const cons=[...D.c].filter(c=>c.fim).sort((a,b)=>DA(a.fim)-DA(b.fim));
   document.getElementById('vvc').innerHTML=cons.length?cons.map(c=>{
     const d=DA(c.fim);const cl=d>90?'ok':d>30?'wa':'cr';
-    return`<div class="vi" onclick="detail('${c.id}')">
-      <div class="vd ${d<0?'pa':cl}"><div class="n">${Math.abs(d)}</div><div class="l">${d<0?'atrás':'dias'}</div></div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.inquilino}</div><div style="font-size:11px;color:var(--dm)">${(c.endereco||'').substring(0,30)}</div></div>
-      <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span class="chip ${stCon(c).cl}" style="font-size:10px">${stCon(c).l}</span></div>
+    const reajData=calcReajusteDate(c);
+    const dReaj=reajData?DA(reajData):null;
+    const clReaj=dReaj==null?'pa':dReaj<0?'pa':dReaj<=30?'cr':dReaj<=90?'wa':'ok';
+    return`<div style="border-bottom:1px solid rgba(48,54,61,.3)">
+      <div class="vi" onclick="detail('${c.id}')">
+        <div class="vd ${d<0?'pa':cl}"><div class="n">${Math.abs(d)}</div><div class="l">${d<0?'atrás':'dias'}</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.inquilino}</div><div style="font-size:11px;color:var(--dm)">${(c.endereco||'').substring(0,30)}</div></div>
+        <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">VENC. CONTRATO</span></div>
+      </div>
+      ${reajData?`<div class="vi" style="padding-left:58px;background:rgba(245,158,11,.04)" onclick="detail('${c.id}')">
+        <div class="vd ${clReaj}" style="width:38px;height:38px"><div class="n" style="font-size:13px">${dReaj!=null?Math.abs(dReaj):'–'}</div><div class="l">${dReaj!=null&&dReaj<0?'atrás':'dias'}</div></div>
+        <div style="flex:1"><div style="font-size:12px;color:var(--dm)">Reajuste ${c.reajusteIndice||'IGP-M'} (${c.reajusteMeses||12} meses)</div></div>
+        <div style="text-align:right"><div style="font-size:12px;font-weight:600;color:var(--ye)">${FD(reajData)}</div><span style="font-size:9px;font-weight:700;color:var(--ye)">REAJUSTE</span></div>
+      </div>`:''}
     </div>`;
   }).join(''):`<div class="empty" style="padding:34px"><div class="ei">📋</div><p>Nenhum contrato</p></div>`;
   const cbs=D.cb.filter(c=>!c.pago&&c.venc).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
