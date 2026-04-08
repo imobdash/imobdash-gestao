@@ -271,7 +271,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="tw"><div class="th2"><h3>📅 Vencimentos</h3><button class="btn bg bsm" onclick="go('vencimentos')">Ver →</button></div><div id="dv"></div></div>
-        <div class="tw"><div class="th2"><h3>💸 Cobranças Pendentes</h3><button class="btn bg bsm" onclick="go('cobrancas')">Ver →</button></div><div id="dp"></div></div>
+        <div class="tw"><div class="th2"><h3>💸 Cobranças a Vencer</h3><button class="btn bg bsm" onclick="go('cobrancas')">Ver →</button></div><div id="dp"></div></div>
       </div>
     </div>
 
@@ -369,6 +369,8 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="g"><label>Início</label><input type="date" id="fini" oninput="calcProp()"></div>
       <div class="g"><label>Fim</label><input type="date" id="ffim"></div>
       <div class="g"><label>Índice</label><select id="find"><option value="IGP-M">IGP-M</option><option value="IPCA">IPCA</option><option value="INPC">INPC</option><option value="Fixo">Fixo</option></select></div>
+      <div class="g"><label>Reajuste após (meses)</label><input type="number" id="freaj" value="12" min="1" max="60" placeholder="12" title="Ex: 12 = reajuste todo ano"></div>
+      <div class="g"><label>Índice do Reajuste</label><select id="freajind"><option value="IGP-M">IGP-M</option><option value="IPCA">IPCA</option><option value="INPC">INPC</option><option value="Fixo %">Fixo %</option><option value="Nenhum">Sem reajuste</option></select></div>
       <div class="g"><label>Multa (%)</label><input type="number" id="fmul" value="2" step="0.1"></div>
       <div class="g"><label>Caução (R$)</label><input type="number" id="fcau" placeholder="0,00" step="0.01"></div>
       <div class="g"><label>Caução retida por</label><select id="fcautp"><option value="imob">Imobiliária</option><option value="prop">Proprietário</option></select></div>
@@ -436,6 +438,20 @@ tr:hover td{background:rgba(255,255,255,.018);}
       </div>
     </div>
     <div class="fa"><button class="btn bg" onclick="cM('mcb')">Cancelar</button><button class="btn bp" id="btnSaveCob" onclick="saveCob()">✓ Salvar</button></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: MARCAR REPASSADO -->
+<div class="mo" id="mrep">
+<div class="md" style="max-width:400px">
+  <div class="mh"><div><h2>Marcar como Repassado</h2><p id="mrep-info" style="font-size:13px;color:var(--dm)"></p></div><button class="mx" onclick="cM('mrep')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g ff"><label>Data do Repasse</label><input type="date" id="mrep-dt"></div>
+      <div id="mrep-vals" style="font-size:13px;padding:10px;background:var(--sf2);border-radius:8px;border:1px solid var(--bd)"></div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mrep')">Cancelar</button><button class="btn bk" id="btnConfRep" onclick="confirmRepasse()">✓ Confirmar Repasse</button></div>
   </div>
 </div>
 </div>
@@ -668,6 +684,8 @@ function rowToContrato(row){
     caucao:Number(row.caucao||0),
     caucaoTp:row.caucao_tp,
     obs:row.observacoes,
+    reajusteMeses:row.reajuste_meses||12,
+    reajusteIndice:row.reajuste_indice||'IGP-M',
     criadoEm:row.created_at?.split('T')[0],
     docs:[]
   };
@@ -692,7 +710,10 @@ function rowToCobranca(row){
     repasse,
     inquilino:row.inquilino,
     endereco:row.endereco,
-    comprovantePath:row.comprovante_path
+    comprovantePath:row.comprovante_path,
+    repasseRealizado:row.repasse_realizado||false,
+    dataRepasse:row.data_repasse||null,
+    reajustePendente:row.reajuste_pendente||false
   };
 }
 function rowToOS(row){
@@ -787,11 +808,9 @@ function calcInadimplencia(cid){
 // PREVISÃO DE CAIXA
 // ══════════════════════════════════════════
 function calcCaixaProj(){
-  const hoje=new Date();
-  const em30=new Date(hoje);em30.setDate(em30.getDate()+30);
-  const pend=D.cb.filter(c=>!c.pago&&c.venc&&new Date(c.venc+'T12:00:00')<=em30);
+  // Todos os pendentes, sem filtro de data
+  const pend=D.cb.filter(c=>!c.pago);
   const aReceber=pend.reduce((a,b)=>a+(b.valor||0),0);
-  // Se repasse não definido, tratar tudo como proprietário (sem_adm ou não calculado)
   const aRepassar=pend.reduce((a,b)=>a+(b.repasse!=null?b.repasse.prop:(b.valor||0)),0);
   const liquido=pend.reduce((a,b)=>a+(b.repasse?.imob||0),0);
   const alugPagos=D.cb.filter(c=>c.pago&&c.tipo==='Aluguel');
@@ -842,6 +861,36 @@ function gerarSugestoes(){
   if(proj.pctInad>20)s.push(`⚠️ Inadimplência em ${proj.pctInad}% — acima do saudável. Revise as cobranças.`);
   if(!D.c.length)s.push('👋 Bem-vindo! Comece cadastrando seu primeiro contrato.');
   return s;
+}
+
+// ══════════════════════════════════════════
+// MARCAR REPASSADO
+// ══════════════════════════════════════════
+let _repCobIds=[];
+function openMarcarRepasse(ids){
+  _repCobIds=Array.isArray(ids)?ids:[ids];
+  const cbs=D.cb.filter(x=>_repCobIds.includes(x.id));
+  const totalProp=cbs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const desc=cbs.length===1?cbs[0].descricao:`${cbs.length} cobranças selecionadas`;
+  document.getElementById('mrep-info').textContent=desc;
+  document.getElementById('mrep-dt').value=TD();
+  document.getElementById('mrep-vals').innerHTML=`🏦 Valor a repassar ao Proprietário: <strong style="color:var(--gn)">${R(totalProp)}</strong>`;
+  oM('mrep');
+}
+async function confirmRepasse(){
+  const dt=document.getElementById('mrep-dt').value;
+  if(!dt){alert('Informe a data do repasse.');return;}
+  const btn=document.getElementById('btnConfRep');
+  btn.disabled=true;btn.textContent='Salvando...';
+  for(const id of _repCobIds){
+    const{error}=await sb.from('cobrancas').update({repasse_realizado:true,data_repasse:dt}).eq('id',id);
+    if(!error){
+      const i=D.cb.findIndex(x=>x.id===id);
+      if(i>=0){D.cb[i]={...D.cb[i],repasseRealizado:true,dataRepasse:dt};}
+    }
+  }
+  btn.disabled=false;btn.textContent='✓ Confirmar Repasse';
+  cM('mrep');renderRepasse();renderDash();
 }
 
 // ══════════════════════════════════════════
@@ -935,8 +984,8 @@ function renderDash(){
     <div class="sc ye"><div class="slb">Ticket Médio</div><div class="sv" style="font-size:17px">${R(proj.ticket)}</div><div class="ss">por aluguel pago</div></div>
   `;
   document.getElementById('stats2').innerHTML=`
-    <div class="sc or"><div class="slb">A Receber (30 dias)</div><div class="sv" style="font-size:17px">${R(proj.aReceber)}</div><div class="ss">cobranças pendentes</div></div>
-    <div class="sc re"><div class="slb">A Repassar Prop.</div><div class="sv" style="font-size:17px">${R(proj.aRepassar)}</div><div class="ss">dos próximos 30 dias</div></div>
+    <div class="sc or"><div class="slb">A Receber (Total)</div><div class="sv" style="font-size:17px">${R(proj.aReceber)}</div><div class="ss">total em aberto</div></div>
+    <div class="sc re"><div class="slb">A Repassar Prop.</div><div class="sv" style="font-size:17px">${R(proj.aRepassar)}</div><div class="ss">ao proprietário</div></div>
     <div class="sc gr"><div class="slb">Receita Líquida Proj.</div><div class="sv" style="font-size:17px">${R(proj.liquido)}</div><div class="ss">para imobiliária</div></div>
     <div class="sc ye"><div class="slb">Pendentes</div><div class="sv">${pend}</div><div class="ss">${D.cb.filter(c=>!c.pago&&DA(c.venc)<0).length} atrasadas</div></div>
   `;
@@ -965,7 +1014,8 @@ function renderDash(){
       <div style="text-align:right"><div style="font-size:11px;color:var(--dm)">${FD(v.data)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">${v.tp==='C'?'CONTRATO':'COBRANÇA'}</span></div>
     </div>`;
   }).join(''):`<div class="empty" style="padding:22px"><div class="ei">📅</div><p>Nenhum vencimento</p></div>`;
-  const pends=D.cb.filter(c=>!c.pago).sort((a,b)=>DA(a.venc)-DA(b.venc)).slice(0,5);
+  // Mostrar cobranças a vencer: próximas 5, ordenadas por data de vencimento
+  const pends=D.cb.filter(c=>!c.pago).sort((a,b)=>new Date(a.venc)-new Date(b.venc)).slice(0,5);
   document.getElementById('dp').innerHTML=pends.length?pends.map(c=>{
     const s=stCob(c);const f=getFase(c);
     return`<div style="display:flex;align-items:center;gap:9px;padding:8px 16px;border-bottom:1px solid rgba(48,54,61,.3)">
@@ -1187,21 +1237,32 @@ function renderRepasse(){
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ac)">${R(pendImob)}</div>
           </div>
         </div>
-        ${todaCobs.length?`<table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th><th>Status</th></tr></thead>
-        <tbody>${todaCobs.map(cb=>{const rp=cb.repasse;
-        const regra=rp.tipo==='primeiro'?'1º mês':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='manual'?'Manual':'Repasse';
-        const statusCl=cb.pago?'cg':'cy';const statusLbl=cb.pago?'Pago':'Pendente';
-        return`<tr>
-          <td>${MF(cb.mes)}</td>
-          <td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td>
-          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</td>
-          <td style="font-weight:600">${R(cb.valor)}</td>
-          <td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td>
-          <td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td>
-          <td style="font-size:11px;color:var(--dm)">${regra}</td>
-          <td><span class="chip ${statusCl}" style="font-size:10px">${statusLbl}</span></td>
-        </tr>`;}).join('')}
-        </tbody></table>`:'<div style="font-size:13px;color:var(--dm)">Nenhuma cobrança com repasse.</div>'}
+        ${todaCobs.length?(()=>{
+          // Cobranças pagas com prop > 0 e não repassadas ainda
+          const pendRep=pagCobs.filter(x=>x.repasse?.prop>0&&!x.repasseRealizado);
+          const repassadoTotal=pagCobs.filter(x=>x.repasseRealizado).reduce((a,b)=>a+(b.repasse?.prop||0),0);
+          return`${pendRep.length?`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:9px 12px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px">
+            <span style="font-size:13px;color:var(--gn)">💸 ${pendRep.length} cobrança(s) paga(s) aguardando repasse ao proprietário · ${R(pendRep.reduce((a,b)=>a+(b.repasse?.prop||0),0))}</span>
+            <button class="btn bk bsm" onclick="openMarcarRepasse(${JSON.stringify(pendRep.map(x=>x.id))})">Marcar Repassado</button>
+          </div>`:''}
+          <table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Pgto</th><th>Repasse Prop.</th></tr></thead>
+          <tbody>${todaCobs.map(cb=>{const rp=cb.repasse;
+          const regra=rp.tipo==='primeiro'?'1º mês':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':rp.tipo==='manual'?'Manual':'Repasse';
+          const pgCl=cb.pago?'cg':'cy';const pgLbl=cb.pago?`Pago ${FD(cb.dataPago)||''}`:FD(cb.venc);
+          const repCl=!cb.pago?'cy':cb.repasseRealizado?'cg':'cr';
+          const repLbl=!cb.pago?'–':cb.repasseRealizado?`Repassado ${FD(cb.dataRepasse)||''}`:rp?.prop>0?'Pendente':'N/A';
+          return`<tr>
+            <td>${MF(cb.mes)}</td>
+            <td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td>
+            <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${cb.descricao||''}">${cb.descricao||''}</td>
+            <td style="font-weight:600">${R(cb.valor)}</td>
+            <td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td>
+            <td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td>
+            <td><span class="chip ${pgCl}" style="font-size:10px">${pgLbl}</span></td>
+            <td>${cb.pago&&rp?.prop>0?`<span class="chip ${repCl}" style="font-size:10px;cursor:${!cb.repasseRealizado?'pointer':'default'}" ${!cb.repasseRealizado?`onclick="openMarcarRepasse('${cb.id}')"`:''}>${repLbl}</span>`:'<span style="font-size:11px;color:var(--dmr)">–</span>'}</td>
+          </tr>`;}).join('')}
+          </tbody></table>`;
+        })():'<div style="font-size:13px;color:var(--dm)">Nenhuma cobrança com repasse.</div>'}
       `}
       </div>
     </div>`;
@@ -1211,7 +1272,22 @@ function renderRepasse(){
 // ══════════════════════════════════════════
 // COBRANÇAS
 // ══════════════════════════════════════════
+let _cobCollapsed=new Set(); // contratos colapsados
+let _cobFiltroEmpresa='',_cobFiltroProp='',_cobFiltroDataIni='',_cobFiltroDataFim='';
 function fCob(f,el){cobFiltro=f;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el?.classList.add('on');renderCobrancas();}
+function toggleCobContract(cid){if(_cobCollapsed.has(cid))_cobCollapsed.delete(cid);else _cobCollapsed.add(cid);renderCobrancas();}
+function aplicarFiltrosCob(){
+  _cobFiltroEmpresa=document.getElementById('flt-empresa')?.value?.toLowerCase()||'';
+  _cobFiltroProp=document.getElementById('flt-prop')?.value?.toLowerCase()||'';
+  _cobFiltroDataIni=document.getElementById('flt-dini')?.value||'';
+  _cobFiltroDataFim=document.getElementById('flt-dfim')?.value||'';
+  renderCobrancas();
+}
+function limparFiltrosCob(){
+  _cobFiltroEmpresa='';_cobFiltroProp='';_cobFiltroDataIni='';_cobFiltroDataFim='';
+  ['flt-empresa','flt-prop','flt-dini','flt-dfim'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderCobrancas();
+}
 
 function cobItem(cb,inDetail=false){
   const s=stCob(cb);
@@ -1225,6 +1301,7 @@ function cobItem(cb,inDetail=false){
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:${atrasadoForte?'var(--re)':'var(--te)'}">${R(cb.valor)}</span>
         <span class="tt ${tpCl(cb.tipo)}">${cb.tipo||'Aluguel'}</span>
+        ${cb.reajustePendente?`<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(249,115,22,.15);color:var(--or)">↑ REAJUSTE</span>`:''}
         ${f.cls?`<span class="fase ${f.cls}">${f.label}</span>`:''}
       </div>
       <div style="font-size:12px;color:var(--dm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</div>
@@ -1250,23 +1327,44 @@ function renderCobrancas(){
   else if(cobFiltro==='pago')list=list.filter(c=>c.pago);
   else if(cobFiltro==='atrasado')list=list.filter(c=>!c.pago&&DA(c.venc)<0);
   else if(cobFiltro==='lembrete')list=list.filter(c=>!c.pago&&DA(c.venc)<=3);
+  // Filtros adicionais
+  if(_cobFiltroEmpresa)list=list.filter(c=>(c.inquilino||'').toLowerCase().includes(_cobFiltroEmpresa));
+  if(_cobFiltroProp){list=list.filter(c=>{const con=D.c.find(x=>x.id===c.contratoId);return(con?.proprietario||'').toLowerCase().includes(_cobFiltroProp);});}
+  if(_cobFiltroDataIni)list=list.filter(c=>c.venc>=_cobFiltroDataIni);
+  if(_cobFiltroDataFim)list=list.filter(c=>c.venc<=_cobFiltroDataFim);
   list.sort((a,b)=>new Date(a.venc)-new Date(b.venc));
   const el=document.getElementById('tcb');
-  if(!list.length){el.innerHTML=`<div class="empty"><div class="ei">💰</div><h3>Nenhuma cobrança</h3><p>Cadastre um contrato ou registre manualmente</p></div>`;return;}
+  const inpS='background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:\'DM Sans\',sans-serif;font-size:12px;padding:5px 8px;outline:none';
+  const filterBar=`<div style="padding:9px 12px;background:var(--sf);border-bottom:1px solid var(--bd);display:flex;flex-wrap:wrap;gap:7px;align-items:flex-end">
+    <div><div style="font-size:10px;color:var(--dm);margin-bottom:3px">EMPRESA/INQUILINO</div><input id="flt-empresa" value="${_cobFiltroEmpresa}" oninput="aplicarFiltrosCob()" placeholder="Buscar..." style="${inpS};width:150px"></div>
+    <div><div style="font-size:10px;color:var(--dm);margin-bottom:3px">PROPRIETÁRIO</div><input id="flt-prop" value="${_cobFiltroProp}" oninput="aplicarFiltrosCob()" placeholder="Buscar..." style="${inpS};width:150px"></div>
+    <div><div style="font-size:10px;color:var(--dm);margin-bottom:3px">VENC. DE</div><input type="date" id="flt-dini" value="${_cobFiltroDataIni}" onchange="aplicarFiltrosCob()" style="${inpS}"></div>
+    <div><div style="font-size:10px;color:var(--dm);margin-bottom:3px">ATÉ</div><input type="date" id="flt-dfim" value="${_cobFiltroDataFim}" onchange="aplicarFiltrosCob()" style="${inpS}"></div>
+    ${(_cobFiltroEmpresa||_cobFiltroProp||_cobFiltroDataIni||_cobFiltroDataFim)?`<button class="btn bg bsm" onclick="limparFiltrosCob()">✕ Limpar</button>`:''}
+    <span style="font-size:11px;color:var(--dm);margin-left:auto;align-self:center">${list.length} cobranças</span>
+  </div>`;
+  if(!list.length){el.innerHTML=filterBar+`<div class="empty"><div class="ei">💰</div><h3>Nenhuma cobrança</h3><p>Cadastre um contrato ou registre manualmente</p></div>`;return;}
   const byContract={};
   list.forEach(c=>{const key=c.contratoId||'avulso';if(!byContract[key])byContract[key]=[];byContract[key].push(c);});
-  el.innerHTML=Object.entries(byContract).map(([cid,cobs])=>{
+  el.innerHTML=filterBar+Object.entries(byContract).map(([cid,cobs])=>{
     const con=D.c.find(x=>x.id===cid);
     const ind=cid!=='avulso'?calcInadimplencia(cid):null;
+    const collapsed=_cobCollapsed.has(cid);
+    const pendCount=cobs.filter(c=>!c.pago).length;
+    const totalPend=cobs.filter(c=>!c.pago).reduce((a,b)=>a+b.valor,0);
     return`<div style="border-bottom:2px solid var(--bd)">
-      <div style="padding:9px 12px;background:var(--sf2);display:flex;align-items:center;justify-content:space-between">
-        <div><div style="font-weight:600;font-size:13px">${con?.inquilino||'Sem contrato'}</div><div style="font-size:11px;color:var(--dm)">${(con?.endereco||'').substring(0,45)}</div></div>
+      <div style="padding:9px 12px;background:var(--sf2);display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleCobContract('${cid}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--dm);transition:transform .15s;display:inline-block;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
+          <div><div style="font-weight:600;font-size:13px">${con?.inquilino||'Sem contrato'}</div><div style="font-size:11px;color:var(--dm)">${(con?.endereco||'').substring(0,45)}</div></div>
+        </div>
         <div style="display:flex;align-items:center;gap:8px">
           ${ind&&ind.risco!=='Baixo'?`<span class="chip ${ind.risco==='Alto'?'cr':'cy'}">${ind.risco} risco</span>`:''}
+          ${pendCount>0?`<span style="font-size:12px;color:var(--ye)">${pendCount} pendentes · ${R(totalPend)}</span>`:'<span style="font-size:12px;color:var(--gn)">✓ Em dia</span>'}
           <div style="font-size:12px;color:var(--dm)">${R(con?.valor||0)}/mês</div>
         </div>
       </div>
-      <div style="padding:0 12px">${cobs.map(cb=>cobItem(cb)).join('')}</div>
+      <div style="padding:0 12px;display:${collapsed?'none':'block'}">${cobs.map(cb=>cobItem(cb)).join('')}</div>
     </div>`;
   }).join('');
   badges();
@@ -1508,12 +1606,13 @@ async function gerarCobsSupabase(c,userId){
     let valor=c.valor,descExtra='';
     if(primMes){const diaIni=ini.getDate();if(diaIni!==1){const dm=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();const dr=dm-diaIni;valor=Math.round((c.valor/dm)*dr*100)/100;descExtra=` (${dr}/${dm} dias)`;}}
     const isFirst=primMes;primMes=false;
-    // 1º mês: repasse da imob calculado sobre o valor CHEIO do aluguel (c.valor),
-    // mesmo que o mês seja proporcional. Prop = valor proporcional - imob.
     const repBase=isFirst?c.valor:valor;
     const repRaw=calcRepasse('Aluguel',repBase,isFirst,adm);
-    const repImob=Math.min(repRaw.imob,valor); // imob não pode superar o cobrado
+    const repImob=Math.min(repRaw.imob,valor);
     const rep={imob:repImob,prop:Math.max(0,valor-repImob),tipo:repRaw.tipo};
+    // Flagear reajuste: meses além do período de reajuste (ex: a partir do 13º se reajuste=12)
+    const monthIdx=(y-ini.getFullYear())*12+(m-ini.getMonth()); // 1-based
+    const reajPend=!!(c.reajusteMeses&&c.reajusteMeses>0&&c.reajusteIndice!=='Nenhum'&&monthIdx>c.reajusteMeses);
     cobsToInsert.push({
       user_id:userId,contrato_id:c.id,
       inquilino:c.inquilino,endereco:c.endereco,
@@ -1521,7 +1620,8 @@ async function gerarCobsSupabase(c,userId){
       descricao:`Aluguel ${MN[m]}/${y}${descExtra}`,
       valor,venc:vencData.toISOString().split('T')[0],
       pago:false,
-      repasse_imob:rep.imob,repasse_prop:rep.prop,repasse_tipo:rep.tipo
+      repasse_imob:rep.imob,repasse_prop:rep.prop,repasse_tipo:rep.tipo,
+      reajuste_pendente:reajPend
     });
     cur=new Date(y,m+1,1);
   }
@@ -1666,6 +1766,8 @@ async function saveContract(){
     caucao:parseFloat(document.getElementById('fcau').value)||0,
     caucao_tp:document.getElementById('fcautp').value,
     observacoes:document.getElementById('fobs').value||null,
+    reajuste_meses:parseInt(document.getElementById('freaj').value)||12,
+    reajuste_indice:document.getElementById('freajind').value||'IGP-M',
     gerar_cob:document.getElementById('fgc').checked
   }).select().single();
   btn.disabled=false;btn.textContent='✓ Salvar Contrato';
