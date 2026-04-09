@@ -2558,200 +2558,447 @@ function enviarWhatsApp(texto){
   const url='https://wa.me/?text='+encodeURIComponent(texto);
   window.open(url,'_blank');
 }
+function relMesLabel(ym){if(!ym)return'–';const[y,m]=ym.split('-');return['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+m-1]+'/'+y;}
+function relMeses(n=24){const hoje=new Date();return[...Array(n)].map((_,i)=>{const d=new Date(hoje.getFullYear(),hoje.getMonth()-i);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;});}
+function R2(v){return'R$'+(+v||0).toFixed(2).replace('.',',');}
+
 function renderRelatorios(){
   const el=document.getElementById('relatorios-content');
-  const hoje=new Date();
-  const mesAtual=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const meses=relMeses(24);
+  const props=[...new Set(D.c.map(c=>c.proprietario).filter(Boolean))].sort();
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:20px">
-      <!-- Repasse por Proprietário -->
+    <div style="display:flex;flex-direction:column;gap:16px">
       <div class="card" style="margin-bottom:0">
         <div class="ch">🏦 Repasse por Proprietário</div>
         <div class="cb">
-          <div style="margin-bottom:10px">
-            <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Período (Mês/Ano)</label>
-            <select id="rel1-mes" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:'DM Sans';font-size:12px">
-              ${[...Array(12)].map((_,i)=>{const d=new Date(hoje.getFullYear(),hoje.getMonth()-i);const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;return`<option value="${m}" ${i===0?'selected':''}>Período ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()]}/${d.getFullYear()}</option>`;}).join('')}
-            </select>
+          <p style="font-size:12px;color:var(--dm);margin-bottom:14px">Detalhamento por proprietário e por contrato: valor cobrado, taxa da imobiliária, valor repassado e pendências de repasse.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">De</label>
+              <select id="rr-de" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                ${meses.map((m,i)=>`<option value="${m}" ${i===2?'selected':''}>${relMesLabel(m)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Até</label>
+              <select id="rr-ate" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                ${meses.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Proprietário</label>
+              <select id="rr-prop" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                <option value="">Todos</option>
+                ${props.map(p=>`<option value="${p}">${p}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn" onclick="rrQuick(0)" style="font-size:11px;padding:3px 8px">Este mês</button>
+            <button class="btn" onclick="rrQuick(1)" style="font-size:11px;padding:3px 8px">Mês anterior</button>
+            <button class="btn" onclick="rrQuick(3)" style="font-size:11px;padding:3px 8px">Trimestre</button>
+            <button class="btn" onclick="rrQuick(6)" style="font-size:11px;padding:3px 8px">Semestre</button>
+            <button class="btn" onclick="rrQuick(12)" style="font-size:11px;padding:3px 8px">Ano</button>
           </div>
           <div style="display:flex;gap:7px;flex-wrap:wrap">
-            <button class="btn bg" onclick="gerarRelRepasse(document.getElementById('rel1-mes').value)">📄 Gerar PDF</button>
-            <button class="btn bg" onclick="shareRelRepasse(document.getElementById('rel1-mes').value)">📱 WhatsApp</button>
+            <button class="btn bg" onclick="gerarRelRepasse()">📄 Gerar PDF</button>
+            <button class="btn bg" onclick="shareRelRepasse()">📱 WhatsApp</button>
           </div>
         </div>
       </div>
-      <!-- Financeiro Mensal -->
       <div class="card" style="margin-bottom:0">
-        <div class="ch">💰 Financeiro Mensal</div>
+        <div class="ch">💰 Financeiro da Imobiliária</div>
         <div class="cb">
-          <div style="margin-bottom:10px">
-            <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Período</label>
-            <select id="rel2-mes" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:'DM Sans';font-size:12px">
-              ${[...Array(12)].map((_,i)=>{const d=new Date(hoje.getFullYear(),hoje.getMonth()-i);const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;return`<option value="${m}" ${i===0?'selected':''}>Período ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()]}/${d.getFullYear()}</option>`;}).join('')}
-            </select>
+          <p style="font-size:12px;color:var(--dm);margin-bottom:14px">Visão financeira da imobiliária: receita própria, volume administrado, breakdown por tipo de cobrança e inadimplência do período.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">De</label>
+              <select id="rf-de" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                ${meses.map((m,i)=>`<option value="${m}" ${i===2?'selected':''}>${relMesLabel(m)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Até</label>
+              <select id="rf-ate" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                ${meses.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn" onclick="rfQuick(0)" style="font-size:11px;padding:3px 8px">Este mês</button>
+            <button class="btn" onclick="rfQuick(1)" style="font-size:11px;padding:3px 8px">Mês anterior</button>
+            <button class="btn" onclick="rfQuick(3)" style="font-size:11px;padding:3px 8px">Trimestre</button>
+            <button class="btn" onclick="rfQuick(6)" style="font-size:11px;padding:3px 8px">Semestre</button>
+            <button class="btn" onclick="rfQuick(12)" style="font-size:11px;padding:3px 8px">Ano</button>
           </div>
           <div style="display:flex;gap:7px;flex-wrap:wrap">
-            <button class="btn bg" onclick="gerarRelFinanceiro(document.getElementById('rel2-mes').value)">📄 Gerar PDF</button>
-            <button class="btn bg" onclick="shareRelFinanceiro(document.getElementById('rel2-mes').value)">📱 WhatsApp</button>
+            <button class="btn bg" onclick="gerarRelFinanceiro()">📄 Gerar PDF</button>
+            <button class="btn bg" onclick="shareRelFinanceiro()">📱 WhatsApp</button>
           </div>
         </div>
       </div>
-      <!-- Extrato de Contrato -->
-      <div class="card" style="margin-bottom:0">
-        <div class="ch">📋 Extrato de Contrato</div>
-        <div class="cb">
-          <div style="margin-bottom:10px">
-            <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Selecione um Contrato</label>
-            <select id="rel3-con" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:'DM Sans';font-size:12px">
-              <option value="">– Escolha um contrato –</option>
-              ${D.c.map(c=>`<option value="${c.id}">${c.inquilino||'–'} · ${(c.endereco||'').substring(0,30)}</option>`).join('')}
-            </select>
-          </div>
-          <div style="display:flex;gap:7px;flex-wrap:wrap">
-            <button class="btn bg" onclick="gerarRelContrato(document.getElementById('rel3-con').value)">📄 Gerar PDF</button>
-            <button class="btn bg" onclick="shareRelContrato(document.getElementById('rel3-con').value)">📱 WhatsApp</button>
-          </div>
-        </div>
-      </div>
-      <!-- Inadimplência -->
-      <div class="card" style="margin-bottom:0">
-        <div class="ch">⚠️ Inadimplência</div>
-        <div class="cb">
-          <p style="font-size:12px;color:var(--dm);margin-bottom:10px">Todas as cobranças em atraso com detalhes de inquilino e dias vencidos.</p>
-          <div style="display:flex;gap:7px;flex-wrap:wrap">
-            <button class="btn bg" onclick="gerarRelInadimplencia()">📄 Gerar PDF</button>
-            <button class="btn bg" onclick="shareRelInadimplencia()">📱 WhatsApp</button>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+        <div class="card" style="margin-bottom:0">
+          <div class="ch">📋 Extrato de Contrato</div>
+          <div class="cb">
+            <p style="font-size:12px;color:var(--dm);margin-bottom:10px">Histórico completo de cobranças de um contrato específico, com status e totais.</p>
+            <div style="margin-bottom:12px">
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Contrato</label>
+              <select id="rel3-con" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                <option value="">– Escolha um contrato –</option>
+                ${D.c.map(c=>`<option value="${c.id}">${c.inquilino||'–'} · ${(c.endereco||'').substring(0,30)}</option>`).join('')}
+              </select>
+            </div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button class="btn bg" onclick="gerarRelContrato(document.getElementById('rel3-con').value)">📄 Gerar PDF</button>
+              <button class="btn bg" onclick="shareRelContrato(document.getElementById('rel3-con').value)">📱 WhatsApp</button>
+            </div>
           </div>
         </div>
-      </div>
-      <!-- Vencimentos e Reajustes -->
-      <div class="card" style="margin-bottom:0">
-        <div class="ch">📅 Vencimentos & Reajustes</div>
-        <div class="cb">
-          <p style="font-size:12px;color:var(--dm);margin-bottom:10px">Contratos vencendo nos próximos 90 dias + reajustes pendentes.</p>
-          <div style="display:flex;gap:7px;flex-wrap:wrap">
-            <button class="btn bg" onclick="gerarRelVencimentos()">📄 Gerar PDF</button>
-            <button class="btn bg" onclick="shareRelVencimentos()">📱 WhatsApp</button>
+        <div class="card" style="margin-bottom:0">
+          <div class="ch">⚠️ Inadimplência</div>
+          <div class="cb">
+            <p style="font-size:12px;color:var(--dm);margin-bottom:10px">Todas as cobranças em atraso: inquilino, valor, dias vencidos e contratos afetados.</p>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button class="btn bg" onclick="gerarRelInadimplencia()">📄 Gerar PDF</button>
+              <button class="btn bg" onclick="shareRelInadimplencia()">📱 WhatsApp</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="ch">📅 Vencimentos & Reajustes</div>
+          <div class="cb">
+            <p style="font-size:12px;color:var(--dm);margin-bottom:10px">Contratos encerrando nos próximos 90 dias, reajustes pendentes e seguros a vencer.</p>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button class="btn bg" onclick="gerarRelVencimentos()">📄 Gerar PDF</button>
+              <button class="btn bg" onclick="shareRelVencimentos()">📱 WhatsApp</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   `;
 }
-function gerarRelRepasse(mes){
-  const[ano,month]=mes.split('-').map(Number);
-  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes&&cb.repasse);
+function rrQuick(n){
+  const m=relMeses(24);
+  if(n===0){document.getElementById('rr-de').value=m[0];document.getElementById('rr-ate').value=m[0];}
+  else if(n===1){document.getElementById('rr-de').value=m[1];document.getElementById('rr-ate').value=m[1];}
+  else{document.getElementById('rr-de').value=m[Math.min(n-1,m.length-1)];document.getElementById('rr-ate').value=m[0];}
+}
+function rfQuick(n){
+  const m=relMeses(24);
+  if(n===0){document.getElementById('rf-de').value=m[0];document.getElementById('rf-ate').value=m[0];}
+  else if(n===1){document.getElementById('rf-de').value=m[1];document.getElementById('rf-ate').value=m[1];}
+  else{document.getElementById('rf-de').value=m[Math.min(n-1,m.length-1)];document.getElementById('rf-ate').value=m[0];}
+}
+function gerarRelRepasse(){
+  const de=document.getElementById('rr-de').value;
+  const ate=document.getElementById('rr-ate').value;
+  const propFiltro=document.getElementById('rr-prop').value;
+  if(de>ate){alert('O mês "De" deve ser anterior ou igual ao "Até"');return;}
+  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
   const byProp={};
   cobs.forEach(cb=>{
     const c=D.c.find(x=>x.id===cb.contratoId);
-    const prop=c?.proprietario||'Sem info';
-    if(!byProp[prop])byProp[prop]={recebido:0,repassado:0,pendente:0};
-    byProp[prop].recebido+=cb.valorPago||cb.valor;
-    byProp[prop].repassado+=cb.repasse?.prop||0;
-    if(cb.repasse?.prop&&!cb.repasseRealizado)byProp[prop].pendente+=cb.repasse.prop;
+    const prop=c?.proprietario||'Sem proprietário';
+    if(propFiltro&&prop!==propFiltro)return;
+    const key=c?.id||cb.contratoId;
+    if(!byProp[prop])byProp[prop]={contratos:{}};
+    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0};
+    const rec=+(cb.valorPago||cb.valor||0);
+    const imob=+(cb.repasse?.imob||0);
+    const prop_v=+(cb.repasse?.prop||0);
+    const pend=prop_v&&!cb.repasseRealizado?prop_v:0;
+    byProp[prop].contratos[key].rows.push({mes:cb.mes,tipo:cb.tipo||'Aluguel',rec,imob,prop_v,pend});
+    byProp[prop].contratos[key].totRec+=rec;
+    byProp[prop].contratos[key].totImob+=imob;
+    byProp[prop].contratos[key].totProp+=prop_v;
+    byProp[prop].contratos[key].totPend+=pend;
   });
-  let html=`<h2>Repasse ao Proprietário · ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}</h2>`;
-  if(Object.keys(byProp).length===0){html+=`<p>Nenhuma cobrança paga neste período.</p>`;gerarPDF('Repasse ao Proprietário',html);return;}
-  html+=`<table><thead><tr><th>Proprietário</th><th>Recebido</th><th>Repassado</th><th>Pendente</th></tr></thead><tbody>`;
-  let totRec=0,totRep=0,totPend=0;
-  Object.entries(byProp).forEach(([prop,vals])=>{
-    totRec+=vals.recebido;totRep+=vals.repassado;totPend+=vals.pendente;
-    html+=`<tr><td>${prop}</td><td>R$${vals.recebido.toFixed(2).replace('.',',')}</td><td>R$${vals.repassado.toFixed(2).replace('.',',')}</td><td>${vals.pendente>0?'<span style="color:red">R$'+vals.pendente.toFixed(2).replace('.',',')+' 🔴':'✓'}</span></td></tr>`;
+  const pl=de===ate?relMesLabel(de):`${relMesLabel(de)} a ${relMesLabel(ate)}`;
+  let html=`<h2 style="margin-bottom:4px">Repasse ao Proprietário</h2><p style="color:#666;font-size:13px;margin-bottom:20px">Período: ${pl}${propFiltro?' · '+propFiltro:''}</p>`;
+  if(!Object.keys(byProp).length){html+=`<p>Nenhuma cobrança paga no período.</p>`;gerarPDF('Repasse ao Proprietário',html);return;}
+  let gRec=0,gImob=0,gProp=0,gPend=0;
+  Object.entries(byProp).forEach(([prop,data])=>{
+    let pRec=0,pImob=0,pProp=0,pPend=0;
+    html+=`<div class="section"><h3 style="font-size:15px;margin-bottom:14px;color:#1e40af">👤 ${prop}</h3>`;
+    Object.values(data.contratos).forEach(ct=>{
+      html+=`<p style="font-size:12px;margin-bottom:6px"><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
+      html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Taxa Imob.</th><th>Ao Prop.</th><th>Pendente</th></tr></thead><tbody>`;
+      ct.rows.sort((a,b)=>a.mes.localeCompare(b.mes)).forEach(r=>{
+        const pc=r.pend>0?`<span style="color:#dc2626;font-weight:600">${R2(r.pend)}</span>`:`<span style="color:#16a34a">✓</span>`;
+        html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.rec)}</td><td>${R2(r.imob)}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
+      });
+      html+=`<tr style="background:#f0f4f8;font-weight:700"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table><div style="height:10px"></div>`;
+      pRec+=ct.totRec;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;
+    });
+    html+=`<div style="background:#dbeafe;padding:10px 14px;border-radius:6px;margin-top:6px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap"><span><strong>${prop}</strong></span><span>Recebido: <strong>${R2(pRec)}</strong></span><span>Taxa Imob.: <strong>${R2(pImob)}</strong></span><span>Repassado: <strong>${R2(pProp)}</strong></span>${pPend>0?`<span style="color:#dc2626">⚠️ Pendente: <strong>${R2(pPend)}</strong></span>`:`<span style="color:#16a34a">✅ Sem pendências</span>`}</div></div>`;
+    gRec+=pRec;gImob+=pImob;gProp+=pProp;gPend+=pPend;
   });
-  html+=`<tr style="background:#f0f4f8;font-weight:bold"><td>TOTAL</td><td>R$${totRec.toFixed(2).replace('.',',')}</td><td>R$${totRep.toFixed(2).replace('.',',')}</td><td>${totPend>0?'R$'+totPend.toFixed(2).replace('.',','):'-'}</td></tr></tbody></table>`;
+  html+=`<div style="background:#1e3a8a;color:#fff;padding:14px 18px;border-radius:8px;margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px"><span><strong>TOTAL GERAL</strong></span><span>Recebido: <strong>${R2(gRec)}</strong></span><span>Taxa Imob.: <strong>${R2(gImob)}</strong></span><span>Repassado: <strong>${R2(gProp)}</strong></span>${gPend>0?`<span>⚠️ Pendente: <strong>${R2(gPend)}</strong></span>`:`<span>✅ Sem pendências</span>`}</div>`;
   gerarPDF('Repasse ao Proprietário',html);
 }
-function shareRelRepasse(mes){
-  const[ano,month]=mes.split('-').map(Number);
-  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes);
-  const total=cobs.reduce((a,b)=>a+(b.valorPago||b.valor),0);
-  const text=`🏠 *ImobGestão — Repasse ao Proprietário*\\n📅 Período: ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}\\n\\n💰 Total Recebido: R$${total.toFixed(2).replace('.',',')}\\n\\n_Gerado pelo ImobGestão_`;
-  enviarWhatsApp(text);
-}
-function gerarRelFinanceiro(mes){
-  const[ano,month]=mes.split('-').map(Number);
-  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes);
-  const byTipo={};
-  cobs.forEach(cb=>{const tipo=cb.tipo||'Aluguel';if(!byTipo[tipo])byTipo[tipo]={total:0,imob:0,prop:0};byTipo[tipo].total+=cb.valorPago||cb.valor;byTipo[tipo].imob+=cb.repasse?.imob||0;byTipo[tipo].prop+=cb.repasse?.prop||0;});
-  let html=`<h2>Financeiro Mensal · ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}</h2>`;
-  html+=`<table><thead><tr><th>Tipo</th><th>Total</th><th>Imobiliária</th><th>Proprietário</th></tr></thead><tbody>`;
-  let totGeral=0,totImob=0,totProp=0;
-  Object.entries(byTipo).forEach(([tipo,vals])=>{
-    totGeral+=vals.total;totImob+=vals.imob;totProp+=vals.prop;
-    html+=`<tr><td>${tipo}</td><td>R$${vals.total.toFixed(2).replace('.',',')}</td><td>R$${vals.imob.toFixed(2).replace('.',',')}</td><td>R$${vals.prop.toFixed(2).replace('.',',')}</td></tr>`;
+function shareRelRepasse(){
+  const de=document.getElementById('rr-de').value;
+  const ate=document.getElementById('rr-ate').value;
+  const propFiltro=document.getElementById('rr-prop').value;
+  const pl=de===ate?relMesLabel(de):`${relMesLabel(de)} a ${relMesLabel(ate)}`;
+  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
+  const byProp={};
+  cobs.forEach(cb=>{
+    const c=D.c.find(x=>x.id===cb.contratoId);
+    const prop=c?.proprietario||'Sem proprietário';
+    if(propFiltro&&prop!==propFiltro)return;
+    if(!byProp[prop])byProp[prop]={rec:0,prop_v:0,pend:0,qtd:0};
+    byProp[prop].rec+=+(cb.valorPago||cb.valor||0);
+    byProp[prop].prop_v+=+(cb.repasse?.prop||0);
+    if(cb.repasse?.prop&&!cb.repasseRealizado)byProp[prop].pend+=+(cb.repasse.prop);
+    byProp[prop].qtd++;
   });
-  html+=`<tr style="background:#f0f4f8;font-weight:bold"><td>TOTAL</td><td>R$${totGeral.toFixed(2).replace('.',',')}</td><td>R$${totImob.toFixed(2).replace('.',',')}</td><td>R$${totProp.toFixed(2).replace('.',',')}</td></tr></tbody></table>`;
-  gerarPDF('Financeiro Mensal',html);
+  const linhas=['🏦 *Repasse ao Proprietário*',`📅 Período: ${pl}`,`📍 ${propFiltro||'Todos os proprietários'}`,''];
+  Object.entries(byProp).forEach(([prop,v])=>{
+    linhas.push(`👤 *${prop}*`);
+    linhas.push(`   Recebido: ${R2(v.rec)}`);
+    linhas.push(`   Repassado: ${R2(v.prop_v)}`);
+    linhas.push(v.pend>0?`   ⚠️ Pendente: ${R2(v.pend)}`:`   ✅ Sem pendências`);
+    linhas.push('');
+  });
+  const gRec=Object.values(byProp).reduce((a,b)=>a+b.rec,0);
+  const gProp=Object.values(byProp).reduce((a,b)=>a+b.prop_v,0);
+  const gPend=Object.values(byProp).reduce((a,b)=>a+b.pend,0);
+  linhas.push(`💰 *Total Recebido: ${R2(gRec)}*`);
+  linhas.push(`🏛️ *Total Repassado: ${R2(gProp)}*`);
+  if(gPend>0)linhas.push(`⚠️ *Total Pendente: ${R2(gPend)}*`);
+  linhas.push('');
+  linhas.push('_Gerado pelo ImobGestão_');
+  enviarWhatsApp(linhas.join('\n'));
 }
-function shareRelFinanceiro(mes){
-  const[ano,month]=mes.split('-').map(Number);
-  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes);
-  const total=cobs.reduce((a,b)=>a+(b.valorPago||b.valor),0);
-  const text=`💰 *ImobGestão — Financeiro Mensal*\\n📅 ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}\\n\\n📥 Total Recebido: R$${total.toFixed(2).replace('.',',')}\\n\\n_Gerado pelo ImobGestão_`;
-  enviarWhatsApp(text);
+function gerarRelFinanceiro(){
+  const de=document.getElementById('rf-de').value;
+  const ate=document.getElementById('rf-ate').value;
+  if(de>ate){alert('O mês "De" deve ser anterior ou igual ao "Até"');return;}
+  const pl=de===ate?relMesLabel(de):`${relMesLabel(de)} a ${relMesLabel(ate)}`;
+  const pagas=D.cb.filter(cb=>cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
+  const pendentes=D.cb.filter(cb=>!cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
+  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0);
+  const byTipo={};
+  pagas.forEach(cb=>{
+    const t=cb.tipo||'Aluguel';
+    if(!byTipo[t])byTipo[t]={total:0,imob:0,prop:0,qtd:0};
+    byTipo[t].total+=+(cb.valorPago||cb.valor||0);
+    byTipo[t].imob+=+(cb.repasse?.imob||0);
+    byTipo[t].prop+=+(cb.repasse?.prop||0);
+    byTipo[t].qtd++;
+  });
+  const totRec=pagas.reduce((a,b)=>a+(+(b.valorPago||b.valor||0)),0);
+  const totImob=pagas.reduce((a,b)=>a+(+(b.repasse?.imob||0)),0);
+  const totProp=pagas.reduce((a,b)=>a+(+(b.repasse?.prop||0)),0);
+  const totPend=pendentes.reduce((a,b)=>a+(+(b.valor||0)),0);
+  const totAtr=atrasadas.reduce((a,b)=>a+(+(b.valor||0)),0);
+  const pctInad=(pagas.length+pendentes.length>0)?((atrasadas.length/(pagas.length+pendentes.length))*100).toFixed(1):'0.0';
+  let html=`<h2 style="margin-bottom:4px">Financeiro da Imobiliária</h2><p style="color:#666;font-size:13px;margin-bottom:20px">Período: ${pl}</p>`;
+  html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#dbeafe;padding:14px;border-radius:8px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase;margin-bottom:6px">Volume Administrado</div><div style="font-size:22px;font-weight:800;color:#1e40af">${R2(totRec)}</div></div>
+    <div style="background:#dcfce7;padding:14px;border-radius:8px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase;margin-bottom:6px">Receita Imobiliária</div><div style="font-size:22px;font-weight:800;color:#16a34a">${R2(totImob)}</div></div>
+    <div style="background:#fef9c3;padding:14px;border-radius:8px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase;margin-bottom:6px">A Receber no Período</div><div style="font-size:22px;font-weight:800;color:#854d0e">${R2(totPend)}</div></div>
+  </div>`;
+  html+=`<div class="section"><h3>Receitas por Tipo de Cobrança</h3><table><thead><tr><th>Tipo</th><th>Qtd.</th><th>Volume Total</th><th>Taxa Imobiliária</th><th>Proprietários</th><th>% Imob.</th></tr></thead><tbody>`;
+  Object.entries(byTipo).sort((a,b)=>b[1].total-a[1].total).forEach(([tipo,v])=>{
+    const pct=v.total>0?((v.imob/v.total)*100).toFixed(1):'0.0';
+    html+=`<tr><td><strong>${tipo}</strong></td><td>${v.qtd}</td><td>${R2(v.total)}</td><td><strong style="color:#16a34a">${R2(v.imob)}</strong></td><td>${R2(v.prop)}</td><td>${pct}%</td></tr>`;
+  });
+  html+=`<tr style="background:#f0f4f8;font-weight:700"><td>TOTAL</td><td>${pagas.length}</td><td>${R2(totRec)}</td><td style="color:#16a34a">${R2(totImob)}</td><td>${R2(totProp)}</td><td>${totRec>0?((totImob/totRec)*100).toFixed(1):'0.0'}%</td></tr></tbody></table></div>`;
+  html+=`<div class="section"><h3>Inadimplência e Pendências</h3><table><thead><tr><th>Indicador</th><th>Qtd.</th><th>Valor</th></tr></thead><tbody>
+    <tr><td>Cobranças pagas no período</td><td>${pagas.length}</td><td><strong style="color:#16a34a">${R2(totRec)}</strong></td></tr>
+    <tr><td>Cobranças pendentes no período</td><td>${pendentes.length}</td><td><strong style="color:#d97706">${R2(totPend)}</strong></td></tr>
+    <tr><td>Cobranças em atraso (total carteira)</td><td><strong style="color:#dc2626">${atrasadas.length}</strong></td><td><strong style="color:#dc2626">${R2(totAtr)}</strong></td></tr>
+    <tr><td>Taxa de inadimplência</td><td colspan="2"><strong>${pctInad}%</strong></td></tr>
+    <tr><td>Contratos ativos</td><td colspan="2">${D.c.filter(c=>c.status==='Ativo').length}</td></tr>
+  </tbody></table></div>`;
+  gerarPDF('Financeiro da Imobiliária',html);
+}
+function shareRelFinanceiro(){
+  const de=document.getElementById('rf-de').value;
+  const ate=document.getElementById('rf-ate').value;
+  const pl=de===ate?relMesLabel(de):`${relMesLabel(de)} a ${relMesLabel(ate)}`;
+  const pagas=D.cb.filter(cb=>cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
+  const pendentes=D.cb.filter(cb=>!cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
+  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0);
+  const totRec=pagas.reduce((a,b)=>a+(+(b.valorPago||b.valor||0)),0);
+  const totImob=pagas.reduce((a,b)=>a+(+(b.repasse?.imob||0)),0);
+  const totPend=pendentes.reduce((a,b)=>a+(+(b.valor||0)),0);
+  const totAtr=atrasadas.reduce((a,b)=>a+(+(b.valor||0)),0);
+  const pctInad=(pagas.length+pendentes.length>0)?((atrasadas.length/(pagas.length+pendentes.length))*100).toFixed(1):'0.0';
+  const linhas=[
+    `💰 *Financeiro da Imobiliária*`,
+    `📅 Período: ${pl}`,
+    ``,
+    `📊 *Resultado do Período*`,
+    `   Volume administrado: ${R2(totRec)}`,
+    `   Receita imobiliária: *${R2(totImob)}*`,
+    `   A receber: ${R2(totPend)}`,
+    ``,
+    `⚠️ *Inadimplência*`,
+    `   Cobranças em atraso: ${atrasadas.length}`,
+    `   Valor em atraso: ${R2(totAtr)}`,
+    `   Taxa: ${pctInad}%`,
+    ``,
+    `_Gerado pelo ImobGestão_`
+  ];
+  enviarWhatsApp(linhas.join('\n'));
 }
 function gerarRelContrato(cid){
   const c=D.c.find(x=>x.id===cid);
   if(!c){alert('Selecione um contrato');return;}
   const cobs=D.cb.filter(x=>x.contratoId===cid).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
-  let html=`<h2>Extrato de Contrato</h2><div class="section"><h3>${c.inquilino||'–'}</h3><p><strong>Endereço:</strong> ${c.endereco||'–'}</p><p><strong>Proprietário:</strong> ${c.proprietario||'–'}</p><p><strong>Período:</strong> ${c.inicio ? 'A partir de '+c.inicio : 'N/A'}</p></div><table><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>`;
+  const pagas=cobs.filter(x=>x.pago);
+  const pend=cobs.filter(x=>!x.pago);
+  const totPago=pagas.reduce((a,b)=>a+(+(b.valorPago||b.valor||0)),0);
+  const totPend=pend.reduce((a,b)=>a+(+(b.valor||0)),0);
+  let html=`<h2 style="margin-bottom:4px">Extrato de Contrato</h2>`;
+  html+=`<div class="section"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div><strong>Inquilino:</strong> ${c.inquilino||'–'}</div>
+    <div><strong>Proprietário:</strong> ${c.proprietario||'–'}</div>
+    <div><strong>Endereço:</strong> ${c.endereco||'–'}</div>
+    <div><strong>Período:</strong> ${c.inicio||'–'} a ${c.fim||'–'}</div>
+    <div><strong>Aluguel:</strong> ${R2(c.valor||0)}/mês</div>
+    <div><strong>Status:</strong> ${c.status||'–'}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px">
+    <div style="background:#dcfce7;padding:10px;border-radius:6px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase">Pago</div><div style="font-size:18px;font-weight:700;color:#16a34a">${R2(totPago)}</div><div style="font-size:10px;color:#555">${pagas.length} cobranças</div></div>
+    <div style="background:#fef9c3;padding:10px;border-radius:6px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase">Pendente</div><div style="font-size:18px;font-weight:700;color:#854d0e">${R2(totPend)}</div><div style="font-size:10px;color:#555">${pend.length} cobranças</div></div>
+    <div style="background:#dbeafe;padding:10px;border-radius:6px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase">Total</div><div style="font-size:18px;font-weight:700;color:#1e40af">${R2(totPago+totPend)}</div><div style="font-size:10px;color:#555">${cobs.length} cobranças</div></div>
+  </div></div>`;
+  html+=`<div class="section"><h3>Histórico de Cobranças</h3><table><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>`;
   cobs.forEach(cb=>{
-    const status=cb.pago?'✓ Pago':'⏳ Pendente';
-    html+=`<tr><td>${cb.mes||'–'}</td><td>${cb.tipo||'–'}</td><td>${cb.descricao||'–'}</td><td>R$${(cb.valorPago||cb.valor||0).toFixed(2).replace('.',',')}</td><td>${cb.venc||'–'}</td><td>${status}</td></tr>`;
+    const atrasado=!cb.pago&&DA(cb.venc)<0;
+    const sc=cb.pago?`<span style="color:#16a34a;font-weight:600">✓ Pago</span>`:atrasado?`<span style="color:#dc2626;font-weight:600">⏳ ${Math.abs(DA(cb.venc))}d atraso</span>`:`<span style="color:#d97706">⏳ Pendente</span>`;
+    html+=`<tr ${atrasado?'style="background:#fff5f5"':''}><td>${relMesLabel(cb.mes||'')}</td><td>${cb.tipo||'Aluguel'}</td><td>${cb.descricao||'–'}</td><td>${R2(cb.valorPago||cb.valor||0)}</td><td>${cb.venc||'–'}</td><td>${sc}</td></tr>`;
   });
-  html+=`</tbody></table>`;
+  html+=`</tbody></table></div>`;
   gerarPDF('Extrato de Contrato',html);
 }
 function shareRelContrato(cid){
   const c=D.c.find(x=>x.id===cid);
   if(!c){alert('Selecione um contrato');return;}
   const cobs=D.cb.filter(x=>x.contratoId===cid);
-  const pago=cobs.filter(x=>x.pago).length;
-  const text=`📋 *Extrato do Contrato*\\n\\n👤 ${c.inquilino}\\n🏠 ${c.endereco}\\n\\n📊 Cobranças: ${cobs.length}\\n✓ Pagas: ${pago}\\n⏳ Pendentes: ${cobs.length-pago}\\n\\n_Gerado pelo ImobGestão_`;
-  enviarWhatsApp(text);
+  const pagas=cobs.filter(x=>x.pago);
+  const pend=cobs.filter(x=>!x.pago);
+  const atr=cobs.filter(cb=>!cb.pago&&DA(cb.venc)<0);
+  const totPago=pagas.reduce((a,b)=>a+(+(b.valorPago||b.valor||0)),0);
+  const totPend=pend.reduce((a,b)=>a+(+(b.valor||0)),0);
+  const linhas=[
+    `📋 *Extrato de Contrato*`,
+    ``,
+    `👤 *${c.inquilino||'–'}*`,
+    `🏠 ${c.endereco||'–'}`,
+    `🏛️ Proprietário: ${c.proprietario||'–'}`,
+    `📅 ${c.inicio||'–'} a ${c.fim||'–'}`,
+    ``,
+    `📊 *Resumo*`,
+    `   Total de cobranças: ${cobs.length}`,
+    `   ✅ Pagas: ${pagas.length} — ${R2(totPago)}`,
+    `   ⏳ Pendentes: ${pend.length} — ${R2(totPend)}`,
+    atr.length>0?`   🔴 Em atraso: ${atr.length}`:`   ✅ Sem atraso`,
+    ``,
+    `_Gerado pelo ImobGestão_`
+  ];
+  enviarWhatsApp(linhas.join('\n'));
 }
 function gerarRelInadimplencia(){
-  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0);
+  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0).sort((a,b)=>DA(a.venc)-DA(b.venc));
   if(!atrasadas.length){alert('Nenhuma cobrança em atraso');return;}
-  let html=`<h2>Relatório de Inadimplência</h2><p style="margin-bottom:14px">Total de Cobranças Atrasadas: <strong>${atrasadas.length}</strong></p><table><thead><tr><th>Inquilino</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Dias em Atraso</th></tr></thead><tbody>`;
-  atrasadas.sort((a,b)=>DA(a.venc)-DA(b.venc)).forEach(cb=>{
+  const totAtr=atrasadas.reduce((a,b)=>a+(+(b.valor||0)),0);
+  const contratos=new Set(atrasadas.map(cb=>cb.contratoId)).size;
+  let html=`<h2 style="margin-bottom:4px">Relatório de Inadimplência</h2><p style="color:#666;font-size:13px;margin-bottom:20px">Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>`;
+  html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#fee2e2;padding:14px;border-radius:8px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase;margin-bottom:6px">Cobranças em Atraso</div><div style="font-size:28px;font-weight:800;color:#dc2626">${atrasadas.length}</div></div>
+    <div style="background:#fee2e2;padding:14px;border-radius:8px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase;margin-bottom:6px">Valor Total em Atraso</div><div style="font-size:20px;font-weight:800;color:#dc2626">${R2(totAtr)}</div></div>
+    <div style="background:#fef9c3;padding:14px;border-radius:8px;text-align:center"><div style="font-size:10px;color:#555;text-transform:uppercase;margin-bottom:6px">Contratos Afetados</div><div style="font-size:28px;font-weight:800;color:#854d0e">${contratos}</div></div>
+  </div>`;
+  html+=`<div class="section"><table><thead><tr><th>Inquilino</th><th>Tipo</th><th>Valor</th><th>Vencimento</th><th>Dias em Atraso</th></tr></thead><tbody>`;
+  atrasadas.forEach(cb=>{
     const dias=Math.abs(DA(cb.venc));
-    html+=`<tr><td>${cb.inquilino||'–'}</td><td>${cb.descricao||'–'}</td><td>R$${(cb.valor||0).toFixed(2).replace('.',',')}</td><td>${cb.venc||'–'}</td><td>${dias} dias</td></tr>`;
+    const cor=dias>30?'#dc2626':dias>15?'#d97706':'#854d0e';
+    html+=`<tr><td><strong>${cb.inquilino||'–'}</strong></td><td>${cb.tipo||'Aluguel'}</td><td><strong>${R2(cb.valor||0)}</strong></td><td>${cb.venc||'–'}</td><td><strong style="color:${cor}">${dias} dias</strong></td></tr>`;
   });
-  html+=`</tbody></table>`;
+  html+=`<tr style="background:#fee2e2;font-weight:700"><td colspan="2">TOTAL</td><td>${R2(totAtr)}</td><td colspan="2">${atrasadas.length} cobranças</td></tr></tbody></table></div>`;
   gerarPDF('Inadimplência',html);
 }
 function shareRelInadimplencia(){
-  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0);
+  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0).sort((a,b)=>DA(a.venc)-DA(b.venc));
   if(!atrasadas.length){alert('Nenhuma cobrança em atraso');return;}
-  let msg=`⚠️ *ImobGestão — Inadimplência*\\n\\n📊 Total em Atraso: ${atrasadas.length}\\n💰 Valor Total: R$${atrasadas.reduce((a,b)=>a+(b.valor||0),0).toFixed(2).replace('.',',')}\\n\\n_Gerado pelo ImobGestão_`;
-  enviarWhatsApp(msg);
+  const totAtr=atrasadas.reduce((a,b)=>a+(+(b.valor||0)),0);
+  const top=atrasadas.slice(0,5);
+  const linhas=[
+    `⚠️ *Inadimplência — ImobGestão*`,
+    `📅 ${new Date().toLocaleDateString('pt-BR')}`,
+    ``,
+    `🔴 *${atrasadas.length} cobranças em atraso*`,
+    `💰 Valor total: *${R2(totAtr)}*`,
+    `🏠 Contratos afetados: ${new Set(atrasadas.map(cb=>cb.contratoId)).size}`,
+    ``,
+    `*Maiores atrasos:*`,
+    ...top.map(cb=>`   • ${cb.inquilino||'–'}: ${R2(cb.valor||0)} — ${Math.abs(DA(cb.venc))}d em atraso`),
+    atrasadas.length>5?`   _...e mais ${atrasadas.length-5} cobranças_`:'',
+    ``,
+    `_Gerado pelo ImobGestão_`
+  ].filter(l=>l!=='');
+  enviarWhatsApp(linhas.join('\n'));
 }
 function gerarRelVencimentos(){
-  const proxVenc=D.c.filter(c=>c.fim&&DA(c.fim)<=90&&DA(c.fim)>=0);
+  const proxVenc=D.c.filter(c=>c.fim&&DA(c.fim)<=90&&DA(c.fim)>=0).sort((a,b)=>DA(a.fim)-DA(b.fim));
   const reajustesDev=D.c.filter(c=>{const rd=calcReajusteDate(c);return rd&&DA(rd)<=0;});
-  let html=`<h2>Vencimentos & Reajustes</h2><h3>Contratos Vencendo nos Próximos 90 dias</h3>`;
-  if(proxVenc.length===0)html+=`<p>Nenhum contrato vencendo.</p>`;
-  else {
-    html+=`<table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Término</th><th>Dias</th></tr></thead><tbody>`;
-    proxVenc.forEach(c=>{html+=`<tr><td>${c.inquilino||'–'}</td><td>${(c.endereco||'').substring(0,40)}</td><td>${c.fim}</td><td>${DA(c.fim)}</td></tr>`;});
+  const segVenc=D.c.filter(c=>c.seguroVence&&DA(c.seguroVence)<=90&&DA(c.seguroVence)>=0);
+  let html=`<h2 style="margin-bottom:4px">Vencimentos & Reajustes</h2><p style="color:#666;font-size:13px;margin-bottom:20px">Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>`;
+  html+=`<div class="section"><h3>📋 Contratos Encerrando — próximos 90 dias</h3>`;
+  if(!proxVenc.length){html+=`<p style="color:#555">Nenhum contrato encerrando nos próximos 90 dias.</p>`;}
+  else{
+    html+=`<table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Proprietário</th><th>Encerramento</th><th>Dias</th></tr></thead><tbody>`;
+    proxVenc.forEach(c=>{
+      const d=DA(c.fim);
+      const cor=d<=15?'#dc2626':d<=30?'#d97706':'#16a34a';
+      html+=`<tr><td><strong>${c.inquilino||'–'}</strong></td><td>${(c.endereco||'').substring(0,35)}</td><td>${c.proprietario||'–'}</td><td>${c.fim}</td><td><strong style="color:${cor}">${d} dias</strong></td></tr>`;
+    });
     html+=`</tbody></table>`;
   }
-  html+=`<h3>Reajustes Pendentes</h3>`;
-  if(reajustesDev.length===0)html+=`<p>Nenhum reajuste pendente.</p>`;
+  html+=`</div><div class="section"><h3>📈 Reajustes de Aluguel Pendentes</h3>`;
+  if(!reajustesDev.length){html+=`<p style="color:#555">Nenhum reajuste pendente.</p>`;}
   else{
-    html+=`<table><thead><tr><th>Inquilino</th><th>Índice</th><th>Data Reajuste</th><th>Valor Atual</th></tr></thead><tbody>`;
-    reajustesDev.forEach(c=>{const rd=calcReajusteDate(c);html+=`<tr><td>${c.inquilino||'–'}</td><td>${c.reajusteIndice||'IGP-M'}</td><td>${rd}</td><td>R$${(c.valor||0).toFixed(2).replace('.',',')}</td></tr>`;});
+    html+=`<table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Índice</th><th>Data Reajuste</th><th>Valor Atual</th></tr></thead><tbody>`;
+    reajustesDev.forEach(c=>{const rd=calcReajusteDate(c);html+=`<tr><td><strong>${c.inquilino||'–'}</strong></td><td>${(c.endereco||'').substring(0,30)}</td><td>${c.reajusteIndice||'IGP-M'}</td><td><strong style="color:#d97706">${rd}</strong></td><td>${R2(c.valor||0)}</td></tr>`;});
     html+=`</tbody></table>`;
+  }
+  html+=`</div>`;
+  if(segVenc.length){
+    html+=`<div class="section"><h3>🛡️ Seguros Vencendo — próximos 90 dias</h3><table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Vencimento</th><th>Dias</th></tr></thead><tbody>`;
+    segVenc.forEach(c=>{const d=DA(c.seguroVence);html+=`<tr><td><strong>${c.inquilino||'–'}</strong></td><td>${c.endereco||'–'}</td><td>${c.seguroVence}</td><td><strong style="color:#d97706">${d} dias</strong></td></tr>`;});
+    html+=`</tbody></table></div>`;
   }
   gerarPDF('Vencimentos & Reajustes',html);
 }
 function shareRelVencimentos(){
-  const proxVenc=D.c.filter(c=>c.fim&&DA(c.fim)<=90&&DA(c.fim)>=0);
+  const proxVenc=D.c.filter(c=>c.fim&&DA(c.fim)<=90&&DA(c.fim)>=0).sort((a,b)=>DA(a.fim)-DA(b.fim));
   const reajustesDev=D.c.filter(c=>{const rd=calcReajusteDate(c);return rd&&DA(rd)<=0;});
-  let msg=`📅 *ImobGestão — Vencimentos & Reajustes*\\n\\n⏰ Contratos vencendo: ${proxVenc.length}\\n↑ Reajustes pendentes: ${reajustesDev.length}\\n\\n_Gerado pelo ImobGestão_`;
-  enviarWhatsApp(msg);
+  const segVenc=D.c.filter(c=>c.seguroVence&&DA(c.seguroVence)<=90&&DA(c.seguroVence)>=0);
+  const linhas=[
+    `📅 *Vencimentos & Reajustes — ImobGestão*`,
+    `📆 ${new Date().toLocaleDateString('pt-BR')}`,
+    ``,
+    `📋 *Contratos encerrando (90 dias): ${proxVenc.length}*`,
+    ...proxVenc.slice(0,3).map(c=>`   • ${c.inquilino||'–'} — ${DA(c.fim)} dias`),
+    proxVenc.length>3?`   _...e mais ${proxVenc.length-3} contratos_`:'',
+    ``,
+    `📈 *Reajustes pendentes: ${reajustesDev.length}*`,
+    ...reajustesDev.slice(0,3).map(c=>`   • ${c.inquilino||'–'} (${c.reajusteIndice||'IGP-M'})`),
+    reajustesDev.length>3?`   _...e mais ${reajustesDev.length-3}_`:'',
+    segVenc.length>0?`\n🛡️ *Seguros vencendo: ${segVenc.length}*`:'',
+    ``,
+    `_Gerado pelo ImobGestão_`
+  ].filter(l=>l!==undefined&&l!='');
+  enviarWhatsApp(linhas.join('\n'));
 }
+
 
 // ══════════════════════════════════════════
 // INIT
