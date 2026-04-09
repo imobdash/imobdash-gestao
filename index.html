@@ -307,6 +307,8 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <div class="ni" onclick="go('vencimentos')"><span class="ic">📅</span> Vencimentos <span class="bdg" id="bdgV" style="background:var(--ye);color:#000;display:none">!</span></div>
     <div class="ns">Suporte</div>
     <div class="ni" onclick="go('ordens')"><span class="ic">🔧</span> OS <span class="bdg" id="bdgO" style="background:var(--re);display:none">0</span></div>
+    <div class="ns">Análise</div>
+    <div class="ni" onclick="go('relatorios')"><span class="ic">📊</span> Relatórios</div>
   </nav>
   <div class="sfoot">
     <div style="display:flex;align-items:center;gap:9px">
@@ -369,6 +371,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
           <div class="tab" onclick="fCob('pago',this)">Pagas</div>
           <div class="tab" onclick="fCob('atrasado',this)">Atrasadas</div>
           <div class="tab" onclick="fCob('lembrete',this)">Ação Necessária</div>
+          <div class="tab" onclick="fCob('encargos',this)">📋 Encargos</div>
         </div>
         <button class="btn bg" onclick="openNCob()">＋ Nova Cobrança</button>
       </div>
@@ -399,6 +402,11 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <div class="view" id="view-detalhe">
       <div style="margin-bottom:12px"><button class="btn bg bsm" onclick="go('contratos')">← Voltar</button></div>
       <div class="dg" id="det"></div>
+    </div>
+
+    <!-- RELATÓRIOS -->
+    <div class="view" id="view-relatorios">
+      <div id="relatorios-content"></div>
     </div>
 
   </div>
@@ -479,6 +487,8 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="g"><label>Multa (%)</label><input type="number" id="fmul" value="2" step="0.1"></div>
       <div class="g"><label>Caução (R$)</label><input type="number" id="fcau" placeholder="0,00" step="0.01"></div>
       <div class="g"><label>Caução retida por</label><select id="fcautp"><option value="imob">Imobiliária</option><option value="prop">Proprietário</option></select></div>
+      <div class="g"><label>Validade do Seguro</label><input type="date" id="fsegvnc"></div>
+      <div class="g"><label>Obs. Seguro</label><input type="text" id="fsegobs" placeholder="Ex: Seguro com Allianz, renovação em ..."></div>
       <div id="propbox" style="display:none" class="ff"></div>
       <div class="g ff" style="background:var(--sf2);border-radius:var(--rs);padding:10px;border:1px solid var(--bd)">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--te);text-transform:none;letter-spacing:0">
@@ -610,6 +620,71 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </div>
 </div>
 
+<!-- MODAL: APLICAR REAJUSTE -->
+<div class="mo" id="mreaj">
+<div class="md" style="max-width:440px">
+  <div class="mh"><div><h2>Aplicar Reajuste</h2></div><button class="mx" onclick="cM('mreaj')">✕</button></div>
+  <div class="mb">
+    <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:11px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="color:var(--dm);font-size:12px">Inquilino:</span><span id="reaj-cinq" style="font-weight:600">–</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--dm);font-size:12px">Valor Atual:</span><span id="reaj-cval" style="font-weight:600;color:var(--gn)">R$ 0,00</span>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="g ff"><label>Índice de correção (%)</label><input type="number" id="reaj-pct" step="0.01" placeholder="0,00" oninput="calcNovoValor()"></div>
+      <div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:8px;padding:11px;margin:10px 0">
+        <div style="font-size:11px;color:var(--dm);margin-bottom:4px">NOVO VALOR</div>
+        <div id="reaj-novo" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--ac2)">R$ –</div>
+      </div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mreaj')">Cancelar</button><button class="btn bp" onclick="confirmReajuste()">✓ Aplicar</button></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: AJUSTAR CAUÇÃO -->
+<div class="mo" id="mcaut">
+<div class="md" style="max-width:440px">
+  <div class="mh"><div><h2>Ajustar Caução</h2></div><button class="mx" onclick="cM('mcaut')">✕</button></div>
+  <div class="mb">
+    <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:11px;margin-bottom:12px">
+      <div style="margin-bottom:8px">
+        <span style="color:var(--dm);font-size:11px">Inquilino: </span><span id="caut-cinq" style="font-weight:600;font-size:13px">–</span>
+      </div>
+      <div style="display:flex;gap:12px">
+        <div>
+          <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Original</div>
+          <div id="caut-orig" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--dm)">R$ 0,00</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Atual</div>
+          <div id="caut-atual" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--ac2)">R$ 0,00</div>
+        </div>
+      </div>
+    </div>
+    <div class="fg">
+      <div class="g ff"><label>Tipo de Ajuste</label>
+        <select id="caut-tipo" onchange="calcNovoCaucao()" style="width:100%;padding:8px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:'DM Sans';font-size:13px">
+          <option value="Complemento">Complemento (↑)</option>
+          <option value="Devolução Parcial">Devolução Parcial (↓)</option>
+          <option value="Devolução Total">Devolução Total</option>
+        </select>
+      </div>
+      <div class="g ff"><label>Valor (R$)</label><input type="number" id="caut-val" step="0.01" placeholder="0,00" oninput="calcNovoCaucao()"></div>
+      <div class="g ff"><label>Motivo</label><input type="text" id="caut-mot" placeholder="Ex: Devolvido ao final do contrato"></div>
+      <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:11px">
+        <div style="font-size:11px;color:var(--dm);margin-bottom:4px">NOVO VALOR</div>
+        <div id="caut-novo" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--gn)">R$ –</div>
+      </div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mcaut')">Cancelar</button><button class="btn bp" onclick="confirmAjustarCaucao()">✓ Confirmar</button></div>
+  </div>
+</div>
+</div>
+
 <!-- MODAL: OS -->
 <div class="mo" id="mos">
 <div class="md">
@@ -628,6 +703,14 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </div>
 
 <script>
+// ══════════════════════════════════════════
+// SQL MIGRATIONS NEEDED (run in Supabase)
+// ══════════════════════════════════════════
+// ALTER TABLE contratos ADD COLUMN reajuste_historico JSONB DEFAULT '[]';
+// ALTER TABLE contratos ADD COLUMN caucao_ajustes JSONB DEFAULT '[]';
+// ALTER TABLE contratos ADD COLUMN seguro_vence DATE;
+// ALTER TABLE contratos ADD COLUMN seguro_obs TEXT;
+
 // ══════════════════════════════════════════
 // SUPABASE INIT
 // ══════════════════════════════════════════
@@ -806,7 +889,15 @@ function rowToContrato(row){
     reajusteMeses:row.reajuste_meses||12,
     reajusteIndice:row.reajuste_indice||'IGP-M',
     criadoEm:row.created_at?.split('T')[0],
-    docs:[]
+    docs:[],
+    // FEATURE 1: REAJUSTE
+    reajusteHistorico:row.reajuste_historico||[],
+    // FEATURE 2: CAUÇÃO
+    caucaoAjustes:row.caucao_ajustes||[],
+    caucaoAtual:(()=>{const adj=row.caucao_ajustes||[];if(!adj.length)return Number(row.caucao||0);return adj[adj.length-1].valorNovo;})(),
+    // FEATURE 3: SEGURO
+    seguroVence:row.seguro_vence,
+    seguroObs:row.seguro_obs
   };
 }
 function rowToCobranca(row){
@@ -1075,14 +1166,14 @@ function renderChart(){
 // ══════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════
-const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato'};
+const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios'};
 function go(v){
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('on'));
   document.getElementById('view-'+v).classList.add('on');
   document.getElementById('ttl').textContent=TITLES[v]||v;
   const ni=document.querySelectorAll('.ni');
-  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6};
+  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6,relatorios:7};
   if(m[v]!==undefined)ni[m[v]]?.classList.add('on');
   bniActive(v);
   if(v==='dashboard')renderDash();
@@ -1092,6 +1183,7 @@ function go(v){
   if(v==='inadimplencia')renderInadimplencia();
   if(v==='vencimentos')renderVenc();
   if(v==='ordens')renderOS();
+  if(v==='relatorios')renderRelatorios();
   cSB();
 }
 function tSB(){document.getElementById('sb').classList.toggle('on');document.getElementById('ovm').classList.toggle('on');}
@@ -1125,7 +1217,36 @@ function renderDash(){
     <div class="sc ye"><div class="slb">A Vencer</div><div class="sv">${proj.aVencer}</div><div class="ss">${atrAlugCount} atrasadas</div></div>
     <div class="sc re" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06)"><div class="slb">Em Atraso</div><div class="sv" style="color:var(--re)">${atrAlugCount}</div><div class="ss">cobranças vencidas</div></div>
   `;
-  document.getElementById('sugestoes-box').innerHTML='';
+  // FEATURE 2: Caução Card
+  const caucoes=D.c.filter(c=>c.caucao>0||c.caucaoAtual>0);
+  const totalCaucImob=caucoes.filter(c=>c.caucaoTp==='imob').reduce((a,b)=>a+b.caucaoAtual,0);
+  const totalCaucProp=caucoes.filter(c=>c.caucaoTp==='prop').reduce((a,b)=>a+b.caucaoAtual,0);
+  const carcCard=caucoes.length?`<div class="card" style="margin-bottom:14px">
+    <div class="ch">🔒 Caução em Custódia</div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div style="padding:10px;background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;text-align:center">
+          <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Retida pela Imob.</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--ac2)">${R(totalCaucImob)}</div>
+        </div>
+        <div style="padding:10px;background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;text-align:center">
+          <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Com Proprietário</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--gn)">${R(totalCaucProp)}</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--bd);padding-top:10px;font-size:12px">
+        ${caucoes.map(c=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(48,54,61,.3)">
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:500">${c.inquilino}</div>
+            <div style="font-size:10px;color:var(--dm)">Original: ${R(c.caucao)} → Atual: ${R(c.caucaoAtual)}</div>
+          </div>
+          <span class="chip ${c.caucaoTp==='imob'?'cb2':'cg'}" style="margin-right:8px">${c.caucaoTp==='imob'?'Imob':'Prop'}</span>
+          <button class="btn bg bsm" onclick="openAjustarCaucao('${c.id}')">Ajustar</button>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`:'';
+  document.getElementById('sugestoes-box').innerHTML=carcCard;
   const alrt=gerarAlertas();
   const al=document.getElementById('alertas-list');
   al.innerHTML=alrt.length?alrt.map(a=>`<div class="alrt">
@@ -1221,9 +1342,41 @@ function detail(id){
         ${ir('Administrado',c.adm==='sim'?'Sim':'Não')}
         ${ir('Início',FD(c.inicio))}${ir('Término',FD(c.fim))}
         ${prog?`<div style="margin-top:9px"><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Progresso · ${prog}%</div><div class="pw"><div class="pb" style="width:${prog}%"></div></div></div>`:''}
+        ${c.seguroVence?`<div style="margin-top:9px;padding:8px 10px;background:${DA(c.seguroVence)<=30?'var(--yd)':'var(--gd)'};border:1px solid ${DA(c.seguroVence)<=30?'rgba(245,158,11,.2)':'rgba(34,197,94,.2)'};border-radius:7px;font-size:12px;color:${DA(c.seguroVence)<=30?'var(--ye)':'var(--gn)'}">🛡️ Seguro vence ${FD(c.seguroVence)}${c.seguroObs?' · '+c.seguroObs:''}</div>`:''}
         ${c.obs?`<div style="margin-top:9px;padding:9px;background:var(--sf2);border-radius:8px;font-size:12px;color:var(--dm);line-height:1.5">${c.obs}</div>`:''}
         ${ind.pct>0?`<div style="margin-top:9px;padding:8px 10px;background:var(--rd);border-radius:7px;font-size:12px;color:var(--re)">⚠️ Inadimplência: ${ind.pct}% (${ind.atrasos} atraso(s) em ${ind.total} cobranças)</div>`:''}
+        ${(() => {const reajData=calcReajusteDate(c);const dReaj=reajData?DA(reajData):null;if(dReaj!==null&&dReaj<=0){return`<div style="margin-top:9px;padding:8px 10px;background:var(--yd);border:1px solid rgba(245,158,11,.2);border-radius:7px;font-size:12px;color:var(--ye);display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>↑ Reajuste disponível desde ${FD(reajData)}</span>
+          <button class="btn bg bsm" onclick="openAplicarReajuste('${c.id}')">Aplicar</button>
+        </div>`;}return'';})()}
       </div>
+    </div>
+    ${c.reajusteHistorico&&c.reajusteHistorico.length?`<div class="card">
+      <div class="ch">📋 Histórico de Reajustes</div>
+      <div class="cb">
+        <div style="font-size:12px;overflow-x:auto">
+          ${c.reajusteHistorico.map(r=>`<div style="padding:8px 0;border-bottom:1px solid rgba(48,54,61,.3);display:flex;align-items:center;justify-content:space-between">
+            <div><div style="font-size:12px;font-weight:500">${FD(r.data)}</div><div style="font-size:11px;color:var(--dm)">${R(r.valorAnterior)} → ${R(r.valorNovo)}</div></div>
+            <div style="text-align:right"><span style="font-size:11px;color:var(--ye);font-weight:600">+${r.pct.toFixed(2)}%</span><div style="font-size:10px;color:var(--dm)">${r.indice}</div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`:''}
+    ${c.caucaoAtual>0?`<div class="card">
+      <div class="ch">🔒 Caução em Custódia <button class="btn bg bsm" onclick="openAjustarCaucao('${c.id}')">Ajustar</button></div>
+      <div class="cb">
+        <div class="ir"><span class="il">Valor Original</span><span class="iv">${R(c.caucao)}</span></div>
+        <div class="ir"><span class="il">Valor Atual</span><span class="iv" style="color:var(--ac2);font-weight:600">${R(c.caucaoAtual)}</span></div>
+        <div class="ir"><span class="il">Custódia</span><span class="iv">${c.caucaoTp==='imob'?'Imobiliária':'Proprietário'}</span></div>
+        ${c.caucaoAjustes&&c.caucaoAjustes.length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">
+          <div style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;margin-bottom:6px">Histórico de Ajustes</div>
+          ${c.caucaoAjustes.map(adj=>`<div style="padding:6px 0;border-bottom:1px solid rgba(48,54,61,.3);font-size:12px">
+            <div style="display:flex;justify-content:space-between"><span>${FD(adj.data)}</span><span style="font-weight:600">${adj.tipo}</span></div>
+            <div style="color:var(--dm);font-size:11px">${adj.motivo||''}</div>
+          </div>`).join('')}
+        </div>`:''}
+      </div>
+    </div>`:''}
     </div>
     <div class="card">
       <div class="ch">💰 Cobranças <button class="btn bg bsm" onclick="openNCobCon('${id}')">＋ Nova</button></div>
@@ -1464,7 +1617,65 @@ function cobItem(cb,inDetail=false){
   </div>`;
 }
 
+const TIPOS_ENCARGO=['IPTU Apto','IPTU Vagas','IPTU Completo','Taxa Lixo Apto','Taxa Lixo Vagas','Condomínio','Seguro'];
+
+function renderEncargos(){
+  const el=document.getElementById('tcb');
+  const ano=new Date().getFullYear();
+  // Agrupar por contrato
+  const byCon={};
+  D.cb.filter(c=>TIPOS_ENCARGO.includes(c.tipo)).forEach(c=>{
+    const key=c.contratoId||'avulso';
+    if(!byCon[key])byCon[key]=[];
+    byCon[key].push(c);
+  });
+  if(!Object.keys(byCon).length){
+    el.innerHTML=`<div class="empty"><div class="ei">📋</div><h3>Nenhum encargo lançado</h3><p>Lance IPTU, Seguro ou Condomínio nas cobranças</p></div>`;
+    return;
+  }
+  // Group by type within each contract
+  const TIPOS_GRUPOS={'IPTU':['IPTU Apto','IPTU Vagas','IPTU Completo'],'Taxa Lixo':['Taxa Lixo Apto','Taxa Lixo Vagas'],'Condomínio':['Condomínio'],'Seguro':['Seguro']};
+  el.innerHTML=Object.entries(byCon).map(([cid,cobs])=>{
+    const con=D.c.find(x=>x.id===cid);
+    const totalLanc=cobs.reduce((a,b)=>a+b.valor,0);
+    const totalPago=cobs.filter(x=>x.pago).reduce((a,b)=>a+(x=>x.valorPago||x.valor)(b),0);
+    const totalPend=cobs.filter(x=>!x.pago).reduce((a,b)=>a+b.valor,0);
+    const atraso=cobs.filter(x=>!x.pago&&DA(x.venc)<0).length;
+    return`<div style="border-bottom:2px solid var(--bd);padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:7px">
+        <div>
+          <div style="font-weight:700;font-size:14px">${con?.inquilino||'Sem contrato'}</div>
+          <div style="font-size:11px;color:var(--dm)">${(con?.endereco||'').substring(0,50)}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--gn)">Pago: ${R(totalPago)}</span>
+          <span style="font-size:12px;color:var(--ye)">Pendente: ${R(totalPend)}</span>
+          ${atraso?`<span class="chip cr">${atraso} em atraso</span>`:''}
+        </div>
+      </div>
+      ${Object.entries(TIPOS_GRUPOS).map(([grupo,tipos])=>{
+        const gcobs=cobs.filter(x=>tipos.includes(x.tipo));
+        if(!gcobs.length)return'';
+        return`<div style="margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--dm);text-transform:uppercase;margin-bottom:5px">${grupo}</div>
+          ${gcobs.map(cb=>{
+            const s=stCob(cb);const f=getFase(cb);
+            return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(48,54,61,.2)">
+              <div style="flex:1"><span style="font-size:13px;font-weight:500">${cb.descricao||cb.tipo}</span><span style="font-size:11px;color:var(--dm);margin-left:7px">Vence: ${FD(cb.venc)}</span>${f.cls?` <span class="fase ${f.cls}">${f.label}</span>`:''}</div>
+              <span style="font-family:'Syne',sans-serif;font-weight:700">${R(cb.valor)}</span>
+              <span class="chip ${s.cl}">${s.l}</span>
+              ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓</button>`:''}
+              <button class="btn bg bsm" onclick="openEditCob('${cb.id}')">✎</button>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
 function renderCobrancas(){
+  if(cobFiltro==='encargos'){renderEncargos();return;}
   let list=[...D.cb];
   if(cobFiltro==='pendente')list=list.filter(c=>!c.pago&&DA(c.venc)>=0);
   else if(cobFiltro==='pago')list=list.filter(c=>c.pago);
@@ -1664,24 +1875,34 @@ function calcReajusteDate(c){
 
 function renderVenc(){
   const cons=[...D.c].filter(c=>c.fim).sort((a,b)=>DA(a.fim)-DA(b.fim));
-  document.getElementById('vvc').innerHTML=cons.length?cons.map(c=>{
-    const d=DA(c.fim);const cl=d>90?'ok':d>30?'wa':'cr';
-    const reajData=calcReajusteDate(c);
-    const dReaj=reajData?DA(reajData):null;
-    const clReaj=dReaj==null?'pa':dReaj<0?'pa':dReaj<=30?'cr':dReaj<=90?'wa':'ok';
-    return`<div style="border-bottom:1px solid rgba(48,54,61,.3)">
-      <div class="vi" onclick="detail('${c.id}')">
-        <div class="vd ${d<0?'pa':cl}"><div class="n">${Math.abs(d)}</div><div class="l">${d<0?'atrás':'dias'}</div></div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.inquilino}</div><div style="font-size:11px;color:var(--dm)">${(c.endereco||'').substring(0,30)}</div></div>
-        <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">VENC. CONTRATO</span></div>
-      </div>
-      ${reajData?`<div class="vi" style="padding-left:58px;background:rgba(245,158,11,.04)" onclick="detail('${c.id}')">
+  // FEATURE 3: Add seguro vencendo
+  const vencimentos=[
+    ...cons.flatMap(c=>{
+      const d=DA(c.fim);const cl=d>90?'ok':d>30?'wa':'cr';
+      const reajData=calcReajusteDate(c);
+      const dReaj=reajData?DA(reajData):null;
+      const clReaj=dReaj==null?'pa':dReaj<0?'pa':dReaj<=30?'cr':dReaj<=90?'wa':'ok';
+      const rows=[`<div style="border-bottom:1px solid rgba(48,54,61,.3)">
+        <div class="vi" onclick="detail('${c.id}')">
+          <div class="vd ${d<0?'pa':cl}"><div class="n">${Math.abs(d)}</div><div class="l">${d<0?'atrás':'dias'}</div></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.inquilino}</div><div style="font-size:11px;color:var(--dm)">${(c.endereco||'').substring(0,30)}</div></div>
+          <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">VENC. CONTRATO</span></div>
+        </div>`];
+      if(reajData){rows.push(`<div class="vi" style="padding-left:58px;background:rgba(245,158,11,.04)" onclick="detail('${c.id}')">
         <div class="vd ${clReaj}" style="width:38px;height:38px"><div class="n" style="font-size:13px">${dReaj!=null?Math.abs(dReaj):'–'}</div><div class="l">${dReaj!=null&&dReaj<0?'atrás':'dias'}</div></div>
         <div style="flex:1"><div style="font-size:12px;color:var(--dm)">Reajuste ${c.reajusteIndice||'IGP-M'} (${c.reajusteMeses||12} meses)</div></div>
         <div style="text-align:right"><div style="font-size:12px;font-weight:600;color:var(--ye)">${FD(reajData)}</div><span style="font-size:9px;font-weight:700;color:var(--ye)">REAJUSTE</span></div>
-      </div>`:''}
-    </div>`;
-  }).join(''):`<div class="empty" style="padding:34px"><div class="ei">📋</div><p>Nenhum contrato</p></div>`;
+      </div>`);}
+      if(c.seguroVence){const dSeg=DA(c.seguroVence);const clSeg=dSeg<0?'cr':dSeg<=30?'cr':dSeg<=90?'wa':'ok';if(dSeg<=-30||dSeg<=90){rows.push(`<div class="vi" style="padding-left:58px;background:rgba(245,158,11,.04)" onclick="detail('${c.id}')">
+        <div class="vd ${clSeg}" style="width:38px;height:38px"><div class="n" style="font-size:13px">${Math.abs(dSeg)}</div><div class="l">${dSeg<0?'atrás':'dias'}</div></div>
+        <div style="flex:1"><div style="font-size:12px;color:var(--dm)">🛡️ Seguro vence</div></div>
+        <div style="text-align:right"><div style="font-size:12px;font-weight:600;color:var(--or)">${FD(c.seguroVence)}</div><span style="font-size:9px;font-weight:700;color:var(--or)">SEGURO</span></div>
+      </div>`);};}
+      rows.push('</div>');
+      return rows;
+    })
+  ].join('');
+  document.getElementById('vvc').innerHTML=cons.length?vencimentos:`<div class="empty" style="padding:34px"><div class="ei">📋</div><p>Nenhum contrato</p></div>`;
   const cbs=D.cb.filter(c=>!c.pago&&c.venc).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
   document.getElementById('vvb').innerHTML=cbs.length?cbs.map(c=>{
     const d=DA(c.venc);const f=getFase(c);
@@ -1931,7 +2152,9 @@ async function saveContract(){
     observacoes:document.getElementById('fobs').value||null,
     reajuste_meses:parseInt(document.getElementById('freaj').value)||12,
     reajuste_indice:document.getElementById('freajind').value||'IGP-M',
-    gerar_cob:document.getElementById('fgc').checked
+    gerar_cob:document.getElementById('fgc').checked,
+    seguro_vence:document.getElementById('fsegvnc').value||null,
+    seguro_obs:document.getElementById('fsegobs').value||null
   }).select().single();
   btn.disabled=false;btn.textContent='✓ Salvar Contrato';
   if(error){alert('Erro ao salvar contrato: '+error.message);return;}
@@ -2191,6 +2414,343 @@ async function delContract(id){
   D.o=D.o.filter(o=>o.contratoId!==id);
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
   go('contratos');
+}
+
+// ══════════════════════════════════════════
+// FEATURE 1: REAJUSTE
+// ══════════════════════════════════════════
+let _reajCid=null;
+function openAplicarReajuste(cid){
+  _reajCid=cid;
+  const c=D.c.find(x=>x.id===cid);
+  if(!c)return;
+  document.getElementById('reaj-cinq').textContent=c.inquilino||'–';
+  document.getElementById('reaj-cval').textContent=R(c.valor);
+  document.getElementById('reaj-pct').value='';
+  document.getElementById('reaj-novo').textContent='R$ –';
+  document.getElementById('reaj-pct').focus();
+  oM('mreaj');
+}
+function calcNovoValor(){
+  const c=D.c.find(x=>x.id===_reajCid);
+  if(!c)return;
+  const pct=parseFloat(document.getElementById('reaj-pct').value)||0;
+  const novoValor=Math.round(c.valor*(1+pct/100)*100)/100;
+  document.getElementById('reaj-novo').textContent=R(novoValor);
+}
+async function confirmReajuste(){
+  const c=D.c.find(x=>x.id===_reajCid);
+  if(!c)return;
+  const pct=parseFloat(document.getElementById('reaj-pct').value)||0;
+  if(pct===0){alert('Informe um percentual de reajuste');return;}
+  const novoValor=Math.round(c.valor*(1+pct/100)*100)/100;
+  const hoje=new Date().toISOString().split('T')[0];
+  const hist=[...(c.reajusteHistorico||[]),{data:hoje,valorAnterior:c.valor,valorNovo:novoValor,pct,indice:c.reajusteIndice}];
+  const{error}=await sb.from('contratos').update({valor:novoValor,reajuste_historico:hist}).eq('id',_reajCid);
+  if(error){alert('Erro: '+error.message);return;}
+  const ci=D.c.findIndex(x=>x.id===_reajCid);
+  if(ci>=0){D.c[ci].valor=novoValor;D.c[ci].reajusteHistorico=hist;}
+  // Update future unpaid cobranças
+  const futureCobs=D.cb.filter(x=>x.contratoId===_reajCid&&!x.pago);
+  for(const cb of futureCobs){
+    const adm=D.c[ci]?.adm==='sim';
+    const rp=calcRepasse(cb.tipo,novoValor,false,adm);
+    await sb.from('cobrancas').update({valor:novoValor,repasse_imob:rp.imob,repasse_prop:rp.prop,repasse_tipo:rp.tipo==='primeiro'?'normal':rp.tipo}).eq('id',cb.id);
+    const cbi=D.cb.findIndex(x=>x.id===cb.id);
+    if(cbi>=0){D.cb[cbi].valor=novoValor;D.cb[cbi].repasse=rp;}
+  }
+  cM('mreaj');
+  renderDash();
+  detail(_reajCid);
+  alert(`✅ Reajuste aplicado! Novo valor: ${R(novoValor)}\n${futureCobs.length} cobranças atualizadas.`);
+}
+
+// ══════════════════════════════════════════
+// FEATURE 2: CAUÇÃO
+// ══════════════════════════════════════════
+let _cautCid=null;
+function openAjustarCaucao(cid){
+  _cautCid=cid;
+  const c=D.c.find(x=>x.id===cid);
+  if(!c)return;
+  document.getElementById('caut-cinq').textContent=c.inquilino||'–';
+  document.getElementById('caut-orig').textContent=R(c.caucao);
+  document.getElementById('caut-atual').textContent=R(c.caucaoAtual);
+  document.getElementById('caut-tipo').value='Complemento';
+  document.getElementById('caut-val').value='';
+  document.getElementById('caut-mot').value='';
+  document.getElementById('caut-novo').textContent=R(c.caucaoAtual);
+  oM('mcaut');
+}
+function calcNovoCaucao(){
+  const c=D.c.find(x=>x.id===_cautCid);
+  if(!c)return;
+  const tipo=document.getElementById('caut-tipo').value;
+  const val=parseFloat(document.getElementById('caut-val').value)||0;
+  let novo=c.caucaoAtual;
+  if(tipo==='Complemento')novo=c.caucaoAtual+val;
+  else if(tipo==='Devolução Parcial')novo=Math.max(0,c.caucaoAtual-val);
+  else if(tipo==='Devolução Total')novo=0;
+  document.getElementById('caut-novo').textContent=R(novo);
+}
+async function confirmAjustarCaucao(){
+  const c=D.c.find(x=>x.id===_cautCid);
+  if(!c)return;
+  const tipo=document.getElementById('caut-tipo').value;
+  const val=parseFloat(document.getElementById('caut-val').value)||0;
+  const motivo=document.getElementById('caut-mot').value||'';
+  if(val===0){alert('Informe um valor');return;}
+  const hoje=new Date().toISOString().split('T')[0];
+  let novo=c.caucaoAtual;
+  if(tipo==='Complemento')novo=c.caucaoAtual+val;
+  else if(tipo==='Devolução Parcial')novo=Math.max(0,c.caucaoAtual-val);
+  else if(tipo==='Devolução Total')novo=0;
+  const adj=[...(c.caucaoAjustes||[]),{data:hoje,tipo,valor:val,valorAnterior:c.caucaoAtual,valorNovo:novo,motivo}];
+  const{error}=await sb.from('contratos').update({caucao_ajustes:adj}).eq('id',_cautCid);
+  if(error){alert('Erro: '+error.message);return;}
+  const ci=D.c.findIndex(x=>x.id===_cautCid);
+  if(ci>=0){D.c[ci].caucaoAjustes=adj;D.c[ci].caucaoAtual=novo;}
+  cM('mcaut');
+  renderDash();
+  detail(_cautCid);
+  alert(`✅ Caução ajustada!\nNovo valor: ${R(novo)}`);
+}
+
+// ══════════════════════════════════════════
+// FEATURE 4: RELATÓRIOS
+// ══════════════════════════════════════════
+function gerarPDF(titulo,htmlContent){
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>${titulo}</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1c2128; padding: 20px; }
+      .header { display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:2px solid #2563eb; margin-bottom:16px; }
+      .logo { font-size:20px; font-weight:800; color:#1c2128; } .logo span{color:#2563eb;}
+      .rdate { font-size:11px; color:#57606a; }
+      h2 { font-size:16px; font-weight:700; margin-bottom:12px; color:#1c2128; }
+      h3 { font-size:13px; font-weight:700; margin:12px 0 6px; color:#1c2128; }
+      table { width:100%; border-collapse:collapse; margin-bottom:12px; }
+      th { font-size:10px; font-weight:700; text-align:left; padding:6px 8px; background:#f0f4f8; border-bottom:2px solid #d0d7de; color:#57606a; text-transform:uppercase; letter-spacing:.3px; }
+      td { padding:6px 8px; border-bottom:1px solid #d0d7de; font-size:11px; }
+      tr:last-child td { border-bottom:none; }
+      .chip { display:inline-block; padding:1px 7px; border-radius:20px; font-size:10px; font-weight:700; }
+      .cg { background:#dcfce7; color:#16a34a; } .cr { background:#fee2e2; color:#dc2626; } .cy { background:#fef9c3; color:#d97706; }
+      .total-row { background:#f0f4f8; font-weight:700; }
+      .section { margin-bottom:20px; padding:14px; border:1px solid #d0d7de; border-radius:8px; }
+      .footer { margin-top:20px; padding-top:10px; border-top:1px solid #d0d7de; font-size:10px; color:#57606a; text-align:center; }
+      @media print { body { padding:10px; } }
+    </style>
+  </head><body>
+    <div class="header">
+      <div class="logo">Imob<span>.</span>Gestão</div>
+      <div class="rdate">${titulo} · Gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+    </div>
+    ${htmlContent}
+    <div class="footer">ImobGestão · Gestão Inteligente de Imóveis · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+  </body></html>`);
+  w.document.close();
+  setTimeout(()=>{w.print();},400);
+}
+function enviarWhatsApp(texto){
+  const url='https://wa.me/?text='+encodeURIComponent(texto);
+  window.open(url,'_blank');
+}
+function renderRelatorios(){
+  const el=document.getElementById('relatorios-content');
+  const hoje=new Date();
+  const mesAtual=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:20px">
+      <!-- Repasse por Proprietário -->
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">🏦 Repasse por Proprietário</div>
+        <div class="cb">
+          <div style="margin-bottom:10px">
+            <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Período (Mês/Ano)</label>
+            <select id="rel1-mes" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:'DM Sans';font-size:12px">
+              ${[...Array(12)].map((_,i)=>{const d=new Date(hoje.getFullYear(),hoje.getMonth()-i);const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;return`<option value="${m}" ${i===0?'selected':''}>Período ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()]}/${d.getFullYear()}</option>`;}).join('')}
+            </select>
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="btn bg" onclick="gerarRelRepasse(document.getElementById('rel1-mes').value)">📄 Gerar PDF</button>
+            <button class="btn bg" onclick="shareRelRepasse(document.getElementById('rel1-mes').value)">📱 WhatsApp</button>
+          </div>
+        </div>
+      </div>
+      <!-- Financeiro Mensal -->
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">💰 Financeiro Mensal</div>
+        <div class="cb">
+          <div style="margin-bottom:10px">
+            <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Período</label>
+            <select id="rel2-mes" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:'DM Sans';font-size:12px">
+              ${[...Array(12)].map((_,i)=>{const d=new Date(hoje.getFullYear(),hoje.getMonth()-i);const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;return`<option value="${m}" ${i===0?'selected':''}>Período ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()]}/${d.getFullYear()}</option>`;}).join('')}
+            </select>
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="btn bg" onclick="gerarRelFinanceiro(document.getElementById('rel2-mes').value)">📄 Gerar PDF</button>
+            <button class="btn bg" onclick="shareRelFinanceiro(document.getElementById('rel2-mes').value)">📱 WhatsApp</button>
+          </div>
+        </div>
+      </div>
+      <!-- Extrato de Contrato -->
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">📋 Extrato de Contrato</div>
+        <div class="cb">
+          <div style="margin-bottom:10px">
+            <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Selecione um Contrato</label>
+            <select id="rel3-con" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-family:'DM Sans';font-size:12px">
+              <option value="">– Escolha um contrato –</option>
+              ${D.c.map(c=>`<option value="${c.id}">${c.inquilino||'–'} · ${(c.endereco||'').substring(0,30)}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="btn bg" onclick="gerarRelContrato(document.getElementById('rel3-con').value)">📄 Gerar PDF</button>
+            <button class="btn bg" onclick="shareRelContrato(document.getElementById('rel3-con').value)">📱 WhatsApp</button>
+          </div>
+        </div>
+      </div>
+      <!-- Inadimplência -->
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">⚠️ Inadimplência</div>
+        <div class="cb">
+          <p style="font-size:12px;color:var(--dm);margin-bottom:10px">Todas as cobranças em atraso com detalhes de inquilino e dias vencidos.</p>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="btn bg" onclick="gerarRelInadimplencia()">📄 Gerar PDF</button>
+            <button class="btn bg" onclick="shareRelInadimplencia()">📱 WhatsApp</button>
+          </div>
+        </div>
+      </div>
+      <!-- Vencimentos e Reajustes -->
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">📅 Vencimentos & Reajustes</div>
+        <div class="cb">
+          <p style="font-size:12px;color:var(--dm);margin-bottom:10px">Contratos vencendo nos próximos 90 dias + reajustes pendentes.</p>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="btn bg" onclick="gerarRelVencimentos()">📄 Gerar PDF</button>
+            <button class="btn bg" onclick="shareRelVencimentos()">📱 WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function gerarRelRepasse(mes){
+  const[ano,month]=mes.split('-').map(Number);
+  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes&&cb.repasse);
+  const byProp={};
+  cobs.forEach(cb=>{
+    const c=D.c.find(x=>x.id===cb.contratoId);
+    const prop=c?.proprietario||'Sem info';
+    if(!byProp[prop])byProp[prop]={recebido:0,repassado:0,pendente:0};
+    byProp[prop].recebido+=cb.valorPago||cb.valor;
+    byProp[prop].repassado+=cb.repasse?.prop||0;
+    if(cb.repasse?.prop&&!cb.repasseRealizado)byProp[prop].pendente+=cb.repasse.prop;
+  });
+  let html=`<h2>Repasse ao Proprietário · ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}</h2>`;
+  if(Object.keys(byProp).length===0){html+=`<p>Nenhuma cobrança paga neste período.</p>`;gerarPDF('Repasse ao Proprietário',html);return;}
+  html+=`<table><thead><tr><th>Proprietário</th><th>Recebido</th><th>Repassado</th><th>Pendente</th></tr></thead><tbody>`;
+  let totRec=0,totRep=0,totPend=0;
+  Object.entries(byProp).forEach(([prop,vals])=>{
+    totRec+=vals.recebido;totRep+=vals.repassado;totPend+=vals.pendente;
+    html+=`<tr><td>${prop}</td><td>R$${vals.recebido.toFixed(2).replace('.',',')}</td><td>R$${vals.repassado.toFixed(2).replace('.',',')}</td><td>${vals.pendente>0?'<span style="color:red">R$'+vals.pendente.toFixed(2).replace('.',',')+' 🔴':'✓'}</span></td></tr>`;
+  });
+  html+=`<tr style="background:#f0f4f8;font-weight:bold"><td>TOTAL</td><td>R$${totRec.toFixed(2).replace('.',',')}</td><td>R$${totRep.toFixed(2).replace('.',',')}</td><td>${totPend>0?'R$'+totPend.toFixed(2).replace('.',','):'-'}</td></tr></tbody></table>`;
+  gerarPDF('Repasse ao Proprietário',html);
+}
+function shareRelRepasse(mes){
+  const[ano,month]=mes.split('-').map(Number);
+  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes);
+  const total=cobs.reduce((a,b)=>a+(b.valorPago||b.valor),0);
+  const text=`🏠 *ImobGestão — Repasse ao Proprietário*\\n📅 Período: ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}\\n\\n💰 Total Recebido: R$${total.toFixed(2).replace('.',',')}\\n\\n_Gerado pelo ImobGestão_`;
+  enviarWhatsApp(text);
+}
+function gerarRelFinanceiro(mes){
+  const[ano,month]=mes.split('-').map(Number);
+  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes);
+  const byTipo={};
+  cobs.forEach(cb=>{const tipo=cb.tipo||'Aluguel';if(!byTipo[tipo])byTipo[tipo]={total:0,imob:0,prop:0};byTipo[tipo].total+=cb.valorPago||cb.valor;byTipo[tipo].imob+=cb.repasse?.imob||0;byTipo[tipo].prop+=cb.repasse?.prop||0;});
+  let html=`<h2>Financeiro Mensal · ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}</h2>`;
+  html+=`<table><thead><tr><th>Tipo</th><th>Total</th><th>Imobiliária</th><th>Proprietário</th></tr></thead><tbody>`;
+  let totGeral=0,totImob=0,totProp=0;
+  Object.entries(byTipo).forEach(([tipo,vals])=>{
+    totGeral+=vals.total;totImob+=vals.imob;totProp+=vals.prop;
+    html+=`<tr><td>${tipo}</td><td>R$${vals.total.toFixed(2).replace('.',',')}</td><td>R$${vals.imob.toFixed(2).replace('.',',')}</td><td>R$${vals.prop.toFixed(2).replace('.',',')}</td></tr>`;
+  });
+  html+=`<tr style="background:#f0f4f8;font-weight:bold"><td>TOTAL</td><td>R$${totGeral.toFixed(2).replace('.',',')}</td><td>R$${totImob.toFixed(2).replace('.',',')}</td><td>R$${totProp.toFixed(2).replace('.',',')}</td></tr></tbody></table>`;
+  gerarPDF('Financeiro Mensal',html);
+}
+function shareRelFinanceiro(mes){
+  const[ano,month]=mes.split('-').map(Number);
+  const cobs=D.cb.filter(cb=>cb.pago&&cb.mes===mes);
+  const total=cobs.reduce((a,b)=>a+(b.valorPago||b.valor),0);
+  const text=`💰 *ImobGestão — Financeiro Mensal*\\n📅 ${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][month-1]}/${ano}\\n\\n📥 Total Recebido: R$${total.toFixed(2).replace('.',',')}\\n\\n_Gerado pelo ImobGestão_`;
+  enviarWhatsApp(text);
+}
+function gerarRelContrato(cid){
+  const c=D.c.find(x=>x.id===cid);
+  if(!c){alert('Selecione um contrato');return;}
+  const cobs=D.cb.filter(x=>x.contratoId===cid).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+  let html=`<h2>Extrato de Contrato</h2><div class="section"><h3>${c.inquilino||'–'}</h3><p><strong>Endereço:</strong> ${c.endereco||'–'}</p><p><strong>Proprietário:</strong> ${c.proprietario||'–'}</p><p><strong>Período:</strong> ${c.inicio ? 'A partir de '+c.inicio : 'N/A'}</p></div><table><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>`;
+  cobs.forEach(cb=>{
+    const status=cb.pago?'✓ Pago':'⏳ Pendente';
+    html+=`<tr><td>${cb.mes||'–'}</td><td>${cb.tipo||'–'}</td><td>${cb.descricao||'–'}</td><td>R$${(cb.valorPago||cb.valor||0).toFixed(2).replace('.',',')}</td><td>${cb.venc||'–'}</td><td>${status}</td></tr>`;
+  });
+  html+=`</tbody></table>`;
+  gerarPDF('Extrato de Contrato',html);
+}
+function shareRelContrato(cid){
+  const c=D.c.find(x=>x.id===cid);
+  if(!c){alert('Selecione um contrato');return;}
+  const cobs=D.cb.filter(x=>x.contratoId===cid);
+  const pago=cobs.filter(x=>x.pago).length;
+  const text=`📋 *Extrato do Contrato*\\n\\n👤 ${c.inquilino}\\n🏠 ${c.endereco}\\n\\n📊 Cobranças: ${cobs.length}\\n✓ Pagas: ${pago}\\n⏳ Pendentes: ${cobs.length-pago}\\n\\n_Gerado pelo ImobGestão_`;
+  enviarWhatsApp(text);
+}
+function gerarRelInadimplencia(){
+  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0);
+  if(!atrasadas.length){alert('Nenhuma cobrança em atraso');return;}
+  let html=`<h2>Relatório de Inadimplência</h2><p style="margin-bottom:14px">Total de Cobranças Atrasadas: <strong>${atrasadas.length}</strong></p><table><thead><tr><th>Inquilino</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Dias em Atraso</th></tr></thead><tbody>`;
+  atrasadas.sort((a,b)=>DA(a.venc)-DA(b.venc)).forEach(cb=>{
+    const dias=Math.abs(DA(cb.venc));
+    html+=`<tr><td>${cb.inquilino||'–'}</td><td>${cb.descricao||'–'}</td><td>R$${(cb.valor||0).toFixed(2).replace('.',',')}</td><td>${cb.venc||'–'}</td><td>${dias} dias</td></tr>`;
+  });
+  html+=`</tbody></table>`;
+  gerarPDF('Inadimplência',html);
+}
+function shareRelInadimplencia(){
+  const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0);
+  if(!atrasadas.length){alert('Nenhuma cobrança em atraso');return;}
+  let msg=`⚠️ *ImobGestão — Inadimplência*\\n\\n📊 Total em Atraso: ${atrasadas.length}\\n💰 Valor Total: R$${atrasadas.reduce((a,b)=>a+(b.valor||0),0).toFixed(2).replace('.',',')}\\n\\n_Gerado pelo ImobGestão_`;
+  enviarWhatsApp(msg);
+}
+function gerarRelVencimentos(){
+  const proxVenc=D.c.filter(c=>c.fim&&DA(c.fim)<=90&&DA(c.fim)>=0);
+  const reajustesDev=D.c.filter(c=>{const rd=calcReajusteDate(c);return rd&&DA(rd)<=0;});
+  let html=`<h2>Vencimentos & Reajustes</h2><h3>Contratos Vencendo nos Próximos 90 dias</h3>`;
+  if(proxVenc.length===0)html+=`<p>Nenhum contrato vencendo.</p>`;
+  else {
+    html+=`<table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Término</th><th>Dias</th></tr></thead><tbody>`;
+    proxVenc.forEach(c=>{html+=`<tr><td>${c.inquilino||'–'}</td><td>${(c.endereco||'').substring(0,40)}</td><td>${c.fim}</td><td>${DA(c.fim)}</td></tr>`;});
+    html+=`</tbody></table>`;
+  }
+  html+=`<h3>Reajustes Pendentes</h3>`;
+  if(reajustesDev.length===0)html+=`<p>Nenhum reajuste pendente.</p>`;
+  else{
+    html+=`<table><thead><tr><th>Inquilino</th><th>Índice</th><th>Data Reajuste</th><th>Valor Atual</th></tr></thead><tbody>`;
+    reajustesDev.forEach(c=>{const rd=calcReajusteDate(c);html+=`<tr><td>${c.inquilino||'–'}</td><td>${c.reajusteIndice||'IGP-M'}</td><td>${rd}</td><td>R$${(c.valor||0).toFixed(2).replace('.',',')}</td></tr>`;});
+    html+=`</tbody></table>`;
+  }
+  gerarPDF('Vencimentos & Reajustes',html);
+}
+function shareRelVencimentos(){
+  const proxVenc=D.c.filter(c=>c.fim&&DA(c.fim)<=90&&DA(c.fim)>=0);
+  const reajustesDev=D.c.filter(c=>{const rd=calcReajusteDate(c);return rd&&DA(rd)<=0;});
+  let msg=`📅 *ImobGestão — Vencimentos & Reajustes*\\n\\n⏰ Contratos vencendo: ${proxVenc.length}\\n↑ Reajustes pendentes: ${reajustesDev.length}\\n\\n_Gerado pelo ImobGestão_`;
+  enviarWhatsApp(msg);
 }
 
 // ══════════════════════════════════════════
