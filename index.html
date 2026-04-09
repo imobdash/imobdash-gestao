@@ -438,6 +438,29 @@ tr:hover td{background:rgba(255,255,255,.018);}
 
 </div><!-- fim #main-app -->
 
+<!-- MODAL: FINALIZAR LOCAÇÃO -->
+<div class="mo" id="mfin">
+<div class="md" style="max-width:420px">
+  <div class="mh"><div><h2>🔒 Finalizar Locação</h2><p>O contrato será encerrado mas mantido para consulta</p></div><button class="mx" onclick="cM('mfin')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g"><label>Data de Encerramento</label><input type="date" id="ffindata"></div>
+      <div class="g"><label>Motivo</label>
+        <select id="ffinmot">
+          <option value="Término natural">Término natural do contrato</option>
+          <option value="Rescisão pelo inquilino">Rescisão pelo inquilino</option>
+          <option value="Rescisão pelo proprietário">Rescisão pelo proprietário</option>
+          <option value="Distrato">Distrato (acordo mútuo)</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="g ff"><label>Observação (opcional)</label><input type="text" id="ffinobs" placeholder="Detalhes sobre o encerramento..."></div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mfin')">Cancelar</button><button class="btn bp" id="btnFinalizar" onclick="confirmarFinalizar()">🔒 Finalizar</button></div>
+  </div>
+</div>
+</div>
+
 <!-- MODAL: NOVO CONTRATO -->
 <div class="mo" id="mc">
 <div class="md mdw">
@@ -487,8 +510,16 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="g"><label>Multa (%)</label><input type="number" id="fmul" value="2" step="0.1"></div>
       <div class="g"><label>Caução (R$)</label><input type="number" id="fcau" placeholder="0,00" step="0.01"></div>
       <div class="g"><label>Caução retida por</label><select id="fcautp"><option value="imob">Imobiliária</option><option value="prop">Proprietário</option></select></div>
-      <div class="g"><label>Validade do Seguro</label><input type="date" id="fsegvnc"></div>
-      <div class="g"><label>Obs. Seguro</label><input type="text" id="fsegobs" placeholder="Ex: Seguro com Allianz, renovação em ..."></div>
+      <div class="fsec">🛡️ Seguro</div>
+      <div class="g"><label>Validade da Apólice</label><input type="date" id="fsegvnc"></div>
+      <div class="g"><label>Seguradora / Obs.</label><input type="text" id="fsegobs" placeholder="Ex: Allianz, apólice nº 12345..."></div>
+      <div class="g ff">
+        <label style="text-transform:none;font-size:12px;font-weight:500;letter-spacing:0">📎 Arquivo da Apólice (PDF/imagem)</label>
+        <div class="uz" style="padding:8px" id="seguz">
+          <input type="file" id="fsegfile" accept=".pdf,image/*">
+          <div style="font-size:12px;color:var(--dm)" id="fsegfilename">Clique para selecionar a apólice</div>
+        </div>
+      </div>
       <div id="propbox" style="display:none" class="ff"></div>
       <div class="g ff" style="background:var(--sf2);border-radius:var(--rs);padding:10px;border:1px solid var(--bd)">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--te);text-transform:none;letter-spacing:0">
@@ -730,6 +761,8 @@ let currentUser=null;
 let _loadingApp=false;
 let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
 let _repCollapsed=new Set();
+let _editContratoId=null;
+let _contratosStatusFiltro='ativo';
 let _repInitialized=false;
 
 // ── TEMA ──
@@ -897,7 +930,11 @@ function rowToContrato(row){
     caucaoAtual:(()=>{const adj=row.caucao_ajustes||[];if(!adj.length)return Number(row.caucao||0);return adj[adj.length-1].valorNovo;})(),
     // FEATURE 3: SEGURO
     seguroVence:row.seguro_vence,
-    seguroObs:row.seguro_obs
+    seguroObs:row.seguro_obs,
+    // FEATURE 4: FINALIZAR LOCAÇÃO
+    encerrado:row.encerrado||false,
+    encerradoEm:row.encerrado_em,
+    encerradoMotivo:row.encerrado_motivo
   };
 }
 function rowToCobranca(row){
@@ -985,7 +1022,7 @@ const toB64=(file)=>new Promise(res=>{const r=new FileReader();r.onload=()=>res(
 function b64ToBlob(b64,type){const bytes=atob(b64);const arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type});}
 function safeName(n){return n.replace(/[^a-z0-9.\-_]/gi,'_');}
 
-function stCon(c){const d=DA(c.fim);if(d>90)return{l:'Vigente',cl:'cg'};if(d>30)return{l:`Vence ${d}d`,cl:'cy'};if(d>0)return{l:`Vence ${d}d`,cl:'cr'};return{l:'Vencido',cl:'cr'};}
+function stCon(c){if(c.encerrado)return{l:'Encerrado',cl:'cr'};const d=DA(c.fim);if(d>90)return{l:'Vigente',cl:'cg'};if(d>30)return{l:`Vence ${d}d`,cl:'cy'};if(d>0)return{l:`Vence ${d}d`,cl:'cr'};return{l:'Vencido',cl:'cr'};}
 function stCob(c){if(c.pago)return{l:'Pago',cl:'cg'};const d=DA(c.venc);if(d<0)return{l:'Atrasado',cl:'cr'};return{l:'Pendente',cl:'cy'};}
 function tpCl(t){if(!t||t==='Aluguel')return'ta';if(t.startsWith('IPTU')||t.startsWith('Taxa'))return'ti';if(t==='Condomínio')return'tc';if(t==='Seguro')return'ts';if(t==='Pintura')return'tp';if(t==='Caução')return'cp';return'tou';}
 
@@ -1286,7 +1323,9 @@ function renderDash(){
 // ══════════════════════════════════════════
 function renderContratos(){
   const q=(document.getElementById('sc')||{}).value?.toLowerCase()||'';
-  const fl=D.c.filter(c=>!q||[c.inquilino,c.proprietario,c.endereco].some(x=>x?.toLowerCase().includes(q)));
+  let fl=D.c.filter(c=>!q||[c.inquilino,c.proprietario,c.endereco].some(x=>x?.toLowerCase().includes(q)));
+  if(_contratosStatusFiltro==='ativo')fl=fl.filter(c=>!c.encerrado);
+  else if(_contratosStatusFiltro==='encerrado')fl=fl.filter(c=>c.encerrado);
   const el=document.getElementById('tc');
   if(!fl.length){el.innerHTML=`<div class="empty"><div class="ei">📋</div><h3>Nenhum contrato${q?' encontrado':''}</h3><p>Clique em "+ Novo Contrato"</p></div>`;return;}
   el.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Proprietário</th><th>Valor</th><th>Risco</th><th>Docs</th><th>Status</th><th></th></tr></thead>
@@ -1349,6 +1388,15 @@ function detail(id){
           <span>↑ Reajuste disponível desde ${FD(reajData)}</span>
           <button class="btn bg bsm" onclick="openAplicarReajuste('${c.id}')">Aplicar</button>
         </div>`;}return'';})()}
+        ${c.seguroVence?`<div style="margin-top:6px;padding:8px 10px;background:${DA(c.seguroVence)<=30?'var(--yd)':'var(--gd)'};border:1px solid ${DA(c.seguroVence)<=30?'rgba(245,158,11,.2)':'rgba(34,197,94,.2)'};border-radius:7px;font-size:12px;display:flex;align-items:center;justify-content:space-between">
+          <span style="color:${DA(c.seguroVence)<=30?'var(--ye)':'var(--gn)'}">🛡️ Seguro vence ${FD(c.seguroVence)}${c.seguroObs?' · '+c.seguroObs:''}</span>
+          ${(c.docs||[]).find(d=>d.tag==='Seguro')?`<button class="btn bg bsm" onclick="viewConFile('${(c.docs||[]).find(d=>d.tag==='Seguro').id}')">📥 Apólice</button>`:''}
+        </div>`:''}
+      </div>
+      <div style="display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--bd);flex-wrap:wrap">
+        <button class="btn bg bsm" onclick="editContrato('${c.id}')">✏️ Editar</button>
+        ${!c.encerrado?`<button class="btn bg bsm" style="background:var(--rd);color:var(--re);border:1px solid rgba(220,38,38,.3)" onclick="openFinalizarLocacao('${c.id}')">🔒 Finalizar Locação</button>`:`<span class="chip cr">🔒 Encerrado em ${FD(c.encerradoEm)} · ${c.encerradoMotivo||''}</span>`}
+        ${!c.encerrado&&c.fim&&DA(c.fim)<=30?`<button class="btn bg bsm" style="background:var(--ag);color:var(--ac2)" onclick="renovarContrato('${c.id}')">🔄 Renovar Contrato</button>`:''}
       </div>
     </div>
     ${c.reajusteHistorico&&c.reajusteHistorico.length?`<div class="card">
@@ -1610,7 +1658,7 @@ function cobItem(cb,inDetail=false){
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
-      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<span style="font-size:11px;color:var(--dm)">Pago ${FD(cb.dataPago)}</span>`}
+      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span><button class="btn bd2 bsm" style="font-size:10px;padding:2px 7px" onclick="estornarPagamento('${cb.id}')">↩ Estornar</button></div>`}
       <button class="btn bg bsm" onclick="openEditCob('${cb.id}')" title="Editar repasse">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
     </div>
@@ -1886,7 +1934,7 @@ function renderVenc(){
         <div class="vi" onclick="detail('${c.id}')">
           <div class="vd ${d<0?'pa':cl}"><div class="n">${Math.abs(d)}</div><div class="l">${d<0?'atrás':'dias'}</div></div>
           <div style="flex:1"><div style="font-size:13px;font-weight:500">${c.inquilino}</div><div style="font-size:11px;color:var(--dm)">${(c.endereco||'').substring(0,30)}</div></div>
-          <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">VENC. CONTRATO</span></div>
+          <div style="text-align:right"><div style="font-size:12px;font-weight:600">${FD(c.fim)}</div><span style="font-size:9px;font-weight:700;color:var(--dmr)">VENC. CONTRATO</span>${d<=0?`<button class="btn bg bsm" style="font-size:10px;margin-top:3px" onclick="event.stopPropagation();renovarContrato('${c.id}')">🔄 Renovar</button>`:''}</div>
         </div>`];
       if(reajData){rows.push(`<div class="vi" style="padding-left:58px;background:rgba(245,158,11,.04)" onclick="detail('${c.id}')">
         <div class="vd ${clReaj}" style="width:38px;height:38px"><div class="n" style="font-size:13px">${dReaj!=null?Math.abs(dReaj):'–'}</div><div class="l">${dReaj!=null&&dReaj<0?'atrás':'dias'}</div></div>
@@ -2122,6 +2170,15 @@ async function runAI(){
   }
 }
 
+let _seguroFile=null;
+document.addEventListener('DOMContentLoaded',()=>{
+  const sf=document.getElementById('fsegfile');
+  if(sf)sf.addEventListener('change',e=>{
+    _seguroFile=e.target.files[0]||null;
+    document.getElementById('fsegfilename').textContent=_seguroFile?_seguroFile.name:'Clique para selecionar a apólice';
+  });
+});
+
 async function saveContract(){
   const inq=document.getElementById('finq').value.trim();
   if(!inq){alert('Informe o nome do inquilino');return;}
@@ -2130,8 +2187,7 @@ async function saveContract(){
   const userId=currentUser.id;
   const ini=document.getElementById('fini').value;
   const fim=document.getElementById('ffim').value;
-  const{data:newCon,error}=await sb.from('contratos').insert({
-    user_id:userId,
+  const payload={
     endereco:document.getElementById('fen').value,
     administrado:document.getElementById('fadm').value==='sim',
     inquilino:inq,
@@ -2152,40 +2208,62 @@ async function saveContract(){
     observacoes:document.getElementById('fobs').value||null,
     reajuste_meses:parseInt(document.getElementById('freaj').value)||12,
     reajuste_indice:document.getElementById('freajind').value||'IGP-M',
-    gerar_cob:document.getElementById('fgc').checked,
     seguro_vence:document.getElementById('fsegvnc').value||null,
     seguro_obs:document.getElementById('fsegobs').value||null
-  }).select().single();
+  };
+  let newCon,error;
+  if(_editContratoId){
+    const r=await sb.from('contratos').update(payload).eq('id',_editContratoId).select().single();
+    newCon=r.data;error=r.error;
+  }else{
+    payload.user_id=userId;
+    payload.gerar_cob=document.getElementById('fgc').checked;
+    const r=await sb.from('contratos').insert(payload).select().single();
+    newCon=r.data;error=r.error;
+  }
   btn.disabled=false;btn.textContent='✓ Salvar Contrato';
   if(error){alert('Erro ao salvar contrato: '+error.message);return;}
   const c=rowToContrato(newCon);
-  c.docs=[];
-  D.c.unshift(c);
-  // Upload PDF contrato
-  if(pdfFile){
-    const ext=pdfFile.name.split('.').pop();
-    const path=`${userId}/${newCon.id}/contrato.${ext}`;
-    const{error:upErr}=await sb.storage.from('documentos').upload(path,pdfFile);
-    if(!upErr){
-      const{data:doc}=await sb.from('documentos').insert({user_id:userId,contrato_id:newCon.id,nome:pdfFile.name,tag:'Contrato',storage_path:path,tamanho:pdfFile.size,mime_type:pdfFile.type}).select().single();
-      if(doc)c.docs.push(rowToDoc(doc));
+  if(_editContratoId){
+    const idx=D.c.findIndex(x=>x.id===_editContratoId);
+    if(idx>=0){c.docs=D.c[idx].docs||[];D.c[idx]=c;}
+  }else{
+    c.docs=[];D.c.unshift(c);
+    if(pdfFile){
+      const ext=pdfFile.name.split('.').pop();
+      const path=`${userId}/${newCon.id}/contrato.${ext}`;
+      const{error:upErr}=await sb.storage.from('documentos').upload(path,pdfFile);
+      if(!upErr){
+        const{data:doc}=await sb.from('documentos').insert({user_id:userId,contrato_id:newCon.id,nome:pdfFile.name,tag:'Contrato',storage_path:path,tamanho:pdfFile.size,mime_type:pdfFile.type}).select().single();
+        if(doc)c.docs.push(rowToDoc(doc));
+      }
     }
-  }
-  // Upload docs extras
-  for(const d of docsExtras){
-    const path=`${userId}/${newCon.id}/${Date.now()}_${safeName(d.name)}`;
-    const blob=b64ToBlob(d.data,d.type);
-    const{error:upErr}=await sb.storage.from('documentos').upload(path,blob);
-    if(!upErr){
-      const{data:doc}=await sb.from('documentos').insert({user_id:userId,contrato_id:newCon.id,nome:d.name,tag:d.tag,storage_path:path,tamanho:blob.size,mime_type:d.type}).select().single();
-      if(doc)c.docs.push(rowToDoc(doc));
+    for(const d of docsExtras){
+      const path=`${userId}/${newCon.id}/${Date.now()}_${safeName(d.name)}`;
+      const blob=b64ToBlob(d.data,d.type);
+      const{error:upErr}=await sb.storage.from('documentos').upload(path,blob);
+      if(!upErr){
+        const{data:doc}=await sb.from('documentos').insert({user_id:userId,contrato_id:newCon.id,nome:d.name,tag:d.tag,storage_path:path,tamanho:blob.size,mime_type:d.type}).select().single();
+        if(doc)c.docs.push(rowToDoc(doc));
+      }
     }
+    if(document.getElementById('fgc').checked)await gerarCobsSupabase(c,userId);
   }
-  // Gerar cobranças
-  if(document.getElementById('fgc').checked){
-    await gerarCobsSupabase(c,userId);
+  if(_seguroFile){
+    const cid=newCon.id;
+    const path=`${userId}/${cid}/seguro_${Date.now()}.${_seguroFile.name.split('.').pop()}`;
+    const{error:supErr}=await sb.storage.from('documentos').upload(path,_seguroFile);
+    if(!supErr){
+      const{data:sdoc}=await sb.from('documentos').insert({user_id:userId,contrato_id:cid,nome:_seguroFile.name,tag:'Seguro',storage_path:path,tamanho:_seguroFile.size,mime_type:_seguroFile.type}).select().single();
+      if(sdoc){const ci=D.c.findIndex(x=>x.id===cid);if(ci>=0)(D.c[ci].docs=D.c[ci].docs||[]).push(rowToDoc(sdoc));}
+    }
+    _seguroFile=null;
   }
-  cM('mc');renderContratos();renderDash();go('contratos');
+  const wasEdit=_editContratoId!==null;
+  _editContratoId=null;
+  cM('mc');renderContratos();renderDash();
+  if(!wasEdit)go('contratos');
+  else detail(newCon.id);
 }
 
 // ══════════════════════════════════════════
@@ -2218,6 +2296,12 @@ async function viewDocByTag(cid,tag){
   const d=(c?.docs||[]).find(x=>(x.tag||'').includes(tag));
   if(!d?.storage_path)return;
   const{data}=await sb.storage.from('documentos').createSignedUrl(d.storage_path,120);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
+}
+async function viewConFile(docId){
+  const doc=D.c.flatMap(c=>c.docs||[]).find(d=>d.id===docId);
+  if(!doc?.storage_path)return;
+  const{data}=await sb.storage.from('documentos').createSignedUrl(doc.storage_path,120);
   if(data?.signedUrl)window.open(data.signedUrl,'_blank');
 }
 
@@ -2999,6 +3083,88 @@ function shareRelVencimentos(){
   enviarWhatsApp(linhas.join('\n'));
 }
 
+async function estornarPagamento(id){
+  if(!confirm('Reverter este pagamento? A cobrança voltará para pendente.'))return;
+  const i=D.cb.findIndex(c=>c.id===id);if(i<0)return;
+  const{error}=await sb.from('cobrancas').update({pago:false,data_pago:null,valor_pago:null,repasse_realizado:false}).eq('id',id);
+  if(error){alert('Erro ao estornar: '+error.message);return;}
+  const cb=D.cb[i];
+  cb.pago=false;cb.dataPago=null;cb.valorPago=null;cb.repasseRealizado=false;
+  renderCobrancas();renderDash();
+  const det=document.getElementById('det');
+  if(det&&det.innerHTML)detail(cb.contratoId);
+}
+
+function editContrato(cid){
+  const c=D.c.find(x=>x.id===cid);if(!c)return;
+  _editContratoId=cid;
+  document.querySelector('#mc h2').textContent='Editar Contrato';
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  set('fen',c.endereco);
+  const fadm=document.getElementById('fadm');if(fadm)fadm.value=c.adm||'sim';
+  set('finq',c.inquilino);set('finqc',c.cpfInq);set('finqt',c.telInq);set('finqe',c.emailInq);
+  set('fprn',c.proprietario);set('fprc',c.cpfProp);set('fprt',c.telProp);set('fpre',c.emailProp);
+  set('fval',c.valor);set('fdv',c.diaVenc);set('fini',c.inicio);set('ffim',c.fim);
+  const find=document.getElementById('find');if(find)find.value=c.indice||'IGP-M';
+  set('freaj',c.reajusteMeses);
+  const freajind=document.getElementById('freajind');if(freajind)freajind.value=c.reajusteIndice||'IGP-M';
+  set('fmul',c.multa);set('fcau',c.caucao);
+  const fcautp=document.getElementById('fcautp');if(fcautp)fcautp.value=c.caucaoTp||'imob';
+  set('fsegvnc',c.seguroVence);set('fsegobs',c.seguroObs);set('fobs',c.obs);
+  const fgc=document.getElementById('fgc');if(fgc){fgc.checked=false;fgc.parentElement.parentElement.style.display='none';}
+  _seguroFile=null;
+  document.getElementById('fsegfilename').textContent='Clique para selecionar (substitui apólice atual)';
+  oM('mc');
+}
+
+function renovarContrato(cid){
+  const c=D.c.find(x=>x.id===cid);if(!c)return;
+  _editContratoId=null;
+  document.querySelector('#mc h2').textContent='Renovar Contrato';
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
+  set('fen',c.endereco);
+  const fadm=document.getElementById('fadm');if(fadm)fadm.value=c.adm||'sim';
+  set('finq',c.inquilino);set('finqc',c.cpfInq);set('finqt',c.telInq);set('finqe',c.emailInq);
+  set('fprn',c.proprietario);set('fprc',c.cpfProp);set('fprt',c.telProp);set('fpre',c.emailProp);
+  set('fval',c.valor);set('fdv',c.diaVenc);
+  set('fini','');set('ffim','');
+  const find=document.getElementById('find');if(find)find.value=c.indice||'IGP-M';
+  set('freaj',c.reajusteMeses);
+  const freajind=document.getElementById('freajind');if(freajind)freajind.value=c.reajusteIndice||'IGP-M';
+  set('fmul',c.multa);set('fcau',c.caucao);
+  const fcautp=document.getElementById('fcautp');if(fcautp)fcautp.value=c.caucaoTp||'imob';
+  set('fsegvnc','');set('fsegobs','');set('fobs',c.obs);
+  const fgc=document.getElementById('fgc');if(fgc){fgc.checked=true;fgc.parentElement.parentElement.style.display='';}
+  _seguroFile=null;
+  if(document.getElementById('fsegfilename'))document.getElementById('fsegfilename').textContent='Clique para selecionar a apólice';
+  oM('mc');
+}
+
+let _finalizarContratoId=null;
+function openFinalizarLocacao(cid){
+  _finalizarContratoId=cid;
+  document.getElementById('ffindata').value=TD();
+  document.getElementById('ffinmot').value='Término natural';
+  document.getElementById('ffinobs').value='';
+  oM('mfin');
+}
+async function confirmarFinalizar(){
+  if(!_finalizarContratoId)return;
+  const data=document.getElementById('ffindata').value;
+  const mot=document.getElementById('ffinmot').value;
+  const obs=document.getElementById('ffinobs').value;
+  const motivo=obs?`${mot} — ${obs}`:mot;
+  const btn=document.getElementById('btnFinalizar');
+  btn.disabled=true;btn.textContent='Finalizando...';
+  const{error}=await sb.from('contratos').update({encerrado:true,encerrado_em:data||null,encerrado_motivo:motivo}).eq('id',_finalizarContratoId);
+  btn.disabled=false;btn.textContent='🔒 Finalizar';
+  if(error){alert('Erro: '+error.message);return;}
+  const i=D.c.findIndex(x=>x.id===_finalizarContratoId);
+  if(i>=0){D.c[i].encerrado=true;D.c[i].encerradoEm=data;D.c[i].encerradoMotivo=motivo;}
+  cM('mfin');
+  renderContratos();renderDash();
+  detail(_finalizarContratoId);
+}
 
 // ══════════════════════════════════════════
 // INIT
