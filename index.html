@@ -770,6 +770,18 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </div>
 </div>
 
+<div class="mo" id="mtranscau">
+<div class="md" style="max-width:380px">
+  <div class="mh"><div><h2>🔄 Transferir Caução</h2><p id="mtranscau-sub" style="font-size:12px;color:var(--dm);margin:0"></p></div><button class="mx" onclick="cM('mtranscau')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g ff"><label>Contrato destino</label><select id="transcau-select" style="width:100%"></select></div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mtranscau')">Cancelar</button><button class="btn bp" id="btnTransCau" onclick="confirmTransferirCaucao()">🔄 Transferir</button></div>
+  </div>
+</div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 // SQL MIGRATIONS NEEDED (run in Supabase)
@@ -799,6 +811,7 @@ let _loadingApp=false;
 let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
 let _repCollapsed=new Set();
 let _editContratoId=null;
+let _renovandoDeId=null; // ID do contrato original na renovação
 let _contratosStatusFiltro='ativo';
 let _repInitialized=false;
 
@@ -1308,7 +1321,7 @@ function renderDash(){
     <div class="sc re" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06)"><div class="slb">Em Atraso</div><div class="sv" style="color:var(--re)">${atrAlugCount}</div><div class="ss">cobranças vencidas</div></div>
   `;
   // FEATURE 2: Caução Card
-  const caucoes=D.c.filter(c=>c.caucao>0||c.caucaoAtual>0);
+  const caucoes=D.c.filter(c=>(c.caucao>0||c.caucaoAtual>0)&&!c.encerrado);
   const totalCaucImob=caucoes.filter(c=>c.caucaoTp==='imob').reduce((a,b)=>a+b.caucaoAtual,0);
   const totalCaucProp=caucoes.filter(c=>c.caucaoTp==='prop').reduce((a,b)=>a+b.caucaoAtual,0);
   const carcCard=caucoes.length?`<div class="card" style="margin-bottom:14px">
@@ -1505,6 +1518,7 @@ function detail(id){
         <button class="btn bg bsm" onclick="editContrato('${c.id}')">✏️ Editar</button>
         ${!c.encerrado?`<button class="btn bg bsm" style="background:var(--rd);color:var(--re);border:1px solid rgba(220,38,38,.3)" onclick="openFinalizarLocacao('${c.id}')">🔒 Finalizar Locação</button>`:`<span class="chip cr">🔒 Encerrado em ${FD(c.encerradoEm)} · ${c.encerradoMotivo||''}</span>`}
         ${!c.encerrado&&c.fim&&DA(c.fim)<=30?`<button class="btn bg bsm" style="background:var(--ag);color:var(--ac2)" onclick="renovarContrato('${c.id}')">🔄 Renovar Contrato</button>`:''}
+        ${c.encerrado&&(c.caucao>0||c.caucaoAtual>0)?`<button class="btn bg bsm" style="background:var(--ag);color:var(--ac2)" onclick="openTransferirCaucao('${c.id}')">🔄 Transferir Caução</button>`:''}
       </div>
     </div>
     ${c.reajusteHistorico&&c.reajusteHistorico.length?`<div class="card">
@@ -2262,6 +2276,7 @@ function clearForm(){
   document.getElementById('fdesc_parc').value='';
   document.getElementById('fdesc_origem').value='prop';
   document.getElementById('desconto-box').style.display='none';
+  _renovandoDeId=null;
 }
 document.getElementById('pdfin').addEventListener('change',function(e){
   const file=e.target.files[0];if(!file)return;
@@ -2482,6 +2497,19 @@ async function saveContract(){
         const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].descontoParc=novoParc;
       }
     }
+  }
+  // ── TRANSFERÊNCIA DE CAUÇÃO NA RENOVAÇÃO ──
+  if(_renovandoDeId){
+    const oldCon=D.c.find(x=>x.id===_renovandoDeId);
+    if(oldCon&&(oldCon.caucao>0||oldCon.caucaoAtual>0)){
+      const adj=[...(oldCon.caucaoAjustes||[]),{data:TD(),tipo:'Transferência',motivo:`Caução transferido para contrato renovado (${c.inquilino})`}];
+      const{error:cErr}=await sb.from('contratos').update({caucao:0,caucao_ajustes:JSON.stringify(adj)}).eq('id',_renovandoDeId);
+      if(!cErr){
+        const oi=D.c.findIndex(x=>x.id===_renovandoDeId);
+        if(oi>=0){D.c[oi].caucao=0;D.c[oi].caucaoAtual=0;D.c[oi].caucaoAjustes=adj;}
+      }
+    }
+    _renovandoDeId=null;
   }
   _editContratoId=null;
   cM('mc');renderContratos();renderDash();
@@ -2821,6 +2849,50 @@ async function confirmAjustarCaucao(){
   renderDash();
   detail(_cautCid);
   alert(`✅ Caução ajustada!\nNovo valor: ${R(novo)}`);
+}
+
+// ══════════════════════════════════════════
+// TRANSFERIR CAUÇÃO (contrato encerrado → ativo)
+// ══════════════════════════════════════════
+let _transcauCid=null;
+function openTransferirCaucao(cid){
+  const oldCon=D.c.find(x=>x.id===cid);
+  if(!oldCon)return;
+  const ativos=D.c.filter(x=>!x.encerrado&&x.id!==cid);
+  if(!ativos.length){alert('Nenhum contrato ativo para receber a caução.');return;}
+  _transcauCid=cid;
+  const val=oldCon.caucaoAtual||oldCon.caucao||0;
+  document.getElementById('mtranscau-sub').textContent=`Mover ${R(val)} de "${oldCon.inquilino}" para contrato ativo`;
+  document.getElementById('transcau-select').innerHTML=ativos.map(x=>`<option value="${x.id}">${x.inquilino} · ${(x.endereco||'').substring(0,30)}</option>`).join('');
+  oM('mtranscau');
+}
+async function confirmTransferirCaucao(){
+  const oldCon=D.c.find(x=>x.id===_transcauCid);
+  if(!oldCon)return;
+  const destId=document.getElementById('transcau-select').value;
+  const newCon=D.c.find(x=>x.id===destId);
+  if(!newCon){alert('Contrato destino não encontrado.');return;}
+  const btn=document.getElementById('btnTransCau');
+  btn.disabled=true;btn.textContent='Transferindo...';
+  const valOld=oldCon.caucaoAtual||oldCon.caucao||0;
+  // Zero caução do contrato encerrado
+  const adjOld=[...(oldCon.caucaoAjustes||[]),{data:TD(),tipo:'Transferência',valor:valOld,valorAnterior:valOld,valorNovo:0,motivo:`Caução transferido para ${newCon.inquilino} (renovação)`}];
+  const{error:e1}=await sb.from('contratos').update({caucao:0,caucao_ajustes:JSON.stringify(adjOld)}).eq('id',_transcauCid);
+  if(e1){alert('Erro ao zerar caução: '+e1.message);btn.disabled=false;btn.textContent='🔄 Transferir';return;}
+  const oi=D.c.findIndex(x=>x.id===_transcauCid);
+  if(oi>=0){D.c[oi].caucao=0;D.c[oi].caucaoAtual=0;D.c[oi].caucaoAjustes=adjOld;}
+  // Somar ao contrato destino
+  const novoVal=(newCon.caucaoAtual||newCon.caucao||0)+valOld;
+  const adjNew=[...(newCon.caucaoAjustes||[]),{data:TD(),tipo:'Recebimento',valor:valOld,valorAnterior:newCon.caucaoAtual||newCon.caucao||0,valorNovo:novoVal,motivo:`Caução recebido de contrato encerrado (${oldCon.inquilino})`}];
+  const{error:e2}=await sb.from('contratos').update({caucao:novoVal,caucao_ajustes:JSON.stringify(adjNew)}).eq('id',destId);
+  if(e2){alert('Erro ao atualizar contrato destino: '+e2.message);btn.disabled=false;btn.textContent='🔄 Transferir';return;}
+  const ni=D.c.findIndex(x=>x.id===destId);
+  if(ni>=0){D.c[ni].caucao=novoVal;D.c[ni].caucaoAtual=novoVal;D.c[ni].caucaoAjustes=adjNew;}
+  btn.disabled=false;btn.textContent='🔄 Transferir';
+  cM('mtranscau');
+  renderDash();
+  detail(_transcauCid);
+  alert(`✅ Caução transferido!\n${R(valOld)} movido para "${newCon.inquilino}"`);
 }
 
 // ══════════════════════════════════════════
@@ -3356,6 +3428,7 @@ function editContrato(cid){
 function renovarContrato(cid){
   const c=D.c.find(x=>x.id===cid);if(!c)return;
   _editContratoId=null;
+  _renovandoDeId=cid; // guardar referência ao contrato original
   document.querySelector('#mc h2').textContent='Renovar Contrato';
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v||'';};
   set('fen',c.endereco);
