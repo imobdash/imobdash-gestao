@@ -1255,9 +1255,18 @@ function cM(id){document.getElementById(id).classList.remove('on');}
 function renderDash(){
   const proj=calcCaixaProj();
   const tot=D.c.length;
+  const totAtivos=D.c.filter(c=>!c.encerrado).length;
+  const totEncerrados=D.c.filter(c=>c.encerrado).length;
   const atrAlugCount=D.cb.filter(c=>!c.pago&&DA(c.venc)<0).length;
   document.getElementById('stats').innerHTML=`
-    <div class="sc bl"><div class="slb">Contratos Ativos</div><div class="sv">${tot}</div><div class="ss">imóveis gerenciados</div></div>
+    <div class="sc bl">
+      <div class="slb">Contratos</div>
+      <div class="sv">${tot}</div>
+      <div class="ss" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px">
+        <span>✅ ${totAtivos} ativos</span>
+        <span style="cursor:pointer;text-decoration:underline;text-underline-offset:2px" onclick="setContratosFiltro('encerrado');go('contratos')">🔒 ${totEncerrados} encerrado${totEncerrados!==1?'s':''} →</span>
+      </div>
+    </div>
     <div class="sc gr"><div class="slb">Receita Total</div><div class="sv" style="font-size:16px">${R(proj.receitaProp)}</div><div class="ss">proprietários receberam</div></div>
     <div class="sc bl" style="border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.06)"><div class="slb">Receita Total Imob.</div><div class="sv" style="font-size:16px;color:var(--ac2)">${R(proj.receitaImob)}</div><div class="ss">imobiliária recebeu</div></div>
     <div class="sc pu"><div class="slb">Inadimplência</div><div class="sv" style="color:${proj.pctInad>20?'var(--re)':proj.pctInad>10?'var(--ye)':'var(--gn)'}">${proj.pctInad}%</div><div class="ss">${proj.atrAlug} em ${proj.totAlug} aluguéis</div></div>
