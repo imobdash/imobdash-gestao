@@ -64,6 +64,8 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .btn-tab-con{padding:5px 14px;border-radius:20px;border:1.5px solid var(--br);background:transparent;color:var(--dm);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
 .btn-tab-con:hover{border-color:var(--ac);color:var(--ac);}
 .btn-tab-con.active{background:var(--ac);border-color:var(--ac);color:#fff;}
+#desconto-box{display:contents}
+#desconto-box.vis{display:contents}
 /* CHIPS */
 .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
 .cg{background:var(--gd);color:var(--gn);}.cy{background:var(--yd);color:var(--ye);}.cr{background:var(--rd);color:var(--re);}.cb2{background:var(--ag);color:var(--ac2);}
@@ -526,6 +528,19 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="g"><label>Multa (%)</label><input type="number" id="fmul" value="2" step="0.1"></div>
       <div class="g"><label>Caução (R$)</label><input type="number" id="fcau" placeholder="0,00" step="0.01"></div>
       <div class="g"><label>Caução retida por</label><select id="fcautp"><option value="imob">Imobiliária</option><option value="prop">Proprietário</option></select></div>
+      <div class="fsec">💸 Desconto no Aluguel</div>
+      <div class="g ff">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--te);text-transform:none;letter-spacing:0">
+          <input type="checkbox" id="fdc_ativo" onchange="toggleDescontoBox()" style="width:15px;height:15px;accent-color:var(--ac2)">
+          Aplicar desconto mensal ao valor do aluguel
+        </label>
+        <div style="font-size:12px;color:var(--dm);margin-top:4px">Ex: taxa de condomínio paga pelo inquilino diretamente no boleto.</div>
+      </div>
+      <div id="desconto-box" style="display:none;contents:''">
+        <div class="g"><label>Descrição do Desconto</label><input type="text" id="fdesc_desc" placeholder="Ex: Taxa de Condomínio"></div>
+        <div class="g"><label>Valor do Desconto (R$)</label><input type="number" id="fdesc_val" placeholder="0,00" step="0.01" min="0" oninput="calcProp()"></div>
+        <div class="g"><label>Parcelas Restantes</label><input type="number" id="fdesc_parc" placeholder="Ex: 38" min="1" title="Número de meses em que o desconto será aplicado automaticamente"></div>
+      </div>
       <div class="fsec">🛡️ Seguro</div>
       <div class="g"><label>Validade da Apólice</label><input type="date" id="fsegvnc"></div>
       <div class="g"><label>Seguradora / Obs.</label><input type="text" id="fsegobs" placeholder="Ex: Allianz, apólice nº 12345..."></div>
@@ -950,7 +965,11 @@ function rowToContrato(row){
     // FEATURE 4: FINALIZAR LOCAÇÃO
     encerrado:row.encerrado||false,
     encerradoEm:row.encerrado_em,
-    encerradoMotivo:row.encerrado_motivo
+    encerradoMotivo:row.encerrado_motivo,
+    // FEATURE 5: DESCONTO MENSAL
+    descontoValor:Number(row.desconto_valor||0),
+    descontoDesc:row.desconto_desc||'',
+    descontoParc:Number(row.desconto_parcelas||0)
   };
 }
 function rowToCobranca(row){
@@ -976,7 +995,9 @@ function rowToCobranca(row){
     comprovantePath:row.comprovante_path,
     repasseRealizado:row.repasse_realizado||false,
     dataRepasse:row.data_repasse||null,
-    reajustePendente:row.reajuste_pendente||false
+    reajustePendente:row.reajuste_pendente||false,
+    descontoAplicado:Number(row.desconto_aplicado||0),
+    descontoDesc:row.desconto_desc_cob||''
   };
 }
 function rowToOS(row){
@@ -1456,6 +1477,9 @@ function detail(id){
         ${ir('Vencimento','Todo dia '+(c.diaVenc||'–'))}${ir('Índice',c.indice)}${ir('Multa',c.multa+'%')}
         ${c.caucao?`${ir('Caução',R(c.caucao)+' — '+(c.caucaoTp==='imob'?'Imobiliária':'Proprietário'))}`:''}
         ${ir('Administrado',c.adm==='sim'?'Sim':'Não')}
+        ${c.descontoValor>0?ir('Desconto Mensal',`-${R(c.descontoValor)} · ${c.descontoDesc||''} · ${c.descontoParc} parcela(s) restante(s)`):''}
+        ${c.descontoValor>0?ir('Valor Líquido (c/ desconto)',R(c.valor-c.descontoValor)):''}
+
         ${ir('Início',FD(c.inicio))}${ir('Término',FD(c.fim))}
         ${prog?`<div style="margin-top:9px"><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Progresso · ${prog}%</div><div class="pw"><div class="pb" style="width:${prog}%"></div></div></div>`:''}
         ${c.seguroVence?`<div style="margin-top:9px;padding:8px 10px;background:${DA(c.seguroVence)<=30?'var(--yd)':'var(--gd)'};border:1px solid ${DA(c.seguroVence)<=30?'rgba(245,158,11,.2)':'rgba(34,197,94,.2)'};border-radius:7px;font-size:12px;color:${DA(c.seguroVence)<=30?'var(--ye)':'var(--gn)'}">🛡️ Seguro vence ${FD(c.seguroVence)}${c.seguroObs?' · '+c.seguroObs:''}</div>`:''}
@@ -1731,6 +1755,7 @@ function cobItem(cb,inDetail=false){
         ${f.cls?`<span class="fase ${f.cls}">${f.label}</span>`:''}
       </div>
       <div style="font-size:12px;color:var(--dm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</div>
+      ${cb.descontoAplicado>0?`<div style="font-size:11px;color:var(--ac2);margin-top:2px">💸 Desc. ${cb.descontoDesc||'Desconto'}: -${R(cb.descontoAplicado)}</div>`:''}
       <div style="font-size:11px;color:var(--dmr);margin-top:1px">Vence: ${FD(cb.venc)}</div>
       ${rp?`<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
         ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop)}</span>`:''}
@@ -2096,8 +2121,19 @@ function calcProp(){
   let msg='';
   if(dia===1){msg=`1º aluguel (${MN[proxMes.getMonth()]}/${proxMes.getFullYear()}): valor integral ${R(val)}.`;}
   else{const dm=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();const dr=dm-dia;const vp=Math.round((val/dm)*dr*100)/100;msg=`Contrato inicia dia ${dia}. 1º aluguel em ${MN[proxMes.getMonth()]}/${proxMes.getFullYear()}: ${dr}/${dm} dias = <strong>${R(vp)}</strong>. Demais meses: ${R(val)}.`;}
+  // Mostrar info de desconto no propbox se houver
+  const dcAtivo=document.getElementById('fdc_ativo').checked;
+  const dcVal=parseFloat(document.getElementById('fdesc_val').value)||0;
+  const dcDesc=document.getElementById('fdesc_desc').value;
+  const dcInfo=dcAtivo&&dcVal>0?`<br><span style="color:var(--ac2)">💸 Desconto: -${R(dcVal)} (${dcDesc||'Desconto'}) → Valor líquido: ${R(Math.max(0,val-dcVal))}/mês</span>`:'';
   box.style.display='block';
-  box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}</div>`;
+  box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}${dcInfo}</div>`;
+}
+function toggleDescontoBox(){
+  const ativo=document.getElementById('fdc_ativo').checked;
+  const box=document.getElementById('desconto-box');
+  box.style.display=ativo?'contents':'none';
+  calcProp();
 }
 
 // ══════════════════════════════════════════
@@ -2112,6 +2148,7 @@ async function gerarCobsSupabase(c,userId){
   let primMes=true;
   let cur=new Date(ini.getFullYear(),ini.getMonth()+1,1);
   const cobsToInsert=[];
+  let descParcsUsadas=0; // contador de parcelas de desconto aplicadas
   while(cur<=fim){
     const y=cur.getFullYear(),m=cur.getMonth();
     const mesRef=`${y}-${String(m+1).padStart(2,'0')}`;
@@ -2120,10 +2157,18 @@ async function gerarCobsSupabase(c,userId){
     let valor=c.valor,descExtra='';
     if(primMes){const diaIni=ini.getDate();if(diaIni!==1){const dm=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();const dr=dm-diaIni;valor=Math.round((c.valor/dm)*dr*100)/100;descExtra=` (${dr}/${dm} dias)`;}}
     const isFirst=primMes;primMes=false;
-    const repBase=isFirst?c.valor:valor;
+    // ── DESCONTO MENSAL ──
+    let descontoAplicado=0;let descontoDescCob='';
+    if(c.descontoValor>0&&c.descontoParc>0&&descParcsUsadas<c.descontoParc){
+      descontoAplicado=c.descontoValor;
+      descontoDescCob=c.descontoDesc||'Desconto';
+      descParcsUsadas++;
+    }
+    const valorLiq=Math.max(0,valor-descontoAplicado);
+    const repBase=isFirst?Math.max(0,c.valor-descontoAplicado):valorLiq;
     const repRaw=calcRepasse('Aluguel',repBase,isFirst,adm);
-    const repImob=Math.min(repRaw.imob,valor);
-    const rep={imob:repImob,prop:Math.max(0,valor-repImob),tipo:repRaw.tipo};
+    const repImob=Math.min(repRaw.imob,valorLiq);
+    const rep={imob:repImob,prop:Math.max(0,valorLiq-repImob),tipo:repRaw.tipo};
     // Flagear reajuste: meses além do período de reajuste (ex: a partir do 13º se reajuste=12)
     const monthIdx=(y-ini.getFullYear())*12+(m-ini.getMonth()); // 1-based
     const reajPend=!!(c.reajusteMeses&&c.reajusteMeses>0&&c.reajusteIndice!=='Nenhum'&&monthIdx>c.reajusteMeses);
@@ -2132,16 +2177,24 @@ async function gerarCobsSupabase(c,userId){
       inquilino:c.inquilino,endereco:c.endereco,
       tipo:'Aluguel',mes:mesRef,
       descricao:`Aluguel ${MN[m]}/${y}${descExtra}`,
-      valor,venc:vencData.toISOString().split('T')[0],
+      valor:valorLiq,venc:vencData.toISOString().split('T')[0],
       pago:false,
       repasse_imob:rep.imob,repasse_prop:rep.prop,repasse_tipo:rep.tipo,
-      reajuste_pendente:reajPend
+      reajuste_pendente:reajPend,
+      desconto_aplicado:descontoAplicado||null,
+      desconto_desc_cob:descontoDescCob||null
     });
     cur=new Date(y,m+1,1);
   }
   if(cobsToInsert.length){
     const{data:newCobs}=await sb.from('cobrancas').insert(cobsToInsert).select();
     if(newCobs)D.cb.push(...newCobs.map(rowToCobranca));
+    // Atualizar parcelas restantes do desconto no contrato
+    if(c.descontoValor>0&&descParcsUsadas>0){
+      const novoParc=Math.max(0,c.descontoParc-descParcsUsadas);
+      await sb.from('contratos').update({desconto_parcelas:novoParc}).eq('id',c.id);
+      const ci=D.c.findIndex(x=>x.id===c.id);if(ci>=0)D.c[ci].descontoParc=novoParc;
+    }
   }
 }
 
@@ -2189,6 +2242,11 @@ function clearForm(){
   document.getElementById('fgc').checked=true;
   document.getElementById('fadm').value='sim';
   document.getElementById('pdfin').value='';
+  document.getElementById('fdc_ativo').checked=false;
+  document.getElementById('fdesc_desc').value='';
+  document.getElementById('fdesc_val').value='';
+  document.getElementById('fdesc_parc').value='';
+  document.getElementById('desconto-box').style.display='none';
 }
 document.getElementById('pdfin').addEventListener('change',function(e){
   const file=e.target.files[0];if(!file)return;
@@ -2306,7 +2364,10 @@ async function saveContract(){
     reajuste_meses:parseInt(document.getElementById('freaj').value)||12,
     reajuste_indice:document.getElementById('freajind').value||'IGP-M',
     seguro_vence:document.getElementById('fsegvnc').value||null,
-    seguro_obs:document.getElementById('fsegobs').value||null
+    seguro_obs:document.getElementById('fsegobs').value||null,
+    desconto_valor:document.getElementById('fdc_ativo').checked?(parseFloat(document.getElementById('fdesc_val').value)||0):0,
+    desconto_desc:document.getElementById('fdc_ativo').checked?(document.getElementById('fdesc_desc').value||null):null,
+    desconto_parcelas:document.getElementById('fdc_ativo').checked?(parseInt(document.getElementById('fdesc_parc').value)||0):0
   };
   let newCon,error;
   if(_editContratoId){
@@ -3208,6 +3269,11 @@ function editContrato(cid){
   set('fmul',c.multa);set('fcau',c.caucao);
   const fcautp=document.getElementById('fcautp');if(fcautp)fcautp.value=c.caucaoTp||'imob';
   set('fsegvnc',c.seguroVence);set('fsegobs',c.seguroObs);set('fobs',c.obs);
+  // Desconto
+  const dcAtivo=c.descontoValor>0;
+  const fdc=document.getElementById('fdc_ativo');if(fdc)fdc.checked=dcAtivo;
+  set('fdesc_desc',c.descontoDesc);set('fdesc_val',c.descontoValor||'');set('fdesc_parc',c.descontoParc||'');
+  const dbox=document.getElementById('desconto-box');if(dbox)dbox.style.display=dcAtivo?'contents':'none';
   const fgc=document.getElementById('fgc');if(fgc){fgc.checked=false;fgc.parentElement.parentElement.style.display='none';}
   _seguroFile=null;
   document.getElementById('fsegfilename').textContent='Clique para selecionar (substitui apólice atual)';
@@ -3231,6 +3297,11 @@ function renovarContrato(cid){
   set('fmul',c.multa);set('fcau',c.caucao);
   const fcautp=document.getElementById('fcautp');if(fcautp)fcautp.value=c.caucaoTp||'imob';
   set('fsegvnc','');set('fsegobs','');set('fobs',c.obs);
+  // Desconto (herdar do contrato anterior)
+  const dcAtivoR=c.descontoValor>0&&c.descontoParc>0;
+  const fdcR=document.getElementById('fdc_ativo');if(fdcR)fdcR.checked=dcAtivoR;
+  set('fdesc_desc',c.descontoDesc);set('fdesc_val',c.descontoValor||'');set('fdesc_parc',c.descontoParc||'');
+  const dboxR=document.getElementById('desconto-box');if(dboxR)dboxR.style.display=dcAtivoR?'contents':'none';
   const fgc=document.getElementById('fgc');if(fgc){fgc.checked=true;fgc.parentElement.parentElement.style.display='';}
   _seguroFile=null;
   if(document.getElementById('fsegfilename'))document.getElementById('fsegfilename').textContent='Clique para selecionar a apólice';
