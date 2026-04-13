@@ -60,6 +60,10 @@ th{font-size:11px;color:var(--dm);font-weight:600;text-align:left;padding:9px 14
 td{padding:10px 14px;border-bottom:1px solid rgba(48,54,61,.5);font-size:13px;}
 tr:last-child td{border-bottom:none;}
 tr:hover td{background:rgba(255,255,255,.018);}
+/* ABAS CONTRATOS */
+.btn-tab-con{padding:5px 14px;border-radius:20px;border:1.5px solid var(--br);background:transparent;color:var(--dm);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-tab-con:hover{border-color:var(--ac);color:var(--ac);}
+.btn-tab-con.active{background:var(--ac);border-color:var(--ac);color:#fff;}
 /* CHIPS */
 .chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
 .cg{background:var(--gd);color:var(--gn);}.cy{background:var(--yd);color:var(--ye);}.cr{background:var(--rd);color:var(--re);}.cb2{background:var(--ag);color:var(--ac2);}
@@ -359,7 +363,19 @@ tr:hover td{background:rgba(255,255,255,.018);}
 
     <!-- CONTRATOS -->
     <div class="view" id="view-contratos">
-      <div class="tw"><div class="th2"><h3>Todos os Contratos</h3><div class="sb">🔍 <input type="text" id="sc" placeholder="Buscar..." oninput="renderContratos()"></div></div><div id="tc"></div></div>
+      <div class="tw">
+        <div class="th2">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <h3 style="margin:0">Contratos</h3>
+            <div style="display:flex;gap:6px">
+              <button class="btn-tab-con active" id="tab-con-ativo" onclick="setContratosFiltro('ativo')">✅ Ativos</button>
+              <button class="btn-tab-con" id="tab-con-encerrado" onclick="setContratosFiltro('encerrado')">🔒 Encerrados</button>
+            </div>
+          </div>
+          <div class="sb">🔍 <input type="text" id="sc" placeholder="Buscar..." oninput="renderContratos()"></div>
+        </div>
+        <div id="tc"></div>
+      </div>
     </div>
 
     <!-- COBRANÇAS -->
@@ -1321,31 +1337,83 @@ function renderDash(){
 // ══════════════════════════════════════════
 // CONTRATOS
 // ══════════════════════════════════════════
+function setContratosFiltro(f){
+  _contratosStatusFiltro=f;
+  // atualiza visual das abas
+  document.querySelectorAll('.btn-tab-con').forEach(b=>b.classList.remove('active'));
+  const tab=document.getElementById('tab-con-'+f);
+  if(tab)tab.classList.add('active');
+  // limpa busca ao trocar aba
+  const sc=document.getElementById('sc');
+  if(sc)sc.value='';
+  renderContratos();
+}
+
 function renderContratos(){
   const q=(document.getElementById('sc')||{}).value?.toLowerCase()||'';
+  const enc=_contratosStatusFiltro==='encerrado';
   let fl=D.c.filter(c=>!q||[c.inquilino,c.proprietario,c.endereco].some(x=>x?.toLowerCase().includes(q)));
-  if(_contratosStatusFiltro==='ativo')fl=fl.filter(c=>!c.encerrado);
-  else if(_contratosStatusFiltro==='encerrado')fl=fl.filter(c=>c.encerrado);
+  if(enc)fl=fl.filter(c=>c.encerrado);
+  else fl=fl.filter(c=>!c.encerrado);
   const el=document.getElementById('tc');
-  if(!fl.length){el.innerHTML=`<div class="empty"><div class="ei">📋</div><h3>Nenhum contrato${q?' encontrado':''}</h3><p>Clique em "+ Novo Contrato"</p></div>`;return;}
-  el.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Proprietário</th><th>Valor</th><th>Risco</th><th>Docs</th><th>Status</th><th></th></tr></thead>
-  <tbody>${fl.map(c=>{
-    const s=stCon(c);
-    const ind=calcInadimplencia(c.id);
-    const ck=checkDocs(c);
-    const riscoCls=ind.risco==='Alto'?'cr':ind.risco==='Médio'?'cy':'cg';
-    const docsCls=ck.status==='completo'?'cg':ck.status==='incompleto'?'cy':'cr';
-    return`<tr style="cursor:pointer" onclick="detail('${c.id}')">
-      <td><div style="font-weight:500">${c.inquilino||'–'}</div><div style="font-size:11px;color:var(--dm)">${c.emailInq||c.telInq||''}</div></td>
-      <td style="color:var(--dm);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.endereco||'–'}</td>
-      <td style="color:var(--dm)">${c.proprietario||'–'}</td>
-      <td style="font-family:'Syne',sans-serif;font-weight:700">${R(c.valor)}</td>
-      <td><span class="chip ${riscoCls}">${ind.risco}</span></td>
-      <td><span class="chip ${docsCls}">${ck.ok}/${ck.total}</span></td>
-      <td><span class="chip ${s.cl}">${s.l}</span></td>
-      <td><button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button></td>
-    </tr>`;
-  }).join('')}</tbody></table></div>`;
+  if(!fl.length){
+    const msg=enc?'Nenhum contrato encerrado encontrado':'Nenhum contrato ativo encontrado';
+    const sub=enc?'Contratos finalizados aparecerão aqui':'Clique em "+ Novo Contrato"';
+    el.innerHTML=`<div class="empty"><div class="ei">${enc?'🔒':'📋'}</div><h3>${q?'Nenhum resultado':msg}</h3><p>${sub}</p></div>`;
+    return;
+  }
+  if(enc){
+    // ── Tabela de contratos ENCERRADOS (colunas adaptadas) ──
+    el.innerHTML=`<div class="tbl-scroll"><table><thead><tr>
+      <th>Inquilino</th><th>Endereço</th><th>Proprietário</th>
+      <th>Período do Contrato</th><th>Valor</th>
+      <th>Encerrado em</th><th>Motivo</th><th></th>
+    </tr></thead>
+    <tbody>${fl.map(c=>{
+      const periodoInicio=c.inicio?FD(c.inicio):'–';
+      const periodoFim=c.fim?FD(c.fim):'–';
+      const encEm=c.encerradoEm?FD(c.encerradoEm):'–';
+      const motivo=c.encerradoMotivo||'–';
+      // verifica se existe contrato renovado (mesmo imóvel/inquilino ativo posterior)
+      const renovado=D.c.find(x=>!x.encerrado&&x.inquilino===c.inquilino&&x.endereco===c.endereco&&x.id!==c.id);
+      return`<tr style="cursor:pointer;opacity:.85" onclick="detail('${c.id}')">
+        <td><div style="font-weight:500">${c.inquilino||'–'}</div><div style="font-size:11px;color:var(--dm)">${c.emailInq||c.telInq||''}</div></td>
+        <td style="color:var(--dm);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.endereco||'–'}</td>
+        <td style="color:var(--dm)">${c.proprietario||'–'}</td>
+        <td style="font-size:12px;color:var(--dm)">${periodoInicio} → ${periodoFim}</td>
+        <td style="font-family:'Syne',sans-serif;font-weight:700">${R(c.valor)}</td>
+        <td><span class="chip cr" style="font-size:11px">${encEm}</span></td>
+        <td style="max-width:140px;font-size:12px;color:var(--dm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${motivo}">${motivo}</td>
+        <td style="display:flex;gap:6px;align-items:center">
+          <button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button>
+          ${renovado?`<span class="chip cb2" style="font-size:10px;white-space:nowrap" title="Contrato renovado ativo para este imóvel">🔄 Renovado</span>`:''}
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>
+    <div style="margin-top:10px;padding:10px 14px;background:var(--c2);border-radius:8px;font-size:12px;color:var(--dm);display:flex;align-items:center;gap:8px">
+      🔒 <strong>${fl.length}</strong> contrato${fl.length!==1?'s':''} encerrado${fl.length!==1?'s':''}. Clique em qualquer linha para ver o histórico completo, incluindo cobranças e documentos.
+    </div>`;
+  } else {
+    // ── Tabela de contratos ATIVOS (layout original) ──
+    el.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>Inquilino</th><th>Endereço</th><th>Proprietário</th><th>Valor</th><th>Risco</th><th>Docs</th><th>Status</th><th></th></tr></thead>
+    <tbody>${fl.map(c=>{
+      const s=stCon(c);
+      const ind=calcInadimplencia(c.id);
+      const ck=checkDocs(c);
+      const riscoCls=ind.risco==='Alto'?'cr':ind.risco==='Médio'?'cy':'cg';
+      const docsCls=ck.status==='completo'?'cg':ck.status==='incompleto'?'cy':'cr';
+      return`<tr style="cursor:pointer" onclick="detail('${c.id}')">
+        <td><div style="font-weight:500">${c.inquilino||'–'}</div><div style="font-size:11px;color:var(--dm)">${c.emailInq||c.telInq||''}</div></td>
+        <td style="color:var(--dm);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.endereco||'–'}</td>
+        <td style="color:var(--dm)">${c.proprietario||'–'}</td>
+        <td style="font-family:'Syne',sans-serif;font-weight:700">${R(c.valor)}</td>
+        <td><span class="chip ${riscoCls}">${ind.risco}</span></td>
+        <td><span class="chip ${docsCls}">${ck.ok}/${ck.total}</span></td>
+        <td><span class="chip ${s.cl}">${s.l}</span></td>
+        <td><button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button></td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  }
 }
 
 // ══════════════════════════════════════════
