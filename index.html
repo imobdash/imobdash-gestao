@@ -2418,6 +2418,47 @@ async function saveContract(){
     _seguroFile=null;
   }
   const wasEdit=_editContratoId!==null;
+  // ── APLICAR DESCONTO ÀS COBRANÇAS PENDENTES (edição) ──
+  if(wasEdit && c.descontoValor>0 && c.descontoParc>0){
+    const pendAlug=D.cb
+      .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel'&&!(x.descontoAplicado>0))
+      .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+    if(pendAlug.length>0){
+      const qtd=Math.min(pendAlug.length,c.descontoParc);
+      const ok=confirm(`Aplicar desconto de ${R(c.descontoValor)} (${c.descontoDesc||'Desconto'}) nas ${qtd} cobranças de aluguel pendentes?\n\nValor atual: ${R(pendAlug[0].valor)} → Valor com desconto: ${R(Math.max(0,pendAlug[0].valor-c.descontoValor))}`);
+      if(ok){
+        const adm=c.adm==='sim';
+        let usadas=0;
+        for(const cb of pendAlug){
+          if(usadas>=c.descontoParc)break;
+          const novoValor=Math.max(0,cb.valor-c.descontoValor);
+          const repRaw=calcRepasse('Aluguel',novoValor,false,adm);
+          const repImob=Math.min(repRaw.imob,novoValor);
+          const repProp=Math.max(0,novoValor-repImob);
+          const{error:eu}=await sb.from('cobrancas').update({
+            valor:novoValor,
+            repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
+            desconto_aplicado:c.descontoValor,
+            desconto_desc_cob:c.descontoDesc||'Desconto'
+          }).eq('id',cb.id);
+          if(!eu){
+            const ci=D.cb.findIndex(x=>x.id===cb.id);
+            if(ci>=0){
+              D.cb[ci].valor=novoValor;
+              D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};
+              D.cb[ci].descontoAplicado=c.descontoValor;
+              D.cb[ci].descontoDesc=c.descontoDesc||'Desconto';
+            }
+            usadas++;
+          }
+        }
+        // Atualizar parcelas restantes no contrato
+        const novoParc=Math.max(0,c.descontoParc-usadas);
+        await sb.from('contratos').update({desconto_parcelas:novoParc}).eq('id',c.id);
+        const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].descontoParc=novoParc;
+      }
+    }
+  }
   _editContratoId=null;
   cM('mc');renderContratos();renderDash();
   if(!wasEdit)go('contratos');
