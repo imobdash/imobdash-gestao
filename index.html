@@ -1730,6 +1730,7 @@ function renderRepasse(){
 // COBRANÇAS
 // ══════════════════════════════════════════
 let _cobCollapsed=new Set(); // contratos colapsados
+let _cobInitialized=false;  // inicializa colapsado na primeira vez
 let _cobFiltroEmpresa='',_cobFiltroProp='',_cobFiltroDataIni='',_cobFiltroDataFim='';
 function fCob(f,el){cobFiltro=f;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el?.classList.add('on');renderCobrancas();}
 function toggleCobContract(cid){if(_cobCollapsed.has(cid))_cobCollapsed.delete(cid);else _cobCollapsed.add(cid);renderCobrancas();}
@@ -1838,6 +1839,8 @@ function renderEncargos(){
 
 function renderCobrancas(){
   if(cobFiltro==='encargos'){renderEncargos();return;}
+  // Colapsar tudo na primeira abertura
+  if(!_cobInitialized){D.c.forEach(c=>_cobCollapsed.add(c.id));_cobInitialized=true;}
   let list=[...D.cb];
   if(cobFiltro==='pendente')list=list.filter(c=>!c.pago&&DA(c.venc)>=0);
   else if(cobFiltro==='pago')list=list.filter(c=>c.pago);
@@ -2434,20 +2437,25 @@ async function saveContract(){
   // ── APLICAR DESCONTO ÀS COBRANÇAS PENDENTES (edição) ──
   if(wasEdit && c.descontoValor>0 && c.descontoParc>0){
     const pendAlug=D.cb
-      .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel'&&!(x.descontoAplicado>0))
+      .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel')
       .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
     if(pendAlug.length>0){
       const qtd=Math.min(pendAlug.length,c.descontoParc);
-      const ok=confirm(`Aplicar desconto de ${R(c.descontoValor)} (${c.descontoDesc||'Desconto'}) nas ${qtd} cobranças de aluguel pendentes?\n\nValor atual: ${R(pendAlug[0].valor)} → Valor com desconto: ${R(Math.max(0,pendAlug[0].valor-c.descontoValor))}`);
+      const origemLabel=(c.descontoOrigem||'prop')==='prop'?'Proprietário (comissão sobre valor original)':'Imobiliária (comissão sobre valor líquido)';
+      const valorBase=pendAlug[0].descontoAplicado>0?pendAlug[0].valor:pendAlug[0].valor; // valor atual da cobrança
+      const novoExemplo=Math.max(0,valorBase-c.descontoValor+(pendAlug[0].descontoAplicado||0));
+      const ok=confirm(`Recalcular ${qtd} cobranças de aluguel pendentes com o desconto:\n\n💸 -${R(c.descontoValor)} (${c.descontoDesc||'Desconto'})\n📋 Absorvido por: ${origemLabel}\n\nValor cobrado → ${R(novoExemplo)}/mês\n\nClicar OK atualizará todas as cobranças pendentes.`);
       if(ok){
         const adm=c.adm==='sim';
         const origemPropE=(c.descontoOrigem||'prop')==='prop';
         let usadas=0;
         for(const cb of pendAlug){
           if(usadas>=c.descontoParc)break;
-          const novoValor=Math.max(0,cb.valor-c.descontoValor);
-          // Se desconto é do prop: comissão calculada sobre valor original (cb.valor)
-          const repBase=origemPropE?cb.valor:novoValor;
+          // Restaurar valor original se a cobrança já tinha desconto aplicado
+          const valorOriginal=cb.valor+(cb.descontoAplicado||0);
+          const novoValor=Math.max(0,valorOriginal-c.descontoValor);
+          // Se desconto é do prop: comissão calculada sobre valor original do aluguel
+          const repBase=origemPropE?valorOriginal:novoValor;
           const repRaw=calcRepasse('Aluguel',repBase,false,adm);
           const repImob=Math.min(repRaw.imob,novoValor);
           const repProp=Math.max(0,novoValor-repImob);
@@ -2864,7 +2872,11 @@ function R2(v){return'R$'+(+v||0).toFixed(2).replace('.',',');}
 function renderRelatorios(){
   const el=document.getElementById('relatorios-content');
   const meses=relMeses(24);
-  const props=[...new Set(D.c.map(c=>c.proprietario).filter(Boolean))].sort();
+  // Normalizar nomes: agrupar variações (MARGARETH x MARGARETHE) pela versão mais comum
+  const normP=n=>(n||'').trim().toUpperCase().replace(/\s+/g,' ');
+  const propGroup={};
+  D.c.forEach(c=>{if(!c.proprietario)return;const norm=normP(c.proprietario);if(!propGroup[norm])propGroup[norm]={name:c.proprietario,n:1};else propGroup[norm].n++;});
+  const props=Object.values(propGroup).map(x=>x.name).sort();
   el.innerHTML=`
     <div style="display:flex;flex-direction:column;gap:16px">
       <div class="card" style="margin-bottom:0">
@@ -2991,18 +3003,20 @@ function rfQuick(n){
   else{document.getElementById('rf-de').value=m[Math.min(n-1,m.length-1)];document.getElementById('rf-ate').value=m[0];}
 }
 function gerarRelRepasse(){
+  const normPN=n=>(n||'').trim().toUpperCase().replace(/\s+/g,' ');
   const de=document.getElementById('rr-de').value;
   const ate=document.getElementById('rr-ate').value;
-  const propFiltro=document.getElementById('rr-prop').value;
+  const propFiltro=normPN(document.getElementById('rr-prop').value);
   if(de>ate){alert('O mês "De" deve ser anterior ou igual ao "Até"');return;}
   const cobs=D.cb.filter(cb=>cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
   const byProp={};
   cobs.forEach(cb=>{
     const c=D.c.find(x=>x.id===cb.contratoId);
-    const prop=c?.proprietario||'Sem proprietário';
-    if(propFiltro&&prop!==propFiltro)return;
+    const propRaw=c?.proprietario||'Sem proprietário';
+    const prop=normPN(propRaw); // chave normalizada — une MARGARETH e MARGARETHE
+    if(propFiltro&&propFiltro!==prop)return;
     const key=c?.id||cb.contratoId;
-    if(!byProp[prop])byProp[prop]={contratos:{}};
+    if(!byProp[prop])byProp[prop]={label:propRaw,contratos:{}};
     if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0};
     const rec=+(cb.valorPago||cb.valor||0);
     const imob=+(cb.repasse?.imob||0);
@@ -3019,8 +3033,9 @@ function gerarRelRepasse(){
   if(!Object.keys(byProp).length){html+=`<p>Nenhuma cobrança paga no período.</p>`;gerarPDF('Repasse ao Proprietário',html);return;}
   let gRec=0,gImob=0,gProp=0,gPend=0;
   Object.entries(byProp).forEach(([prop,data])=>{
+    const propLabel=data.label||prop;
     let pRec=0,pImob=0,pProp=0,pPend=0;
-    html+=`<div class="section"><h3 style="font-size:15px;margin-bottom:14px;color:#1e40af">👤 ${prop}</h3>`;
+    html+=`<div class="section"><h3 style="font-size:15px;margin-bottom:14px;color:#1e40af">👤 ${propLabel}</h3>`;
     Object.values(data.contratos).forEach(ct=>{
       html+=`<p style="font-size:12px;margin-bottom:6px"><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
       html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Taxa Imob.</th><th>Ao Prop.</th><th>Pendente</th></tr></thead><tbody>`;
@@ -3031,7 +3046,7 @@ function gerarRelRepasse(){
       html+=`<tr style="background:#f0f4f8;font-weight:700"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table><div style="height:10px"></div>`;
       pRec+=ct.totRec;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;
     });
-    html+=`<div style="background:#dbeafe;padding:10px 14px;border-radius:6px;margin-top:6px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap"><span><strong>${prop}</strong></span><span>Recebido: <strong>${R2(pRec)}</strong></span><span>Taxa Imob.: <strong>${R2(pImob)}</strong></span><span>Repassado: <strong>${R2(pProp)}</strong></span>${pPend>0?`<span style="color:#dc2626">⚠️ Pendente: <strong>${R2(pPend)}</strong></span>`:`<span style="color:#16a34a">✅ Sem pendências</span>`}</div></div>`;
+    html+=`<div style="background:#dbeafe;padding:10px 14px;border-radius:6px;margin-top:6px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap"><span><strong>${propLabel}</strong></span><span>Recebido: <strong>${R2(pRec)}</strong></span><span>Taxa Imob.: <strong>${R2(pImob)}</strong></span><span>Repassado: <strong>${R2(pProp)}</strong></span>${pPend>0?`<span style="color:#dc2626">⚠️ Pendente: <strong>${R2(pPend)}</strong></span>`:`<span style="color:#16a34a">✅ Sem pendências</span>`}</div></div>`;
     gRec+=pRec;gImob+=pImob;gProp+=pProp;gPend+=pPend;
   });
   html+=`<div style="background:#1e3a8a;color:#fff;padding:14px 18px;border-radius:8px;margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px"><span><strong>TOTAL GERAL</strong></span><span>Recebido: <strong>${R2(gRec)}</strong></span><span>Taxa Imob.: <strong>${R2(gImob)}</strong></span><span>Repassado: <strong>${R2(gProp)}</strong></span>${gPend>0?`<span>⚠️ Pendente: <strong>${R2(gPend)}</strong></span>`:`<span>✅ Sem pendências</span>`}</div>`;
