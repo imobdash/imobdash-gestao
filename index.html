@@ -1592,19 +1592,20 @@ function renderInadimplencia(){
 function repasseCard(cid){
   const c=D.c.find(x=>x.id===cid);
   const cobs=D.cb.filter(x=>x.contratoId===cid&&x.pago&&x.repasse);
-  if(!c?.adm||c.adm==='nao')return'<div style="font-size:13px;color:var(--dm)">Não administrado.</div>';
   if(!cobs.length)return'<div style="font-size:13px;color:var(--dm)">Nenhum pagamento ainda.</div>';
   const totalProp=cobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
   const totalImob=cobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
-  return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px">
+  const isAdm=c?.adm==='sim';
+  return`${!isAdm?'<div style="font-size:11px;color:var(--dm);background:var(--sf2);border:1px solid var(--bd);border-radius:7px;padding:4px 10px;display:inline-block;margin-bottom:8px">Administração direta · 100% ao proprietário</div>':''}
+  <div style="display:grid;grid-template-columns:${isAdm?'1fr 1fr':'1fr'};gap:9px;margin-bottom:11px">
     <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px;text-align:center">
       <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Proprietário</div>
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--gn)">${R(totalProp)}</div>
     </div>
-    <div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;padding:10px;text-align:center">
+    ${isAdm?`<div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;padding:10px;text-align:center">
       <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Imobiliária</div>
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--ac2)">${R(totalImob)}</div>
-    </div>
+    </div>`:''}
   </div>
   <table class="rtable"><thead><tr><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th></tr></thead>
   <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
@@ -1638,29 +1639,34 @@ function renderRepasse(){
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           ${pendRep.length?`<span style="font-size:12px;color:var(--ye)">💸 ${pendRep.length} aguardando repasse</span>`:''}
-          ${c.adm==='sim'?`<span style="font-size:12px;color:var(--gn)">Prop: ${R(totalProp)}</span><span style="font-size:12px;color:var(--ac2)">Imob: ${R(totalImob)}</span>`:''}
+          <span style="font-size:12px;color:var(--gn)">Prop: ${R(totalProp)}</span>${c.adm==='sim'?`<span style="font-size:12px;color:var(--ac2)">Imob: ${R(totalImob)}</span>`:''}
           <button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button>
         </div>
       </div>
       ${collapsed?'':(`<div style="padding:14px 16px">
-      ${c.adm==='nao'?'<div style="font-size:13px;color:var(--dm)">Não administrado.</div>':`
-        <div class="rep-summary-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:11px">
+      ${(()=>{
+        if(c.adm==='nao'){
+          return`<div style="font-size:11px;color:var(--dm);background:var(--sf2);border:1px solid var(--bd);border-radius:7px;padding:5px 10px;display:inline-block;margin-bottom:10px">Administração direta · 100% ao proprietário</div>`;
+        }
+        return '';
+      })()}
+        <div class="rep-summary-grid" style="display:grid;grid-template-columns:repeat(${c.adm==='nao'?2:4},1fr);gap:9px;margin-bottom:11px">
           <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:10px;text-align:center">
             <div style="font-size:10px;color:var(--dm);margin-bottom:2px">PROP. RECEBIDO</div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--gn)">${R(totalProp)}</div>
           </div>
-          <div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;padding:10px;text-align:center">
+          ${c.adm==='sim'?`<div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;padding:10px;text-align:center">
             <div style="font-size:10px;color:var(--dm);margin-bottom:2px">IMOB. RETIDO</div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ac2)">${R(totalImob)}</div>
-          </div>
+          </div>`:''}
           <div style="background:var(--yd);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:10px;text-align:center">
             <div style="font-size:10px;color:var(--dm);margin-bottom:2px">PROP. PENDENTE</div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ye)">${R(pendProp)}</div>
           </div>
-          <div style="background:rgba(59,130,246,.05);border:1px solid rgba(37,99,235,.15);border-radius:9px;padding:10px;text-align:center">
+          ${c.adm==='sim'?`<div style="background:rgba(59,130,246,.05);border:1px solid rgba(37,99,235,.15);border-radius:9px;padding:10px;text-align:center">
             <div style="font-size:10px;color:var(--dm);margin-bottom:2px">IMOB. PENDENTE</div>
             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--ac)">${R(pendImob)}</div>
-          </div>
+          </div>`:''}
         </div>
         ${todaCobs.length?(()=>{
           return`${pendRep.length?`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:9px 12px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;flex-wrap:wrap;gap:8px">
@@ -1684,7 +1690,6 @@ function renderRepasse(){
           </tr>`;}).join('')}
           </tbody></table></div>`;
         })():'<div style="font-size:13px;color:var(--dm)">Nenhuma cobrança com repasse.</div>'}
-      `}
       </div>`)}
     </div>`;
   }).join('');
@@ -2226,7 +2231,7 @@ async function runAI(){
       return;
     }
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',max_tokens:1000,
+      model:'claude-sonnet-4-6',max_tokens:1000,
       system:`Extraia dados de contratos de aluguel. Retorne SOMENTE JSON sem markdown:\n{"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"obs":""}`,
       messages:[{role:'user',content:[ci,{type:'text',text:'Extraia os dados deste contrato.'}]}]
     })});
@@ -2256,8 +2261,9 @@ async function runAI(){
     document.getElementById('ait').innerHTML='✅ Dados extraídos! Revise antes de salvar.';
     document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Verifique os campos abaixo.</span>';
   }catch(e){
+    console.error('[runAI] erro:',e);
     document.getElementById('ait').innerHTML='⚠️ Não foi possível extrair automaticamente';
-    document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Preencha manualmente ou verifique sua conexão.</span>';
+    document.getElementById('aim').innerHTML=`<span style="color:var(--dm);font-size:13px">Erro: ${e.message||'verifique o console (F12)'}. Preencha manualmente.</span>`;
   }
 }
 
