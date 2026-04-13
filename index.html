@@ -2226,10 +2226,24 @@ async function runAI(){
       return;
     }
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',max_tokens:1000,
+      model:'claude-haiku-4-5-20251001',max_tokens:1000,
       system:`Extraia dados de contratos de aluguel. Retorne SOMENTE JSON sem markdown:\n{"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"obs":""}`,
       messages:[{role:'user',content:[ci,{type:'text',text:'Extraia os dados deste contrato.'}]}]
     })});
+    if(!resp.ok){
+      const status=resp.status;
+      if(status===529||status===503){
+        document.getElementById('ait').innerHTML='⚠️ Serviço temporariamente sobrecarregado';
+        document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">A IA está sobrecarregada. Aguarde alguns segundos e tente novamente.</span>';
+      }else if(status===401){
+        document.getElementById('ait').innerHTML='⚠️ API key inválida ou não configurada';
+        document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Verifique sua API key e tente novamente.</span>';
+      }else{
+        document.getElementById('ait').innerHTML=`⚠️ Erro ao chamar a IA (${status})`;
+        document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Preencha manualmente ou tente novamente.</span>';
+      }
+      return;
+    }
     const data=await resp.json();
     const txt=data.content?.map(i=>i.text||'').join('').trim();
     const p=JSON.parse(txt.replace(/```json|```/g,'').trim());
@@ -2243,7 +2257,7 @@ async function runAI(){
     document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Verifique os campos abaixo.</span>';
   }catch(e){
     document.getElementById('ait').innerHTML='⚠️ Não foi possível extrair automaticamente';
-    document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Preencha manualmente.</span>';
+    document.getElementById('aim').innerHTML='<span style="color:var(--dm);font-size:13px">Preencha manualmente ou verifique sua conexão.</span>';
   }
 }
 
