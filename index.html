@@ -313,6 +313,9 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <div class="ni" onclick="go('vencimentos')"><span class="ic">📅</span> Vencimentos <span class="bdg" id="bdgV" style="background:var(--ye);color:#000;display:none">!</span></div>
     <div class="ns">Suporte</div>
     <div class="ni" onclick="go('ordens')"><span class="ic">🔧</span> OS <span class="bdg" id="bdgO" style="background:var(--re);display:none">0</span></div>
+    <div class="ns">Imobiliária</div>
+    <div class="ni" onclick="go('despesas')"><span class="ic">🧾</span> Despesas</div>
+    <div class="ni" onclick="go('finimob')"><span class="ic">💼</span> Fin. Imobiliária</div>
     <div class="ns">Análise</div>
     <div class="ni" onclick="go('relatorios')"><span class="ic">📊</span> Relatórios</div>
   </nav>
@@ -420,6 +423,20 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <div class="view" id="view-detalhe">
       <div style="margin-bottom:12px"><button class="btn bg bsm" onclick="go('contratos')">← Voltar</button></div>
       <div class="dg" id="det"></div>
+    </div>
+
+    <!-- DESPESAS IMOB -->
+    <div class="view" id="view-despesas">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:8px">
+        <div></div>
+        <button class="btn bp bsm" onclick="openNDespesa()">＋ Nova Despesa</button>
+      </div>
+      <div id="despesas-content"></div>
+    </div>
+
+    <!-- FINANCEIRO IMOBILIÁRIA -->
+    <div class="view" id="view-finimob">
+      <div id="finimob-content"></div>
     </div>
 
     <!-- RELATÓRIOS -->
@@ -770,6 +787,53 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </div>
 </div>
 
+<!-- MODAL BOLETO -->
+<div class="mo" id="mblt">
+<div class="md" style="max-width:380px">
+  <div class="mh"><div><h2>📄 Boleto da Cobrança</h2><p id="mblt-sub" style="font-size:12px;color:var(--dm);margin:0"></p></div><button class="mx" onclick="cM('mblt')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g"><label>Data de Emissão</label><input type="date" id="blt-dt"></div>
+      <div class="g ff"><label>Arquivo do Boleto (PDF)</label>
+        <div class="uz" style="padding:10px"><input type="file" id="blt-file" accept=".pdf" onchange="document.getElementById('blt-fn').textContent=this.files[0]?.name||''"><div id="blt-fn" style="font-size:12px;color:var(--dm);margin-top:4px"></div></div>
+      </div>
+      <div id="blt-view-row" style="display:none;padding:8px 0">
+        <button class="btn bg bsm" onclick="viewBoletoAtual()">👁 Ver Boleto Atual</button>
+      </div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mblt')">Cancelar</button><button class="btn bp" id="btnSaveBlt" onclick="saveBoleto()">💾 Salvar</button></div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL DESPESA -->
+<div class="mo" id="mdesp">
+<div class="md" style="max-width:420px">
+  <div class="mh"><div><h2 id="mdesp-title">＋ Nova Despesa</h2></div><button class="mx" onclick="cM('mdesp')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g ff"><label>Descrição</label><input type="text" id="desp-desc" placeholder="Ex: Vistoria Apto 802, Análise Alude..."></div>
+      <div class="g"><label>Valor (R$)</label><input type="number" id="desp-val" step="0.01" placeholder="0,00"></div>
+      <div class="g"><label>Data</label><input type="date" id="desp-dt"></div>
+      <div class="g"><label>Tipo</label>
+        <select id="desp-tipo">
+          <option value="Vistoria">🔍 Vistoria</option>
+          <option value="Análise Crédito">📊 Análise de Crédito (Alude)</option>
+          <option value="Honorários">⚖️ Honorários / Jurídico</option>
+          <option value="Marketing">📣 Marketing / Publicidade</option>
+          <option value="Manutenção">🔧 Manutenção / OS</option>
+          <option value="Outros">📋 Outros</option>
+        </select>
+      </div>
+      <div class="g ff"><label>Vincular a Contrato (opcional)</label>
+        <select id="desp-con"><option value="">— Nenhum —</option></select>
+      </div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mdesp')">Cancelar</button><button class="btn bp" id="btnSaveDesp" onclick="saveDespesa()">✓ Salvar Despesa</button></div>
+  </div>
+</div>
+</div>
+
 <div class="mo" id="mtranscau">
 <div class="md" style="max-width:380px">
   <div class="mh"><div><h2>🔄 Transferir Caução</h2><p id="mtranscau-sub" style="font-size:12px;color:var(--dm);margin:0"></p></div><button class="mx" onclick="cM('mtranscau')">✕</button></div>
@@ -790,6 +854,26 @@ tr:hover td{background:rgba(255,255,255,.018);}
 // ALTER TABLE contratos ADD COLUMN caucao_ajustes JSONB DEFAULT '[]';
 // ALTER TABLE contratos ADD COLUMN seguro_vence DATE;
 // ALTER TABLE contratos ADD COLUMN seguro_obs TEXT;
+// -- Dados extraídos por IA por tipo de documento:
+// ALTER TABLE contratos ADD COLUMN dados_analise_credito JSONB;
+// ALTER TABLE contratos ADD COLUMN dados_vistoria JSONB;
+// ALTER TABLE contratos ADD COLUMN dados_contrato_adm JSONB;
+// -- Boleto por cobrança:
+// ALTER TABLE cobrancas ADD COLUMN boleto_path TEXT;
+// ALTER TABLE cobrancas ADD COLUMN boleto_emitido_em DATE;
+// -- Despesas da imobiliária:
+// CREATE TABLE IF NOT EXISTS despesas_imob (
+//   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+//   user_id UUID NOT NULL,
+//   contrato_id UUID REFERENCES contratos(id) ON DELETE SET NULL,
+//   descricao TEXT NOT NULL,
+//   valor NUMERIC(10,2) NOT NULL DEFAULT 0,
+//   data DATE,
+//   tipo TEXT DEFAULT 'Outros',
+//   created_at TIMESTAMPTZ DEFAULT NOW()
+// );
+// ALTER TABLE despesas_imob ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "users_own_despesas" ON despesas_imob FOR ALL USING (auth.uid() = user_id);
 
 // ══════════════════════════════════════════
 // SUPABASE INIT
@@ -805,7 +889,7 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{
 // ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
-let D={c:[],cb:[],o:[]};
+let D={c:[],cb:[],o:[],d:[]}; // d = despesas_imob
 let currentUser=null;
 let _loadingApp=false;
 let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
@@ -989,7 +1073,10 @@ function rowToContrato(row){
     descontoValor:Number(row.desconto_valor||0),
     descontoDesc:row.desconto_desc||'',
     descontoParc:Number(row.desconto_parcelas||0),
-    descontoOrigem:row.desconto_origem||'prop'
+    descontoOrigem:row.desconto_origem||'prop',
+    dadosAnalise:row.dados_analise_credito||null,
+    dadosVistoria:row.dados_vistoria||null,
+    dadosContAdm:row.dados_contrato_adm||null
   };
 }
 function rowToCobranca(row){
@@ -1017,7 +1104,9 @@ function rowToCobranca(row){
     dataRepasse:row.data_repasse||null,
     reajustePendente:row.reajuste_pendente||false,
     descontoAplicado:Number(row.desconto_aplicado||0),
-    descontoDesc:row.desconto_desc_cob||''
+    descontoDesc:row.desconto_desc_cob||'',
+    boletoPath:row.boleto_path||null,
+    boletoEmitidoEm:row.boleto_emitido_em||null
   };
 }
 function rowToOS(row){
@@ -1048,11 +1137,12 @@ function rowToDoc(row){
 // LOAD ALL DATA
 // ══════════════════════════════════════════
 async function loadAll(){
-  const[r1,r2,r3,r4]=await Promise.all([
+  const[r1,r2,r3,r4,r5]=await Promise.all([
     sb.from('contratos').select('*').order('created_at',{ascending:false}),
     sb.from('cobrancas').select('*').order('venc',{ascending:true}),
     sb.from('ordens_servico').select('*').order('created_at',{ascending:false}),
-    sb.from('documentos').select('*').order('created_at',{ascending:false})
+    sb.from('documentos').select('*').order('created_at',{ascending:false}),
+    sb.from('despesas_imob').select('*').order('data',{ascending:false}).catch(()=>({data:[],error:null}))
   ]);
   if(r1.error){console.error('contratos:',r1.error);throw new Error('Erro na tabela contratos: '+r1.error.message);}
   if(r2.error){console.error('cobrancas:',r2.error);throw new Error('Erro na tabela cobranças: '+r2.error.message);}
@@ -1061,6 +1151,7 @@ async function loadAll(){
   D.c=(r1.data||[]).map(rowToContrato);
   D.cb=(r2.data||[]).map(rowToCobranca);
   D.o=(r3.data||[]).map(rowToOS);
+  D.d=(r5.data||[]).map(row=>({id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.created_at}));
   const allDocs=(r4.data||[]).map(rowToDoc);
   D.c.forEach(c=>{c.docs=allDocs.filter(d=>d.contratoId===c.id);});
 }
@@ -1148,13 +1239,27 @@ function gerarAlertas(){
 // ══════════════════════════════════════════
 // CHECKLIST DOCS
 // ══════════════════════════════════════════
-const DOCS_OBR=['Contrato','RG/CPF','Comprovante de Renda','Laudo de Vistoria'];
+const DOC_CATS=[
+  {key:'Locação',icon:'📋',label:'Contrato de Locação',
+   aiPrompt:`Extraia dados deste contrato de locação. Retorne SOMENTE JSON sem markdown, sem comentários:\n{"inquilino":"","cpfInq":"","telInq":"","emailInq":"","proprietario":"","cpfProp":"","telProp":"","emailProp":"","endereco":"","valor":0,"diaVenc":0,"inicio":"YYYY-MM-DD","fim":"YYYY-MM-DD","indice":"IGP-M","multa":2,"caucao":0,"fiador":"","fiadorCpf":"","fiadorTel":"","ocupante":"","obs":""}`,
+   fillForm:true,dbField:null},
+  {key:'Administração',icon:'🤝',label:'Contrato de Administração',
+   aiPrompt:`Extraia dados deste contrato de administração. Retorne SOMENTE JSON sem markdown:\n{"proprietario":"","administradora":"","imovel":"","comissaoPrimeiro":50,"comissaoMensal":10,"indiceReajuste":"IGP-M","prazoMeses":12,"multaRescisoria":3,"observacoes":""}`,
+   fillForm:false,dbField:'dados_contrato_adm'},
+  {key:'Vistoria',icon:'🔍',label:'Laudo de Vistoria',
+   aiPrompt:`Extraia dados deste laudo de vistoria. Retorne SOMENTE JSON sem markdown:\n{"dataVistoria":"YYYY-MM-DD","empresa":"","metragem":0,"mobilia":"","leituraEnergia":"","leituraGas":"","estadoGeral":"","parecer":"","pendencias":""}`,
+   fillForm:false,dbField:'dados_vistoria'},
+  {key:'Análise',icon:'📊',label:'Análise de Crédito',
+   aiPrompt:`Extraia dados desta análise de crédito. Retorne SOMENTE JSON sem markdown:\n{"nome":"","documento":"","score":0,"classificacao":"","risco":"","debitosProtestos":0,"chequesDevolvidos":0,"situacaoRF":"","capitalSocial":0,"socios":2,"funcionarios":0,"empresaFamiliar":""}`,
+   fillForm:false,dbField:'dados_analise_credito'},
+];
+const DOCS_OBR=['Locação','Administração','Vistoria','Análise']; // back-compat
 function checkDocs(c){
   const docs=c.docs||[];
   const tags=docs.map(d=>d.tag||'');
-  const faltando=DOCS_OBR.filter(req=>!tags.some(t=>t.includes(req.split('/')[0])));
+  const faltando=DOC_CATS.filter(cat=>!tags.includes(cat.key));
   const status=faltando.length===0?'completo':faltando.length<=2?'incompleto':'critico';
-  return{faltando,status,total:DOCS_OBR.length,ok:DOCS_OBR.length-faltando.length};
+  return{faltando:faltando.map(c=>c.label),status,total:DOC_CATS.length,ok:DOC_CATS.length-faltando.length};
 }
 
 // ══════════════════════════════════════════
@@ -1260,14 +1365,14 @@ function renderChart(){
 // ══════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════
-const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios'};
+const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios',despesas:'Despesas da Imobiliária',finimob:'Financeiro da Imobiliária'};
 function go(v){
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('on'));
   document.getElementById('view-'+v).classList.add('on');
   document.getElementById('ttl').textContent=TITLES[v]||v;
   const ni=document.querySelectorAll('.ni');
-  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6,relatorios:7};
+  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6,despesas:7,finimob:8,relatorios:9};
   if(m[v]!==undefined)ni[m[v]]?.classList.add('on');
   bniActive(v);
   if(v==='dashboard')renderDash();
@@ -1277,6 +1382,8 @@ function go(v){
   if(v==='inadimplencia')renderInadimplencia();
   if(v==='vencimentos')renderVenc();
   if(v==='ordens')renderOS();
+  if(v==='despesas')renderDespesas();
+  if(v==='finimob')renderFinImob();
   if(v==='relatorios')renderRelatorios();
   cSB();
 }
@@ -1568,13 +1675,36 @@ function detail(id){
   <div>
     <div class="card">
       <div class="ch">📁 Documentos</div>
-      <div class="cb" style="padding:7px 16px">
-        ${DOCS_OBR.map(req=>{
-          const found=(docs||[]).find(d=>(d.tag||'').includes(req.split('/')[0]));
-          return`<div class="ckitem"><div class="cksym ${found?'ck-ok':'ck-miss'}">${found?'✓':'✗'}</div><span style="flex:1">${req}</span>${found?`<button class="btn bg bsm" onclick="viewDocByTag('${id}','${req.split('/')[0]}')">👁</button>`:''}</div>`;
+      <div class="cb" style="padding:10px 16px">
+        ${DOC_CATS.map(cat=>{
+          const found=(docs||[]).find(d=>(d.tag||'')===cat.key);
+          const aiData=cat.key==='Análise'?c.dadosAnalise:cat.key==='Vistoria'?c.dadosVistoria:cat.key==='Administração'?c.dadosContAdm:null;
+          return`<div style="border:1px solid var(--bd);border-radius:9px;padding:11px 14px;margin-bottom:9px;background:var(--sf2)">
+            <div style="display:flex;align-items:center;gap:9px;justify-content:space-between;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:18px">${cat.icon}</span>
+                <div>
+                  <div style="font-size:13px;font-weight:600">${cat.label}</div>
+                  ${found?`<div style="font-size:11px;color:var(--gn)">✅ Enviado · ${found.date}</div>`:`<div style="font-size:11px;color:var(--dm)">Não enviado</div>`}
+                </div>
+              </div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                ${found?`<button class="btn bg bsm" onclick="viewDocByTag('${id}','${cat.key}')">👁 Ver</button>`:''}
+                <label class="btn bg bsm" style="cursor:pointer">📎 ${found?'Substituir':'Enviar'}<input type="file" accept=".pdf,image/*" style="display:none" onchange="uploadDocCat('${id}','${cat.key}',this.files[0])"></label>
+                ${found?`<button class="btn bg bsm" style="background:var(--ag);color:var(--ac2)" onclick="readDocCatAI('${id}','${cat.key}')">🤖 Ler com IA</button>`:''}
+              </div>
+            </div>
+            ${aiData?`<div style="margin-top:10px;padding:9px 11px;background:linear-gradient(135deg,rgba(37,99,235,.07),rgba(124,58,237,.07));border:1px solid rgba(37,99,235,.2);border-radius:7px">
+              <div style="font-size:11px;font-weight:700;color:var(--ac2);margin-bottom:6px">🤖 Dados extraídos pela IA</div>
+              ${Object.entries(aiData).filter(([k,v])=>v!=null&&v!==''&&v!==0&&!(Array.isArray(v)&&!v.length)).map(([k,v])=>`<div style="font-size:12px;display:flex;gap:6px;padding:2px 0;border-bottom:1px solid rgba(48,54,61,.2)"><span style="color:var(--dm);min-width:130px;flex-shrink:0">${k.replace(/([A-Z])/g,' $1').trim()}</span><span style="font-weight:500;word-break:break-word">${Array.isArray(v)?v.join(', '):v}</span></div>`).join('')}
+            </div>`:''}
+          </div>`;
         }).join('')}
-        ${docs.filter(d=>!DOCS_OBR.some(r=>d.tag?.includes(r.split('/')[0]))).map(d=>`<div class="di"><div class="dic ${d.type?.startsWith('image')?'img':''}">${d.type?.startsWith('image')?'🖼️':'📄'}</div><div style="flex:1;overflow:hidden"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</div><div style="font-size:11px;color:var(--dm)">${d.tag||'Documento'} · ${d.date}</div></div><button class="btn bg bsm" onclick="viewDoc('${id}','${d.name}')">👁</button></div>`).join('')}
-        <div class="uz" style="padding:10px;margin-top:7px"><input type="file" accept=".pdf,image/*" multiple onchange="addDocToCon('${id}',this)"><div style="font-size:12px;color:var(--dm)">＋ Adicionar documento</div></div>
+        <div style="margin-top:6px">
+          <div style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;margin-bottom:6px">Outros documentos</div>
+          ${docs.filter(d=>!DOC_CATS.some(c=>c.key===d.tag)).map(d=>`<div class="di"><div class="dic">${d.type?.startsWith('image')?'🖼️':'📄'}</div><div style="flex:1;overflow:hidden"><div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</div><div style="font-size:11px;color:var(--dm)">${d.tag||'Documento'} · ${d.date}</div></div><button class="btn bg bsm" onclick="viewDoc('${id}','${d.name}')">👁</button></div>`).join('')}
+          <div class="uz" style="padding:10px;margin-top:5px"><input type="file" accept=".pdf,image/*" multiple onchange="addDocToCon('${id}',this)"><div style="font-size:12px;color:var(--dm)">＋ Adicionar outro documento</div></div>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -1784,10 +1914,12 @@ function cobItem(cb,inDetail=false){
         ${rp.imob>0?`<span class="rep rep-im">Imob: ${R(rp.imob)}</span>`:''}
       </div>`:''}
       ${cb.comprovantePath?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--gn);cursor:pointer" onclick="viewCobFile('${cb.id}')">✅ Comprovante</span></div>`:''}
+      ${cb.boletoPath||cb.boletoEmitidoEm?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--ac2);cursor:pointer" onclick="openBoleto('${cb.id}')">📄 Boleto ${cb.boletoEmitidoEm?'('+FD(cb.boletoEmitidoEm)+')':''}</span></div>`:''}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
       ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span><button class="btn bd2 bsm" style="font-size:10px;padding:2px 7px" onclick="estornarPagamento('${cb.id}')">↩ Estornar</button></div>`}
+      <button class="btn bg bsm" onclick="openBoleto('${cb.id}')" title="${cb.boletoPath?'Ver/editar boleto':'Registrar boleto'}">📄</button>
       <button class="btn bg bsm" onclick="openEditCob('${cb.id}')" title="Editar repasse">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
     </div>
@@ -2893,6 +3025,316 @@ async function confirmTransferirCaucao(){
   renderDash();
   detail(_transcauCid);
   alert(`✅ Caução transferido!\n${R(valOld)} movido para "${newCon.inquilino}"`);
+}
+
+// ══════════════════════════════════════════
+// UPLOAD POR CATEGORIA DE DOCUMENTO
+// ══════════════════════════════════════════
+async function uploadDocCat(cid,catKey,file){
+  if(!file)return;
+  const c=D.c.find(x=>x.id===cid);if(!c)return;
+  if(!c.docs)c.docs=[];
+  // Remove doc anterior da mesma categoria
+  const old=c.docs.find(d=>d.tag===catKey);
+  if(old?.storage_path){await sb.storage.from('documentos').remove([old.storage_path]);}
+  if(old?.id){await sb.from('documentos').delete().eq('id',old.id);c.docs=c.docs.filter(d=>d.tag!==catKey);}
+  // Upload novo
+  const path=`${currentUser.id}/${cid}/cat_${catKey}_${Date.now()}.${file.name.split('.').pop()}`;
+  const{error:upErr}=await sb.storage.from('documentos').upload(path,file);
+  if(upErr){alert('Erro no upload: '+upErr.message);return;}
+  const{data:doc}=await sb.from('documentos').insert({user_id:currentUser.id,contrato_id:cid,nome:file.name,tag:catKey,storage_path:path,tamanho:file.size,mime_type:file.type}).select().single();
+  if(doc)c.docs.push(rowToDoc(doc));
+  detail(cid);
+}
+
+// ══════════════════════════════════════════
+// LEITURA IA POR CATEGORIA DE DOCUMENTO
+// ══════════════════════════════════════════
+async function readDocCatAI(cid,catKey){
+  const c=D.c.find(x=>x.id===cid);if(!c)return;
+  const cat=DOC_CATS.find(x=>x.key===catKey);if(!cat)return;
+  const doc=(c.docs||[]).find(d=>d.tag===catKey);if(!doc?.storage_path){alert('Envie o documento primeiro.');return;}
+  // Download file from storage
+  const{data:dlData,error:dlErr}=await sb.storage.from('documentos').download(doc.storage_path);
+  if(dlErr){alert('Erro ao baixar documento: '+dlErr.message);return;}
+  const b64=await toB64(new File([dlData],doc.name,{type:doc.mime_type||'application/pdf'}));
+  // Show loading indicator in detail
+  const btn=event?.target;if(btn){btn.disabled=true;btn.textContent='⏳ Lendo...';}
+  try{
+    const isPDF=(doc.mime_type||'').includes('pdf');
+    const ci=isPDF?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}:{type:'image',source:{type:'base64',media_type:doc.mime_type||'image/jpeg',data:b64}};
+    const apiKey=getApiKey();
+    const headers={'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+    if(apiKey)headers['x-api-key']=apiKey;
+    if(!apiKey&&!window.location.hostname.includes('claude.ai')){alert('API key não configurada. Acesse via claude.ai ou configure sua key.');return;}
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers,body:JSON.stringify({
+      model:'claude-sonnet-4-6',max_tokens:1500,
+      system:cat.aiPrompt,
+      messages:[{role:'user',content:[ci,{type:'text',text:`Extraia os dados deste documento (${cat.label}).`}]}]
+    })});
+    if(!resp.ok){alert(`Erro IA: ${resp.status}`);return;}
+    const data=await resp.json();
+    const txt=data.content?.map(i=>i.text||'').join('').trim();
+    const parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(cat.fillForm){
+      // Preenche o formulário do contrato
+      const F=(id,v)=>{if(v!=null&&v!==''&&v!==0){const e=document.getElementById(id);if(e)e.value=v;}};
+      F('finq',parsed.inquilino);F('finqc',parsed.cpfInq);F('finqt',parsed.telInq);F('finqe',parsed.emailInq);
+      F('fprn',parsed.proprietario);F('fprc',parsed.cpfProp);F('fprt',parsed.telProp);F('fpre',parsed.emailProp);
+      F('fen',parsed.endereco);F('fval',parsed.valor);F('fdv',parsed.diaVenc);F('fini',parsed.inicio);F('ffim',parsed.fim);F('fmul',parsed.multa);F('fobs',parsed.obs);F('fcau',parsed.caucao);
+      if(parsed.indice){const e=document.getElementById('find');if(e)e.value=parsed.indice;}
+      calcProp();
+      alert('✅ Dados extraídos! O formulário foi preenchido — verifique antes de salvar.');
+    }else if(cat.dbField){
+      // Salva no campo do contrato
+      const{error:eu}=await sb.from('contratos').update({[cat.dbField]:parsed}).eq('id',cid);
+      if(eu){alert('Erro ao salvar: '+eu.message);return;}
+      const ci2=D.c.findIndex(x=>x.id===cid);
+      if(ci2>=0){
+        if(cat.key==='Análise')D.c[ci2].dadosAnalise=parsed;
+        else if(cat.key==='Vistoria')D.c[ci2].dadosVistoria=parsed;
+        else if(cat.key==='Administração')D.c[ci2].dadosContAdm=parsed;
+      }
+      detail(cid);
+    }
+  }catch(e){
+    alert('⚠️ Erro na leitura: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🤖 Ler com IA';}
+  }
+}
+
+// ══════════════════════════════════════════
+// BOLETO POR COBRANÇA
+// ══════════════════════════════════════════
+let _bltCobId=null;
+function openBoleto(cobId){
+  _bltCobId=cobId;
+  const cb=D.cb.find(x=>x.id===cobId);if(!cb)return;
+  const con=D.c.find(x=>x.id===cb.contratoId);
+  document.getElementById('mblt-sub').textContent=`${cb.tipo||'Aluguel'} · ${MF(cb.mes)} · ${R(cb.valor)} · ${con?.inquilino||''}`;
+  document.getElementById('blt-dt').value=cb.boletoEmitidoEm||TD();
+  document.getElementById('blt-fn').textContent='';
+  document.getElementById('blt-file').value='';
+  document.getElementById('blt-view-row').style.display=cb.boletoPath?'block':'none';
+  oM('mblt');
+}
+async function saveBoleto(){
+  const cb=D.cb.find(x=>x.id===_bltCobId);if(!cb)return;
+  const btn=document.getElementById('btnSaveBlt');
+  btn.disabled=true;btn.textContent='Salvando...';
+  const dt=document.getElementById('blt-dt').value||TD();
+  const file=document.getElementById('blt-file').files[0];
+  let path=cb.boletoPath||null;
+  if(file){
+    const np=`${currentUser.id}/${cb.id}/boleto_${Date.now()}.pdf`;
+    if(path){await sb.storage.from('documentos').remove([path]);}
+    const{error:upErr}=await sb.storage.from('documentos').upload(np,file);
+    if(upErr){alert('Erro upload: '+upErr.message);btn.disabled=false;btn.textContent='💾 Salvar';return;}
+    path=np;
+  }
+  const{error}=await sb.from('cobrancas').update({boleto_path:path,boleto_emitido_em:dt}).eq('id',_bltCobId);
+  btn.disabled=false;btn.textContent='💾 Salvar';
+  if(error){alert('Erro: '+error.message);return;}
+  const ci=D.cb.findIndex(x=>x.id===_bltCobId);
+  if(ci>=0){D.cb[ci].boletoPath=path;D.cb[ci].boletoEmitidoEm=dt;}
+  cM('mblt');
+  renderCobrancas();
+  if(document.getElementById('view-detalhe').classList.contains('on')&&cb.contratoId)detail(cb.contratoId);
+  alert('✅ Boleto registrado com sucesso!');
+}
+async function viewBoletoAtual(){
+  const cb=D.cb.find(x=>x.id===_bltCobId);
+  if(!cb?.boletoPath)return;
+  const{data}=await sb.storage.from('documentos').createSignedUrl(cb.boletoPath,120);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
+}
+
+// ══════════════════════════════════════════
+// DESPESAS DA IMOBILIÁRIA
+// ══════════════════════════════════════════
+let _despEditId=null;
+function openNDespesa(id){
+  _despEditId=id||null;
+  const desp=id?D.d.find(x=>x.id===id):null;
+  document.getElementById('mdesp-title').textContent=id?'✏️ Editar Despesa':'＋ Nova Despesa';
+  document.getElementById('desp-desc').value=desp?.descricao||'';
+  document.getElementById('desp-val').value=desp?.valor||'';
+  document.getElementById('desp-dt').value=desp?.data||TD();
+  document.getElementById('desp-tipo').value=desp?.tipo||'Outros';
+  const sel=document.getElementById('desp-con');
+  sel.innerHTML='<option value="">— Nenhum —</option>'+D.c.filter(c=>!c.encerrado).map(c=>`<option value="${c.id}">${c.inquilino} · ${(c.endereco||'').substring(0,25)}</option>`).join('');
+  sel.value=desp?.contratoId||'';
+  oM('mdesp');
+}
+async function saveDespesa(){
+  const btn=document.getElementById('btnSaveDesp');
+  const desc=document.getElementById('desp-desc').value.trim();
+  if(!desc){alert('Informe a descrição');return;}
+  const val=parseFloat(document.getElementById('desp-val').value)||0;
+  if(val<=0){alert('Informe o valor');return;}
+  const dt=document.getElementById('desp-dt').value||TD();
+  const tipo=document.getElementById('desp-tipo').value;
+  const conId=document.getElementById('desp-con').value||null;
+  btn.disabled=true;btn.textContent='Salvando...';
+  const payload={user_id:currentUser.id,contrato_id:conId,descricao:desc,valor:val,data:dt,tipo};
+  let result;
+  if(_despEditId){
+    result=await sb.from('despesas_imob').update(payload).eq('id',_despEditId).select().single();
+  }else{
+    result=await sb.from('despesas_imob').insert(payload).select().single();
+  }
+  btn.disabled=false;btn.textContent='✓ Salvar Despesa';
+  if(result.error){alert('Erro: '+result.error.message);return;}
+  const row=result.data;
+  const mapped={id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.created_at};
+  if(_despEditId){const i=D.d.findIndex(x=>x.id===_despEditId);if(i>=0)D.d[i]=mapped;}
+  else D.d.unshift(mapped);
+  cM('mdesp');renderDespesas();
+}
+async function deleteDespesa(id){
+  if(!confirm('Excluir esta despesa?'))return;
+  await sb.from('despesas_imob').delete().eq('id',id);
+  D.d=D.d.filter(x=>x.id!==id);
+  renderDespesas();
+}
+function renderDespesas(){
+  const el=document.getElementById('despesas-content');if(!el)return;
+  const tipoIcon={Vistoria:'🔍','Análise Crédito':'📊',Honorários:'⚖️',Marketing:'📣',Manutenção:'🔧',Outros:'📋'};
+  const totalGeral=D.d.reduce((a,b)=>a+b.valor,0);
+  const byTipo={};
+  D.d.forEach(d=>{if(!byTipo[d.tipo])byTipo[d.tipo]=0;byTipo[d.tipo]+=d.valor;});
+  if(!D.d.length){
+    el.innerHTML='<div class="empty"><div class="ei">🧾</div><h3>Nenhuma despesa registrada</h3><p>Clique em "+ Nova Despesa" para lançar vistoria, análise Alude, honorários, etc.</p></div>';
+    return;
+  }
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px">
+      <div class="sc"><div class="sl">Total de Despesas</div><div class="sv" style="color:var(--re)">${R(totalGeral)}</div></div>
+      ${Object.entries(byTipo).map(([t,v])=>`<div class="sc"><div class="sl">${tipoIcon[t]||'📋'} ${t}</div><div class="sv" style="font-size:16px">${R(v)}</div></div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="cb" style="padding:0 16px">
+        ${D.d.map(d=>{
+          const con=d.contratoId?D.c.find(x=>x.id===d.contratoId):null;
+          return`<div class="ci">
+            <div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:var(--rd);border-radius:8px;font-size:16px;flex-shrink:0">${tipoIcon[d.tipo]||'📋'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600">${d.descricao}</div>
+              <div style="font-size:11px;color:var(--dm)">${d.tipo} · ${FD(d.data)}${con?` · ${con.inquilino}`:''}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+              <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--re)">${R(d.valor)}</span>
+              <div style="display:flex;gap:4px">
+                <button class="btn bg bsm" onclick="openNDespesa('${d.id}')">✎</button>
+                <button class="btn bd2 bsm" onclick="deleteDespesa('${d.id}')">🗑</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// FINANCEIRO DA IMOBILIÁRIA
+// ══════════════════════════════════════════
+function renderFinImob(){
+  const el=document.getElementById('finimob-content');if(!el)return;
+  // Comissões por mês (repasse imob pago)
+  const comByMes={};
+  D.cb.filter(c=>c.pago&&c.repasse?.imob>0).forEach(c=>{
+    const m=c.mes||c.dataPago?.substring(0,7)||'';if(!m)return;
+    if(!comByMes[m])comByMes[m]={comissao:0,bruto:0};
+    comByMes[m].comissao+=c.repasse.imob;
+    comByMes[m].bruto+=c.valorPago||c.valor;
+  });
+  // Boletos: emitidos vs pagos
+  const boletosTot=D.cb.filter(c=>c.boletoEmitidoEm).length;
+  const boletosPagos=D.cb.filter(c=>c.boletoEmitidoEm&&c.pago).length;
+  const boletosEmitidoVal=D.cb.filter(c=>c.boletoEmitidoEm).reduce((a,b)=>a+b.valor,0);
+  const boletosPagosVal=D.cb.filter(c=>c.boletoEmitidoEm&&c.pago).reduce((a,b)=>a+(b.valorPago||b.valor),0);
+  // Despesas por mês
+  const despByMes={};
+  D.d.forEach(d=>{
+    const m=d.data?.substring(0,7)||'';if(!m)return;
+    if(!despByMes[m])despByMes[m]=0;
+    despByMes[m]+=d.valor;
+  });
+  // Totais
+  const totalCom=Object.values(comByMes).reduce((a,b)=>a+b.comissao,0);
+  const totalDesp=D.d.reduce((a,b)=>a+b.valor,0);
+  const lucroLiq=totalCom-totalDesp;
+  // Meses combinados para gráfico
+  const meses=[...new Set([...Object.keys(comByMes),...Object.keys(despByMes)])].sort().slice(-12);
+  const maxVal=Math.max(...meses.map(m=>Math.max(comByMes[m]?.comissao||0,despByMes[m]||0)),1);
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px">
+      <div class="sc"><div class="sl">💼 Total Comissões</div><div class="sv" style="color:var(--gn)">${R(totalCom)}</div></div>
+      <div class="sc"><div class="sl">🧾 Total Despesas</div><div class="sv" style="color:var(--re)">${R(totalDesp)}</div></div>
+      <div class="sc"><div class="sl">📈 Lucro Líquido</div><div class="sv" style="color:${lucroLiq>=0?'var(--gn)':'var(--re)'}">${R(lucroLiq)}</div></div>
+      <div class="sc"><div class="sl">📄 Boletos Emitidos</div><div class="sv" style="font-size:16px">${boletosTot} (${R(boletosEmitidoVal)})</div></div>
+      <div class="sc"><div class="sl">✅ Boletos Pagos</div><div class="sv" style="font-size:16px;color:var(--gn)">${boletosPagos} (${boletosTot?Math.round(boletosPagos/boletosTot*100):0}%)</div></div>
+    </div>
+    ${meses.length?`<div class="card" style="margin-bottom:14px">
+      <div class="ch">📊 Comissões vs Despesas por Mês</div>
+      <div class="cb" style="padding:14px 16px">
+        <div style="display:flex;align-items:flex-end;gap:8px;height:160px;overflow-x:auto">
+          ${meses.map(m=>{
+            const com=comByMes[m]?.comissao||0;
+            const desp=despByMes[m]||0;
+            const hc=Math.round(com/maxVal*140);
+            const hd=Math.round(desp/maxVal*140);
+            return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:44px;flex:1">
+              <div style="display:flex;align-items:flex-end;gap:3px;height:140px">
+                <div style="width:18px;background:var(--gn);border-radius:3px 3px 0 0;height:${hc}px" title="Comissão: ${R(com)}"></div>
+                <div style="width:18px;background:var(--re);opacity:.7;border-radius:3px 3px 0 0;height:${hd}px" title="Despesa: ${R(desp)}"></div>
+              </div>
+              <div style="font-size:9px;color:var(--dm);text-align:center">${MF(m)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:14px;margin-top:8px">
+          <span style="font-size:11px;color:var(--dm)"><span style="color:var(--gn);font-weight:700">■</span> Comissão</span>
+          <span style="font-size:11px;color:var(--dm)"><span style="color:var(--re);font-weight:700">■</span> Despesa</span>
+        </div>
+      </div>
+    </div>`:''}
+    <div class="card">
+      <div class="ch">📋 Detalhamento Mensal</div>
+      <div class="cb" style="padding:0">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:var(--sf2)">
+            <th style="padding:9px 14px;text-align:left;font-size:11px;color:var(--dm);font-weight:600">MÊS</th>
+            <th style="padding:9px 14px;text-align:right;font-size:11px;color:var(--dm);font-weight:600">COMISSÃO</th>
+            <th style="padding:9px 14px;text-align:right;font-size:11px;color:var(--dm);font-weight:600">DESPESAS</th>
+            <th style="padding:9px 14px;text-align:right;font-size:11px;color:var(--dm);font-weight:600">RESULTADO</th>
+          </tr></thead>
+          <tbody>
+            ${meses.slice().reverse().map((m,i)=>{
+              const com=comByMes[m]?.comissao||0;
+              const desp=despByMes[m]||0;
+              const res=com-desp;
+              return`<tr style="background:${i%2===0?'transparent':'var(--sf2)'}">
+                <td style="padding:8px 14px;font-weight:500">${MF(m)}</td>
+                <td style="padding:8px 14px;text-align:right;color:var(--gn);font-weight:600">${R(com)}</td>
+                <td style="padding:8px 14px;text-align:right;color:var(--re)">${R(desp)}</td>
+                <td style="padding:8px 14px;text-align:right;font-weight:700;color:${res>=0?'var(--gn)':'var(--re)'}">${R(res)}</td>
+              </tr>`;
+            }).join('')}
+            <tr style="background:var(--ag);border-top:2px solid var(--bd)">
+              <td style="padding:9px 14px;font-weight:700">TOTAL</td>
+              <td style="padding:9px 14px;text-align:right;font-weight:700;color:var(--gn)">${R(totalCom)}</td>
+              <td style="padding:9px 14px;text-align:right;font-weight:700;color:var(--re)">${R(totalDesp)}</td>
+              <td style="padding:9px 14px;text-align:right;font-weight:700;color:${lucroLiq>=0?'var(--gn)':'var(--re)'}">${R(lucroLiq)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin-top:14px;display:flex;justify-content:flex-end">
+      <button class="btn bg bsm" onclick="go('despesas')">🧾 Gerenciar Despesas →</button>
+    </div>`;
 }
 
 // ══════════════════════════════════════════
