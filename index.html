@@ -1137,12 +1137,11 @@ function rowToDoc(row){
 // LOAD ALL DATA
 // ══════════════════════════════════════════
 async function loadAll(){
-  const[r1,r2,r3,r4,r5]=await Promise.all([
+  const[r1,r2,r3,r4]=await Promise.all([
     sb.from('contratos').select('*').order('created_at',{ascending:false}),
     sb.from('cobrancas').select('*').order('venc',{ascending:true}),
     sb.from('ordens_servico').select('*').order('created_at',{ascending:false}),
     sb.from('documentos').select('*').order('created_at',{ascending:false}),
-    sb.from('despesas_imob').select('*').order('data',{ascending:false}).catch(()=>({data:[],error:null}))
   ]);
   if(r1.error){console.error('contratos:',r1.error);throw new Error('Erro na tabela contratos: '+r1.error.message);}
   if(r2.error){console.error('cobrancas:',r2.error);throw new Error('Erro na tabela cobranças: '+r2.error.message);}
@@ -1151,9 +1150,13 @@ async function loadAll(){
   D.c=(r1.data||[]).map(rowToContrato);
   D.cb=(r2.data||[]).map(rowToCobranca);
   D.o=(r3.data||[]).map(rowToOS);
-  D.d=(r5.data||[]).map(row=>({id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.created_at}));
   const allDocs=(r4.data||[]).map(rowToDoc);
   D.c.forEach(c=>{c.docs=allDocs.filter(d=>d.contratoId===c.id);});
+  // Despesas — carregada separada para não quebrar caso tabela ainda não exista
+  try{
+    const r5=await sb.from('despesas_imob').select('*').order('data',{ascending:false});
+    D.d=(r5.data||[]).map(row=>({id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.criado_em}));
+  }catch(e){console.warn('despesas_imob não disponível:',e);D.d=[];}
 }
 
 // ══════════════════════════════════════════
