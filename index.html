@@ -3195,7 +3195,7 @@ async function saveDespesa(){
   const tipo=document.getElementById('desp-tipo').value;
   const conId=document.getElementById('desp-con').value||null;
   btn.disabled=true;btn.textContent='Salvando...';
-  const payload={user_id:currentUser.id,contrato_id:conId,descricao:desc,valor:val,data:dt,tipo};
+  const payload={contrato_id:conId,descricao:desc,valor:val,data:dt,tipo};
   let result;
   if(_despEditId){
     result=await sb.from('despesas_imob').update(payload).eq('id',_despEditId).select().single();
