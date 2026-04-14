@@ -3054,8 +3054,10 @@ async function uploadDocCat(cid,catKey,file){
   const old=c.docs.find(d=>d.tag===catKey);
   if(old?.storage_path){await sb.storage.from('documentos').remove([old.storage_path]);}
   if(old?.id){await sb.from('documentos').delete().eq('id',old.id);c.docs=c.docs.filter(d=>d.tag!==catKey);}
-  // Upload novo
-  const path=`${currentUser.id}/${cid}/cat_${catKey}_${Date.now()}.${file.name.split('.').pop()}`;
+  // Upload novo — sanitiza o catKey (remove acentos e caracteres especiais)
+  const safeKey=catKey.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]/g,'_');
+  const ext=(file.name.split('.').pop()||'pdf').replace(/[^a-zA-Z0-9]/g,'');
+  const path=`${currentUser.id}/${cid}/cat_${safeKey}_${Date.now()}.${ext}`;
   const{error:upErr}=await sb.storage.from('documentos').upload(path,file);
   if(upErr){alert('Erro no upload: '+upErr.message);return;}
   const{data:doc}=await sb.from('documentos').insert({user_id:currentUser.id,contrato_id:cid,nome:file.name,tag:catKey,storage_path:path,tamanho:file.size,mime_type:file.type}).select().single();
