@@ -3512,13 +3512,18 @@ async function executarAnalise(){
   const valor=parseFloat(document.getElementById('pret-valor').value)||0;
   const garantia=document.getElementById('pret-garantia').value;
   const prop=document.getElementById('pret-prop').value.trim();
-  const prompt=`Você é um especialista em análise de crédito imobiliária. Leia o documento de análise de crédito e retorne SOMENTE JSON sem markdown:\n{"nome":"","cpf":"","telefone":"","score":0,"classificacao":"","nivel":"ALTO|MÉDIO|BAIXO","recomendacao":"texto objetivo com recomendação","pontos":[{"ok":true,"texto":"ponto avaliado"}],"debitosTotal":0,"processosCriticos":"resumo dos processos graves ou vazio","condicoes":"condições sugeridas se aprovação condicional ou vazio","statusSugerido":"aprovado|atencao|recusado"}\n\nContexto adicional: Imóvel pretendido: ${imovel||'não informado'}, Valor do aluguel: R$ ${valor||'não informado'}, Garantia: ${garantia||'não informada'}. Relação renda/aluguel mínima recomendada: 3x.`;
+  const prompt=`Você é um especialista em análise de crédito imobiliária. Leia TODOS os dados do documento de análise de crédito e retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem markdown, sem explicações:\n{"nome":"","cpf":"","telefone":"","score":0,"classificacao":"","nivel":"ALTO","recomendacao":"","pontos":[{"ok":true,"texto":""}],"debitosTotal":0,"processosCriticos":"","condicoes":"","statusSugerido":"recusado"}\n\nPreencha o campo "nivel" com ALTO, MÉDIO ou BAIXO. Preencha "statusSugerido" com aprovado, atencao ou recusado. Liste de 4 a 6 pontos relevantes em "pontos". Contexto: Imóvel pretendido: ${imovel||'não informado'}, Aluguel: R$ ${valor||'não informado'}, Garantia: ${garantia||'não informada'}. Renda mínima recomendada: 3x o aluguel.`;
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':window.ANTHRO_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:900,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:_pretPdfB64}},{type:'text',text:prompt}]}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':window.ANTHRO_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:_pretPdfB64}},{type:'text',text:prompt}]},{role:'assistant',content:'{'}]})});
     const json=await resp.json();
+    if(json.error){throw new Error(json.error.message||'Erro na API');}
     let txt=(json.content&&json.content[0]?.text)||'';
-    txt=txt.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
-    const par=JSON.parse(txt);
+    // A resposta começa depois do '{' que colocamos como prefill
+    txt=('{'+txt).replace(/```json\n?/g,'').replace(/```\n?/g,'');
+    // Extrai apenas o primeiro objeto JSON válido
+    const match=txt.match(/\{[\s\S]*\}/);
+    if(!match)throw new Error('Resposta da IA não contém JSON válido. Tente novamente.');
+    const par=JSON.parse(match[0]);
     _pretResultado={...par,imovel,valor,garantia,prop};
     // Salva histórico enxuto no Supabase (sem bloquear se tabela não existir)
     try{await sb.from('pretendentes').insert({nome:par.nome,cpf:par.cpf,telefone:par.telefone,imovel_pretendido:imovel,valor_pretendido:valor||null,garantia:garantia||null,proprietario:prop||null,nivel_risco:par.nivel,status:par.statusSugerido||'atencao',parecer_ia:par});}catch(e){console.warn('Histórico não salvo:',e);}
