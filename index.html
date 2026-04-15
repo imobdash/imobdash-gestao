@@ -908,6 +908,9 @@ tr:hover td{background:rgba(255,255,255,.018);}
         <button class="btn bg" style="justify-content:center;padding:10px;font-size:12px" onclick="abrirMsgPretendente()">📱 Msg. ao Pretendente</button>
         <button class="btn bg" style="justify-content:center;padding:10px;font-size:12px" onclick="abrirMsgProprietario()">📱 Msg. ao Proprietário</button>
       </div>
+      <div style="margin-top:8px">
+        <button class="btn" style="width:100%;justify-content:center;padding:10px;font-size:12px;background:var(--sf2);border:1px solid var(--bd);color:var(--te)" onclick="gerarRelatorioPDF()">📄 Relatório Formal (para o pretendente solicitar)</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3683,13 +3686,13 @@ Atenciosamente,
   }
   return `Olá, ${nome}. 👋
 
-Agradecemos muito seu interesse em locar o imóvel *${imovel}* e todo o tempo e atenção dedicados ao processo de análise.
+Agradecemos seu interesse no imóvel *${imovel}* e o tempo dedicado ao processo.
 
-Após avaliação cuidadosa do seu perfil, infelizmente não será possível prosseguir com esta locação no momento. Lamentamos não poder atendê-lo(a) desta vez.
+Informamos que realizamos uma análise de crédito do seu perfil e, com base nos dados obtidos, não foi possível aprovar a locação nas condições atuais — principalmente em razão de restrições financeiras identificadas e da garantia oferecida (${r.garantia||'caução'}).
 
-Não desanime — o mercado imobiliário é amplo e continuamos à disposição para ajudá-lo(a) na busca pelo imóvel ideal. Fique à vontade para entrar em contato a qualquer momento. 🏠
+Caso deseje conhecer os detalhes da análise ou questionar alguma informação, você tem esse direito — basta nos solicitar o relatório formal, que apresentaremos de forma transparente. (Art. 20 da LGPD)
 
-Desejamos muito sucesso e boa sorte na sua busca!
+Continuamos à disposição para ajudá-lo(a) e, se desejar, podemos conversar sobre outras opções de imóveis ou garantias que possam viabilizar uma futura locação.
 
 Com respeito e cordialidade,
 *Imob.Gestão* 🏠`;
@@ -3697,7 +3700,10 @@ Com respeito e cordialidade,
 
 function gerarMsgProprietario(r){
   const nivelEmoji=r.nivel==='ALTO'?'🔴':r.nivel==='MÉDIO'?'🟡':'🟢';
-  const pontosCrit=(r.pontos||[]).filter(p=>!p.ok).slice(0,3).map(p=>`⚠️ ${p.texto}`).join('\n');
+  // Filtra dados criminais sensíveis para não expor número de processo ao proprietário
+  const sanitizarPonto=(txt)=>txt.replace(/processo\s+\d{5,}[\d\.\-\/]*/gi,'restrição legal identificada').replace(/inquérito\s+policial[^,
+]*/gi,'restrição de natureza legal').replace(/\d{5,}[\d\.\-\/]{5,}/g,'[nº omitido]');
+  const pontosCrit=(r.pontos||[]).filter(p=>!p.ok).slice(0,3).map(p=>`⚠️ ${sanitizarPonto(p.texto)}`).join('\n');
   const pontosOk=(r.pontos||[]).filter(p=>p.ok).slice(0,2).map(p=>`✅ ${p.texto}`).join('\n');
   return `Prezado(a) *${r.prop||'Proprietário'}*,
 
@@ -3737,6 +3743,141 @@ function enviarWhatsApp(){
 }
 
 // ══════════════════════════════════════════
+function gerarRelatorioPDF(){
+  const r=_pretResultado;
+  if(!r){alert('Nenhuma análise disponível.');return;}
+  const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const nivelCor=r.nivel==='ALTO'?'#dc2626':r.nivel==='MÉDIO'?'#d97706':'#16a34a';
+  const nivelBg=r.nivel==='ALTO'?'#fef2f2':r.nivel==='MÉDIO'?'#fffbeb':'#f0fdf4';
+  const statusLabel=r.statusSugerido==='aprovado'?'✅ Aprovado':r.statusSugerido==='atencao'?'⚠️ Aprovado com ressalvas':'❌ Recusado';
+
+  const pontosHtml=(r.pontos||[]).map(p=>`
+    <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;align-items:flex-start">
+      <span style="font-size:14px;min-width:18px">${p.ok?'✅':'⚠️'}</span>
+      <span style="font-size:13px;color:#374151;line-height:1.5">${p.texto||''}</span>
+    </div>`).join('');
+
+  const html=`
+  <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:40px 30px;color:#111">
+    <!-- Cabeçalho -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1e3a5f;padding-bottom:20px;margin-bottom:24px">
+      <div>
+        <div style="font-size:22px;font-weight:700;color:#1e3a5f">Imob.Gestão</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">Sistema de Gestão Imobiliária</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:600;color:#374151">Relatório de Análise de Crédito</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">${hoje}</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px">Documento confidencial — uso restrito</div>
+      </div>
+    </div>
+
+    <!-- Dados do candidato -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Dados do Candidato</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Nome completo</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.nome||'–'}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">CPF</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.cpf||'–'}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Telefone</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.telefone||'–'}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Score de crédito</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.score||'–'} ${r.classificacao?'('+r.classificacao+')':''}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Imóvel pretendido -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Imóvel Pretendido</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Endereço</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.imovel||'–'}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Aluguel</div>
+          <div style="font-size:13px;font-weight:600;color:#111">R$ ${r.valor?Number(r.valor).toFixed(2).replace('.',','):'–'}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Garantia</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.garantia||'–'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado -->
+    <div style="background:${nivelBg};border:2px solid ${nivelCor};border-radius:10px;padding:18px 20px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:16px;font-weight:700;color:${nivelCor}">Resultado: Risco ${r.nivel||'–'}</div>
+        <div style="font-size:14px;font-weight:600;color:${nivelCor}">${statusLabel}</div>
+      </div>
+      <div style="font-size:13px;color:#374151;line-height:1.6">${r.recomendacao||''}</div>
+    </div>
+
+    <!-- Pontos da análise -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Pontos da Análise</div>
+      ${pontosHtml}
+    </div>
+
+    ${r.processosCriticos?`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:6px">⚠️ PROCESSOS / RESTRIÇÕES CRÍTICAS</div>
+      <div style="font-size:12px;color:#7c2d12;line-height:1.6">${r.processosCriticos}</div>
+    </div>`:''}
+
+    ${r.condicoes?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:6px">📋 CONDIÇÕES SUGERIDAS</div>
+      <div style="font-size:12px;color:#1e3a8a;line-height:1.6">${r.condicoes}</div>
+    </div>`:''}
+
+    <!-- Nota LGPD -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:6px">⚖️ SEUS DIREITOS — LEI GERAL DE PROTEÇÃO DE DADOS (LGPD — Lei 13.709/2018)</div>
+      <div style="font-size:11px;color:#64748b;line-height:1.7">
+        Esta análise foi realizada com base em dados de crédito autorizados por você junto à plataforma Alude. Conforme o <strong>Art. 20 da LGPD</strong>, você tem o direito de:<br>
+        • <strong>Solicitar revisão humana</strong> desta decisão automatizada;<br>
+        • <strong>Corrigir dados imprecisos</strong> — acesse <a href="https://www.alude.com.br">alude.com.br</a> ou <a href="https://www.consumidor.gov.br">consumidor.gov.br</a>;<br>
+        • <strong>Contestar</strong> informações incorretas diretamente com os bureaus de crédito (Serasa, SPC, Boa Vista).<br>
+        Para exercer esses direitos, entre em contato com nossa equipe.
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div style="border-top:1px solid #e5e7eb;padding-top:16px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:10px;color:#9ca3af">Gerado em ${hoje} · Imob.Gestão · Documento de uso interno e confidencial</div>
+      <div style="font-size:10px;color:#9ca3af">Fonte: Alude Análise de Crédito</div>
+    </div>
+  </div>`;
+
+  const w=window.open('','_blank');
+  w.document.write(\`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>Relatório de Análise — \${r.nome||'Pretendente'}</title>
+    <style>
+      body{margin:0;background:#e5e7eb;font-family:Arial,sans-serif}
+      @media print{body{background:white}.no-print{display:none}}
+    </style>
+  </head><body>
+    <div class="no-print" style="background:#1e3a5f;color:white;padding:12px 24px;text-align:center;font-size:13px">
+      📄 Relatório formal de análise de crédito — <strong>Imprima ou salve como PDF</strong> (Ctrl+P / Cmd+P)
+      &nbsp;&nbsp;<button onclick="window.print()" style="background:white;color:#1e3a5f;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+    <div style="padding:20px 0">
+      \${html}
+    </div>
+  </body></html>\`);
+  w.document.close();
+}
+
 // FEATURE 4: RELATÓRIOS
 // ══════════════════════════════════════════
 function gerarPDF(titulo,htmlContent){
