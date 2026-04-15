@@ -3513,8 +3513,13 @@ async function executarAnalise(){
   const garantia=document.getElementById('pret-garantia').value;
   const prop=document.getElementById('pret-prop').value.trim();
   const prompt=`Você é um especialista em análise de crédito imobiliária. Leia TODOS os dados do documento de análise de crédito e retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem markdown, sem explicações:\n{"nome":"","cpf":"","telefone":"","score":0,"classificacao":"","nivel":"ALTO","recomendacao":"","pontos":[{"ok":true,"texto":""}],"debitosTotal":0,"processosCriticos":"","condicoes":"","statusSugerido":"recusado"}\n\nPreencha o campo "nivel" com ALTO, MÉDIO ou BAIXO. Preencha "statusSugerido" com aprovado, atencao ou recusado. Liste de 4 a 6 pontos relevantes em "pontos". Contexto: Imóvel pretendido: ${imovel||'não informado'}, Aluguel: R$ ${valor||'não informado'}, Garantia: ${garantia||'não informada'}. Renda mínima recomendada: 3x o aluguel.`;
+  const apiKeyPret=getApiKey();
+  if(!apiKeyPret){
+    document.getElementById('pret-err').textContent='⚠️ API key não configurada. Acesse Configurações e salve sua chave Anthropic.';
+    btn.disabled=false;btn.textContent='🔍 Analisar';return;
+  }
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':window.ANTHRO_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:_pretPdfB64}},{type:'text',text:prompt}]},{role:'assistant',content:'{'}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':apiKeyPret,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:_pretPdfB64}},{type:'text',text:prompt}]},{role:'assistant',content:'{'}]})});
     const json=await resp.json();
     if(json.error){throw new Error(json.error.message||'Erro na API');}
     let txt=(json.content&&json.content[0]?.text)||'';
