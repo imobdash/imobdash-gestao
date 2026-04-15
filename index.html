@@ -317,6 +317,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <div class="ni" onclick="go('despesas')"><span class="ic">🧾</span> Despesas</div>
     <div class="ni" onclick="go('finimob')"><span class="ic">💼</span> Fin. Imobiliária</div>
     <div class="ns">Análise</div>
+    <div class="ni" onclick="go('pretendentes')"><span class="ic">🔍</span> Pretendentes <span class="bdg" id="bdgPret" style="background:var(--ye);display:none">0</span></div>
     <div class="ni" onclick="go('relatorios')"><span class="ic">📊</span> Relatórios</div>
   </nav>
   <div class="sfoot">
@@ -437,6 +438,15 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <!-- FINANCEIRO IMOBILIÁRIA -->
     <div class="view" id="view-finimob">
       <div id="finimob-content"></div>
+    </div>
+
+    <!-- PRETENDENTES -->
+    <div class="view" id="view-pretendentes">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:7px;flex-wrap:wrap" id="pret-filtros"></div>
+        <button class="btn bp bsm" onclick="openNPretendente()">＋ Novo Pretendente</button>
+      </div>
+      <div id="pretendentes-content"></div>
     </div>
 
     <!-- RELATÓRIOS -->
@@ -846,6 +856,78 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </div>
 </div>
 
+<!-- MODAL NOVA ANÁLISE DE PRETENDENTE -->
+<div class="mo" id="mpret">
+<div class="md" style="max-width:520px">
+  <div class="mh"><div><h2>🔍 Análise de Pretendente</h2><p style="font-size:12px;color:var(--dm);margin:0">Suba a análise de crédito (Alude) e informe o imóvel</p></div><button class="mx" onclick="cM('mpret')">✕</button></div>
+  <div class="mb">
+    <!-- Upload análise Alude -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">📊 Análise de Crédito (Alude) *</label>
+      <div id="pret-upload-area" style="border:2px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:.2s;background:var(--sf2)" onclick="document.getElementById('pret-pdf').click()">
+        <div style="font-size:28px;margin-bottom:6px">📄</div>
+        <div id="pret-upload-label" style="font-size:13px;color:var(--dm)">Clique para selecionar o PDF da Alude</div>
+        <div style="font-size:11px;color:var(--dm);margin-top:4px">Aceita PDF</div>
+      </div>
+      <input type="file" id="pret-pdf" accept=".pdf" style="display:none" onchange="onPretPdfSelect(this)">
+    </div>
+    <!-- Dados do imóvel -->
+    <div style="font-size:11px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏠 Imóvel Pretendido</div>
+    <div class="fg" style="margin-bottom:14px">
+      <div class="g ff"><label>Endereço / Descrição</label><input id="pret-imovel" placeholder="Ex: Apto 802, Ed. Beach Walk, Vila Velha/ES"></div>
+      <div class="g"><label>Valor do aluguel (R$)</label><input id="pret-valor" type="number" step="0.01" placeholder="0,00"></div>
+      <div class="g"><label>Garantia oferecida</label>
+        <select id="pret-garantia">
+          <option value="">Não informado</option>
+          <option value="Caução">Caução (depósito)</option>
+          <option value="Fiador">Fiador</option>
+          <option value="Seguro Fiança">Seguro Fiança</option>
+          <option value="Título de Capitalização">Título de Capitalização</option>
+        </select>
+      </div>
+      <div class="g"><label>Proprietário do imóvel</label><input id="pret-prop" placeholder="Nome do proprietário (para mensagem)"></div>
+    </div>
+    <div class="fa">
+      <button class="btn bg" onclick="cM('mpret')">Cancelar</button>
+      <button class="btn" id="btnAnalisar" style="background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff;gap:6px" onclick="executarAnalise()">🤖 Analisar com IA</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL RESULTADO DA ANÁLISE -->
+<div class="mo" id="mpret-result">
+<div class="md" style="max-width:560px">
+  <div class="mh"><div><h2 id="pret-result-title">📋 Resultado da Análise</h2><p id="pret-result-sub" style="font-size:12px;color:var(--dm);margin:0"></p></div><button class="mx" onclick="cM('mpret-result')">✕</button></div>
+  <div class="mb" style="max-height:80vh;overflow-y:auto">
+    <div id="pret-result-content"></div>
+    <!-- Mensagens -->
+    <div style="margin-top:14px;border-top:1px solid var(--bd);padding-top:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">💬 Comunicação</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn bg" style="justify-content:center;padding:10px;font-size:12px" onclick="abrirMsgPretendente()">📱 Msg. ao Pretendente</button>
+        <button class="btn bg" style="justify-content:center;padding:10px;font-size:12px" onclick="abrirMsgProprietario()">📱 Msg. ao Proprietário</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL MENSAGEM WHATSAPP -->
+<div class="mo" id="mmsg">
+<div class="md" style="max-width:500px">
+  <div class="mh"><div><h2 id="mmsg-title">📱 Mensagem</h2><p id="mmsg-sub" style="font-size:12px;color:var(--dm);margin:0"></p></div><button class="mx" onclick="cM('mmsg')">✕</button></div>
+  <div class="mb">
+    <div style="font-size:11px;color:var(--dm);margin-bottom:6px">Revise e edite antes de enviar — o destinatário não verá detalhes da análise:</div>
+    <textarea id="mmsg-txt" rows="11" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:12px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;resize:vertical;outline:none"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn bg" style="flex:1;justify-content:center" onclick="copiarMsg()">📋 Copiar</button>
+      <button class="btn" style="flex:2;justify-content:center;background:#25D366;border-color:#25D366;color:#fff" onclick="enviarWhatsApp()">📲 Abrir no WhatsApp</button>
+    </div>
+  </div>
+</div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 // SQL MIGRATIONS NEEDED (run in Supabase)
@@ -889,7 +971,7 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{
 // ══════════════════════════════════════════
 // STATE
 // ══════════════════════════════════════════
-let D={c:[],cb:[],o:[],d:[]}; // d = despesas_imob
+let D={c:[],cb:[],o:[],d:[],p:[]}; // d=despesas_imob p=pretendentes
 let currentUser=null;
 let _loadingApp=false;
 let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
@@ -1157,6 +1239,14 @@ async function loadAll(){
     const r5=await sb.from('despesas_imob').select('*').order('data',{ascending:false});
     D.d=(r5.data||[]).map(row=>({id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.criado_em}));
   }catch(e){console.warn('despesas_imob não disponível:',e);D.d=[];}
+  // Pretendentes
+  try{
+    const r6=await sb.from('pretendentes').select('*').order('criado_em',{ascending:false});
+    D.p=(r6.data||[]).map(rowToPretendente);
+  }catch(e){console.warn('pretendentes não disponível:',e);D.p=[];}
+}
+function rowToPretendente(r){
+  return{id:r.id,nome:r.nome,cpf:r.cpf,telefone:r.telefone,email:r.email,profissao:r.profissao,rendaDec:Number(r.renda_declarada||0),imovel:r.imovel_pretendido,valorPret:Number(r.valor_pretendido||0),garantia:r.garantia,proprietario:r.proprietario,status:r.status||'pendente',nivelRisco:r.nivel_risco,parecerIA:r.parecer_ia,obs:r.observacoes,contratoId:r.contrato_id,docs:r.docs||[],criadoEm:r.criado_em};
 }
 
 // ══════════════════════════════════════════
@@ -1368,14 +1458,14 @@ function renderChart(){
 // ══════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════
-const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios',despesas:'Despesas da Imobiliária',finimob:'Financeiro da Imobiliária'};
+const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios',despesas:'Despesas da Imobiliária',finimob:'Financeiro da Imobiliária',pretendentes:'Pretendentes'};
 function go(v){
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('on'));
   document.getElementById('view-'+v).classList.add('on');
   document.getElementById('ttl').textContent=TITLES[v]||v;
   const ni=document.querySelectorAll('.ni');
-  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6,despesas:7,finimob:8,relatorios:9};
+  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6,despesas:7,finimob:8,pretendentes:9,relatorios:10};
   if(m[v]!==undefined)ni[m[v]]?.classList.add('on');
   bniActive(v);
   if(v==='dashboard')renderDash();
@@ -1387,6 +1477,7 @@ function go(v){
   if(v==='ordens')renderOS();
   if(v==='despesas')renderDespesas();
   if(v==='finimob')renderFinImob();
+  if(v==='pretendentes')renderPretendentes();
   if(v==='relatorios')renderRelatorios();
   cSB();
 }
@@ -2660,6 +2751,15 @@ async function saveContract(){
     _renovandoDeId=null;
   }
   _editContratoId=null;
+  // ── VINCULAR PRETENDENTE CONVERTIDO ──
+  if(window._pretConvertendoId){
+    try{
+      await sb.from('pretendentes').update({status:'convertido',contrato_id:newCon.id}).eq('id',window._pretConvertendoId);
+      const pi=D.p.findIndex(x=>x.id===window._pretConvertendoId);
+      if(pi>=0){D.p[pi].status='convertido';D.p[pi].contratoId=newCon.id;}
+    }catch(e){console.warn('Erro ao vincular pretendente:',e);}
+    window._pretConvertendoId=null;
+  }
   cM('mc');renderContratos();renderDash();
   if(!wasEdit)go('contratos');
   else detail(newCon.id);
@@ -3361,6 +3461,269 @@ function renderFinImob(){
     <div style="margin-top:14px;display:flex;justify-content:flex-end">
       <button class="btn bg bsm" onclick="go('despesas')">🧾 Gerenciar Despesas →</button>
     </div>`;
+}
+
+// ══════════════════════════════════════════
+// PRETENDENTES — Análise rápida por PDF
+// ══════════════════════════════════════════
+const PRET_STATUS={
+  aprovado:{l:'Aprovado',cl:'cg',ic:'✅'},
+  atencao:{l:'Atenção',cl:'cy',ic:'⚠️'},
+  recusado:{l:'Recusado',cl:'cr',ic:'❌'},
+};
+const PRET_DOC_CATS=[
+  {key:'analise',icon:'📊',label:'Análise de Crédito'},
+  {key:'rg_cnh',icon:'🪪',label:'RG / CNH'},
+  {key:'renda',icon:'💰',label:'Comprovante de Renda'},
+  {key:'outro',icon:'📄',label:'Outro Documento'},
+];
+// estado do resultado atual (sem persistir no DB o conteúdo completo)
+let _pretResultado=null; // {nome,tel,imovel,valor,garantia,prop,nivel,parecer}
+let _pretMsgTipo=null;   // 'pretendente'|'proprietario'
+let _pretPdfB64=null;    // base64 do PDF Alude
+
+function onPretPdfSelect(input){
+  const f=input.files[0];if(!f)return;
+  document.getElementById('pret-upload-label').textContent='📄 '+f.name;
+  document.getElementById('pret-upload-area').style.borderColor='var(--gn)';
+  const reader=new FileReader();
+  reader.onload=e=>{_pretPdfB64=e.target.result.split(',')[1];};
+  reader.readAsDataURL(f);
+}
+
+function openNPretendente(){
+  _pretPdfB64=null;
+  _pretResultado=null;
+  document.getElementById('pret-upload-label').textContent='Clique para selecionar o PDF da Alude';
+  document.getElementById('pret-upload-area').style.borderColor='var(--bd)';
+  document.getElementById('pret-pdf').value='';
+  document.getElementById('pret-imovel').value='';
+  document.getElementById('pret-valor').value='';
+  document.getElementById('pret-garantia').value='';
+  document.getElementById('pret-prop').value='';
+  oM('mpret');
+}
+
+async function executarAnalise(){
+  if(!_pretPdfB64){alert('Selecione o PDF da análise de crédito (Alude).');return;}
+  const btn=document.getElementById('btnAnalisar');
+  btn.disabled=true;btn.textContent='⏳ Analisando...';
+  const imovel=document.getElementById('pret-imovel').value.trim();
+  const valor=parseFloat(document.getElementById('pret-valor').value)||0;
+  const garantia=document.getElementById('pret-garantia').value;
+  const prop=document.getElementById('pret-prop').value.trim();
+  const prompt=`Você é um especialista em análise de crédito imobiliária. Leia o documento de análise de crédito e retorne SOMENTE JSON sem markdown:\n{"nome":"","cpf":"","telefone":"","score":0,"classificacao":"","nivel":"ALTO|MÉDIO|BAIXO","recomendacao":"texto objetivo com recomendação","pontos":[{"ok":true,"texto":"ponto avaliado"}],"debitosTotal":0,"processosCriticos":"resumo dos processos graves ou vazio","condicoes":"condições sugeridas se aprovação condicional ou vazio","statusSugerido":"aprovado|atencao|recusado"}\n\nContexto adicional: Imóvel pretendido: ${imovel||'não informado'}, Valor do aluguel: R$ ${valor||'não informado'}, Garantia: ${garantia||'não informada'}. Relação renda/aluguel mínima recomendada: 3x.`;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':window.ANTHRO_KEY,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:900,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:_pretPdfB64}},{type:'text',text:prompt}]}]})});
+    const json=await resp.json();
+    let txt=(json.content&&json.content[0]?.text)||'';
+    txt=txt.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const par=JSON.parse(txt);
+    _pretResultado={...par,imovel,valor,garantia,prop};
+    // Salva histórico enxuto no Supabase (sem bloquear se tabela não existir)
+    try{await sb.from('pretendentes').insert({nome:par.nome,cpf:par.cpf,telefone:par.telefone,imovel_pretendido:imovel,valor_pretendido:valor||null,garantia:garantia||null,proprietario:prop||null,nivel_risco:par.nivel,status:par.statusSugerido||'atencao',parecer_ia:par});}catch(e){console.warn('Histórico não salvo:',e);}
+    // Recarrega lista
+    try{const r=await sb.from('pretendentes').select('*').order('criado_em',{ascending:false});D.p=(r.data||[]).map(rowToPretendente);}catch(e){}
+    cM('mpret');
+    mostrarResultadoAnalise(par,imovel,valor,prop);
+  }catch(e){
+    alert('Erro na análise: '+e.message);
+  }finally{
+    btn.disabled=false;btn.textContent='🤖 Analisar com IA';
+  }
+}
+
+function mostrarResultadoAnalise(par,imovel,valor,prop){
+  const nivelEmoji=par.nivel==='ALTO'?'🔴':par.nivel==='MÉDIO'?'🟡':'🟢';
+  const nivelBg=par.nivel==='ALTO'?'var(--rd)':par.nivel==='MÉDIO'?'var(--yd)':'var(--gd)';
+  const nivelCor=par.nivel==='ALTO'?'var(--re)':par.nivel==='MÉDIO'?'var(--ye)':'var(--gn)';
+  const stLabel=par.statusSugerido==='aprovado'?'✅ Aprovado':par.statusSugerido==='recusado'?'❌ Recusado':'⚠️ Aprovar com atenção';
+  document.getElementById('pret-result-title').textContent=`📋 ${par.nome||'Pretendente'}`;
+  document.getElementById('pret-result-sub').textContent=`CPF: ${par.cpf||'–'} · Score: ${par.score||'–'} ${par.classificacao||''}`;
+  document.getElementById('pret-result-content').innerHTML=`
+    <!-- Nível de risco -->
+    <div style="background:${nivelBg};border-radius:12px;padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="font-size:40px;line-height:1">${nivelEmoji}</div>
+        <div>
+          <div style="font-size:16px;font-weight:800;color:${nivelCor}">RISCO ${par.nivel} — ${stLabel}</div>
+          <div style="font-size:13px;color:var(--dm);margin-top:2px">${par.recomendacao||''}</div>
+        </div>
+      </div>
+      ${par.pontos&&par.pontos.length?`<div style="display:flex;flex-direction:column;gap:5px">
+        ${par.pontos.map(pt=>`<div style="font-size:12px;display:flex;gap:7px;align-items:flex-start;padding:5px 8px;background:rgba(0,0,0,.08);border-radius:6px"><span style="flex-shrink:0">${pt.ok?'✅':'⚠️'}</span><span>${pt.texto}</span></div>`).join('')}
+      </div>`:''}
+      ${par.processosCriticos?`<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,.12);border-radius:7px;font-size:12px"><strong>⚖️ Processos críticos:</strong> ${par.processosCriticos}</div>`:''}
+      ${par.condicoes?`<div style="margin-top:8px;padding:8px 10px;background:rgba(0,0,0,.08);border-radius:7px;font-size:12px"><strong>📋 Condições sugeridas:</strong> ${par.condicoes}</div>`:''}
+    </div>
+    <!-- Dados extraídos -->
+    <div class="card" style="margin-bottom:0">
+      <div class="ch" style="font-size:12px">📊 Dados extraídos do documento</div>
+      <div class="cb">
+        ${[['Nome',par.nome],['CPF',par.cpf],['Telefone',par.telefone||'–'],['Score',par.score?(par.score+' '+par.classificacao):'–'],['Débitos',par.debitosTotal?'R$ '+par.debitosTotal.toFixed(2):'R$ 0,00'],['Imóvel pretendido',imovel||'não informado'],['Valor do aluguel',valor?'R$ '+valor.toFixed(2).replace('.',','):'não informado'],['Garantia',_pretResultado?.garantia||'não informada'],['Proprietário',prop||'não informado']].map(([l,v])=>`<div class="ir"><span class="il">${l}</span><span class="iv">${v||'–'}</span></div>`).join('')}
+      </div>
+    </div>`;
+  oM('mpret-result');
+}
+
+function renderPretendentes(){
+  const el=document.getElementById('pretendentes-content');
+  if(!el)return;
+  // Atualiza badge (análises recentes = últimos 7 dias)
+  const recentes=D.p.filter(p=>{const d=new Date(p.criadoEm);return(Date.now()-d)<7*24*3600*1000;}).length;
+  const bdg=document.getElementById('bdgPret');
+  if(bdg){bdg.style.display=recentes>0?'inline-flex':'none';bdg.textContent=recentes;}
+  // Filtros
+  const filtroAtual=window._pretFiltro||'todos';
+  const tots={todos:D.p.length,aprovado:D.p.filter(p=>p.status==='aprovado').length,atencao:D.p.filter(p=>p.status==='atencao').length,recusado:D.p.filter(p=>p.status==='recusado').length};
+  document.getElementById('pret-filtros').innerHTML=Object.entries({todos:'Todos',aprovado:'✅ Aprovados',atencao:'⚠️ Atenção',recusado:'❌ Recusados'}).map(([k,l])=>`<button class="btn bsm ${filtroAtual===k?'bp':'bg'}" onclick="window._pretFiltro='${k}';renderPretendentes()">${l} (${tots[k]})</button>`).join('');
+  const lista=filtroAtual==='todos'?D.p:D.p.filter(p=>p.status===filtroAtual);
+  if(!lista.length){
+    el.innerHTML=`<div class="empty"><div class="ei">🔍</div><h3>Nenhuma análise${filtroAtual!=='todos'?' com este resultado':' realizada'}</h3><p>Clique em "+ Novo Pretendente" para analisar um candidato.</p></div>`;
+    return;
+  }
+  el.innerHTML=lista.map(p=>{
+    const st=PRET_STATUS[p.status]||{l:p.status,cl:'bg',ic:'⚪'};
+    const nivelEmoji=p.nivelRisco==='ALTO'?'🔴':p.nivelRisco==='MÉDIO'?'🟡':p.nivelRisco==='BAIXO'?'🟢':'⚪';
+    const nivelCl=p.nivelRisco==='ALTO'?'cr':p.nivelRisco==='MÉDIO'?'cy':p.nivelRisco==='BAIXO'?'cg':'';
+    return`<div class="card" style="margin-bottom:10px">
+      <div class="cb" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:14px;font-weight:700">${p.nome||'–'}</span>
+            <span class="chip ${nivelCl}">${nivelEmoji} Risco ${p.nivelRisco||'–'}</span>
+            <span class="chip ${st.cl}">${st.ic} ${st.l}</span>
+          </div>
+          <div style="font-size:12px;color:var(--dm);display:flex;gap:12px;flex-wrap:wrap">
+            ${p.cpf?`<span>CPF: ${p.cpf}</span>`:''}
+            ${p.imovel?`<span>🏠 ${p.imovel.substring(0,45)}${p.imovel.length>45?'...':''}</span>`:''}
+            ${p.valorPret?`<span>💰 R$ ${p.valorPret.toFixed(2)}/mês</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--dm);margin-top:3px">${FD(p.criadoEm)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <button class="btn bg bsm" onclick="verHistoricoAnalise('${p.id}')">📋 Ver</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function verHistoricoAnalise(id){
+  const p=D.p.find(x=>x.id===id);if(!p)return;
+  if(p.parecerIA){
+    _pretResultado={...p.parecerIA,imovel:p.imovel,valor:p.valorPret,garantia:p.garantia,prop:p.proprietario,nome:p.nome,cpf:p.cpf,telefone:p.telefone};
+    mostrarResultadoAnalise(p.parecerIA,p.imovel,p.valorPret,p.proprietario);
+  }else{
+    alert('Esta análise não possui parecer detalhado salvo.');
+  }
+}
+
+// ── MENSAGENS ──
+function abrirMsgPretendente(){
+  if(!_pretResultado)return;
+  _pretMsgTipo='pretendente';
+  document.getElementById('mmsg-title').textContent='📱 Mensagem ao Pretendente';
+  document.getElementById('mmsg-sub').textContent=`Para: ${_pretResultado.nome||'Pretendente'}${_pretResultado.telefone?' · '+_pretResultado.telefone:''}`;
+  document.getElementById('mmsg-txt').value=gerarMsgPretendente(_pretResultado);
+  oM('mmsg');
+}
+
+function abrirMsgProprietario(){
+  if(!_pretResultado)return;
+  _pretMsgTipo='proprietario';
+  document.getElementById('mmsg-title').textContent='📱 Mensagem ao Proprietário';
+  document.getElementById('mmsg-sub').textContent=`Sobre: ${_pretResultado.nome||'Pretendente'} · ${_pretResultado.imovel||'imóvel não informado'}`;
+  document.getElementById('mmsg-txt').value=gerarMsgProprietario(_pretResultado);
+  oM('mmsg');
+}
+
+function gerarMsgPretendente(r){
+  const nome=(r.nome||'').split(' ')[0]||'Olá';
+  const imovel=r.imovel||'o imóvel de seu interesse';
+  const status=r.statusSugerido||r.status||'atencao';
+  if(status==='aprovado'){
+    return `Olá, ${nome}! 😊
+
+Temos uma ótima notícia: sua análise para o imóvel *${imovel}* foi concluída e ficamos felizes em informar que está tudo certo para darmos continuidade! ✅
+
+Os próximos passos são:
+▪️ Assinatura do contrato de locação
+▪️ Pagamento da garantia${r.garantia?' ('+r.garantia+')':''}
+▪️ Entrega das chaves
+
+Em breve entraremos em contato para agendar e alinhar todos os detalhes. Qualquer dúvida, estamos à disposição!
+
+Atenciosamente,
+*Imob.Gestão* 🏠`;
+  }
+  if(status==='atencao'){
+    return `Olá, ${nome}! 👋
+
+Agradecemos muito seu interesse em locar o imóvel *${imovel}* e o tempo dedicado ao processo.
+
+Concluímos a sua análise e identificamos alguns pontos que gostaríamos de conversar com você antes de prosseguirmos. Nossa equipe está aqui para ajudar a encontrar a melhor solução! 😊
+
+Por favor, entre em contato para conversarmos com calma sobre as opções disponíveis. Será um prazer atendê-lo(a) pessoalmente.
+
+📞 Aguardamos seu retorno!
+
+Atenciosamente,
+*Imob.Gestão* 🏠`;
+  }
+  return `Olá, ${nome}. 👋
+
+Agradecemos muito seu interesse em locar o imóvel *${imovel}* e todo o tempo e atenção dedicados ao processo de análise.
+
+Após avaliação cuidadosa do seu perfil, infelizmente não será possível prosseguir com esta locação no momento. Lamentamos não poder atendê-lo(a) desta vez.
+
+Não desanime — o mercado imobiliário é amplo e continuamos à disposição para ajudá-lo(a) na busca pelo imóvel ideal. Fique à vontade para entrar em contato a qualquer momento. 🏠
+
+Desejamos muito sucesso e boa sorte na sua busca!
+
+Com respeito e cordialidade,
+*Imob.Gestão* 🏠`;
+}
+
+function gerarMsgProprietario(r){
+  const nivelEmoji=r.nivel==='ALTO'?'🔴':r.nivel==='MÉDIO'?'🟡':'🟢';
+  const pontosCrit=(r.pontos||[]).filter(p=>!p.ok).slice(0,3).map(p=>`⚠️ ${p.texto}`).join('\n');
+  const pontosOk=(r.pontos||[]).filter(p=>p.ok).slice(0,2).map(p=>`✅ ${p.texto}`).join('\n');
+  return `Prezado(a) *${r.prop||'Proprietário'}*,
+
+Realizamos a análise de crédito e perfil do candidato interessado no seu imóvel em *${r.imovel||'seu imóvel'}*.
+
+*Candidato:* ${r.nome||'–'}
+*Aluguel pretendido:* ${r.valor?'R$ '+Number(r.valor).toFixed(2).replace('.',','):' não informado'}/mês
+*Garantia oferecida:* ${r.garantia||'não informada'}
+
+*Resultado:* ${nivelEmoji} Risco ${r.nivel||'–'}
+_${r.recomendacao||''}_
+${pontosCrit?'\n*Pontos de atenção:*\n'+pontosCrit:''}${pontosOk?'\n*Pontos positivos:*\n'+pontosOk:''}
+${r.condicoes?'\n📋 *Condições sugeridas:* '+r.condicoes:''}
+
+Nossa equipe está à disposição para esclarecer qualquer dúvida e orientá-lo(a) sobre os próximos passos.
+
+Atenciosamente,
+*Imob.Gestão* 🏠`;
+}
+
+function copiarMsg(){
+  const txt=document.getElementById('mmsg-txt').value;
+  navigator.clipboard?.writeText(txt).then(()=>alert('✅ Mensagem copiada!')).catch(()=>{
+    document.getElementById('mmsg-txt').select();document.execCommand('copy');alert('✅ Copiado!');
+  });
+}
+
+function enviarWhatsApp(){
+  const txt=document.getElementById('mmsg-txt').value;
+  let tel='';
+  if(_pretMsgTipo==='pretendente'){
+    tel=(_pretResultado?.telefone||'').replace(/\D/g,'');
+  }else{
+    tel=(prompt('Número do WhatsApp do proprietário (somente números com DDD):','')||'').replace(/\D/g,'');
+  }
+  window.open(`https://wa.me/${tel?'55'+tel:''}?text=${encodeURIComponent(txt)}`,'_blank');
 }
 
 // ══════════════════════════════════════════
