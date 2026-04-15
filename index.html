@@ -3701,8 +3701,13 @@ Com respeito e cordialidade,
 function gerarMsgProprietario(r){
   const nivelEmoji=r.nivel==='ALTO'?'🔴':r.nivel==='MÉDIO'?'🟡':'🟢';
   // Filtra dados criminais sensíveis para não expor número de processo ao proprietário
-  const sanitizarPonto=(txt)=>txt.replace(/processo\s+\d{5,}[\d\.\-\/]*/gi,'restrição legal identificada').replace(/inquérito\s+policial[^,
-]*/gi,'restrição de natureza legal').replace(/\d{5,}[\d\.\-\/]{5,}/g,'[nº omitido]');
+  const sanitizarPonto=(txt)=>{
+    let s=txt;
+    s=s.replace(/processo\s+[\d\.\-\/]{5,}/gi,'restrição legal identificada');
+    s=s.replace(/inqu.rito\s+policial[^,.]*/gi,'restrição de natureza legal');
+    s=s.replace(/[\d]{5,}[\.\-\/][\d\.\-\/]{4,}/g,'[nº omitido]');
+    return s;
+  };
   const pontosCrit=(r.pontos||[]).filter(p=>!p.ok).slice(0,3).map(p=>`⚠️ ${sanitizarPonto(p.texto)}`).join('\n');
   const pontosOk=(r.pontos||[]).filter(p=>p.ok).slice(0,2).map(p=>`✅ ${p.texto}`).join('\n');
   return `Prezado(a) *${r.prop||'Proprietário'}*,
@@ -3859,22 +3864,19 @@ function gerarRelatorioPDF(){
   </div>`;
 
   const w=window.open('','_blank');
-  w.document.write(\`<!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
-    <title>Relatório de Análise — \${r.nome||'Pretendente'}</title>
-    <style>
-      body{margin:0;background:#e5e7eb;font-family:Arial,sans-serif}
-      @media print{body{background:white}.no-print{display:none}}
-    </style>
-  </head><body>
-    <div class="no-print" style="background:#1e3a5f;color:white;padding:12px 24px;text-align:center;font-size:13px">
-      📄 Relatório formal de análise de crédito — <strong>Imprima ou salve como PDF</strong> (Ctrl+P / Cmd+P)
-      &nbsp;&nbsp;<button onclick="window.print()" style="background:white;color:#1e3a5f;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>
-    </div>
-    <div style="padding:20px 0">
-      \${html}
-    </div>
-  </body></html>\`);
+  const pageTitle='Relatorio de Analise — '+(r.nome||'Pretendente');
+  const pageHtml='<!DOCTYPE html><html><head>'
+    +'<meta charset="UTF-8">'
+    +'<title>'+pageTitle+'</title>'
+    +'<style>body{margin:0;background:#e5e7eb;font-family:Arial,sans-serif}@media print{body{background:white}.no-print{display:none}}</style>'
+    +'</head><body>'
+    +'<div class="no-print" style="background:#1e3a5f;color:white;padding:12px 24px;text-align:center;font-size:13px">'
+    +'📄 Relatório formal — <strong>Imprima ou salve como PDF</strong> (Ctrl+P)'
+    +'&nbsp;&nbsp;<button onclick="window.print()" style="background:white;color:#1e3a5f;border:none;border-radius:4px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer">🖨️ Imprimir / Salvar PDF</button>'
+    +'</div>'
+    +'<div style="padding:20px 0">'+html+'</div>'
+    +'</body></html>';
+  w.document.write(pageHtml);
   w.document.close();
 }
 
