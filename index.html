@@ -1985,7 +1985,7 @@ function renderRepasse(){
             <td>${MF(cb.mes)}</td>
             <td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td>
             <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${cb.descricao||''}">${cb.descricao||''}</td>
-            <td style="font-weight:600">${R(cb.valor)}</td>
+            <td style="font-weight:600">${R(cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor)}${cb.descontoAplicado>0?`<div style="font-size:10px;color:#7c3aed;font-weight:600">-${R(cb.descontoAplicado)}</div>`:''}</td>
             <td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td>
             <td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td>
             <td><span class="chip ${pgCl}" style="font-size:10px">${pgLbl}</span></td>
@@ -2027,21 +2027,34 @@ function cobItem(cb,inDetail=false){
   const m=(cb.mes||'').split('-');
   const rp=cb.repasse;
   const atrasadoForte=!cb.pago&&DA(cb.venc)<-5;
+  // Desconto: valor original e info de parcela
+  const valorOriginal=cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor;
+  let parcInfo='';
+  if(cb.descontoAplicado>0){
+    const con=D.c.find(x=>x.id===cb.contratoId);
+    const totalParc=con?.descontoParc||0;
+    if(totalParc>0){
+      const allDesc=(D.cb||[]).filter(x=>x.contratoId===cb.contratoId&&x.descontoAplicado>0).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+      const parcNum=allDesc.findIndex(x=>x.id===cb.id)+1;
+      if(parcNum>0)parcInfo=` · Parcela ${parcNum} de ${totalParc}`;
+    }
+  }
   return`<div class="ci" id="ci-${cb.id}" style="${atrasadoForte?'border-left:3px solid var(--re);padding-left:7px':''}">
     <div class="cbg"><div class="m">${m[1]?MN[+m[1]-1]:'–'}</div><div class="y">${m[0]||''}</div></div>
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:${atrasadoForte?'var(--re)':'var(--te)'}">${R(cb.valor)}</span>
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:${atrasadoForte?'var(--re)':'var(--te)'}">${R(valorOriginal)}</span>
         <span class="tt ${tpCl(cb.tipo)}">${cb.tipo||'Aluguel'}</span>
         ${cb.reajustePendente?`<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(249,115,22,.15);color:var(--or)">↑ REAJUSTE</span>`:''}
         ${f.cls?`<span class="fase ${f.cls}">${f.label}</span>`:''}
       </div>
       <div style="font-size:12px;color:var(--dm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</div>
-      ${cb.descontoAplicado>0?`<div style="font-size:11px;color:var(--ac2);margin-top:2px">💸 Desc. ${cb.descontoDesc||'Desconto'}: -${R(cb.descontoAplicado)}</div>`:''}
+      ${cb.descontoAplicado>0?`<div style="font-size:11px;color:var(--ac2);margin-top:2px;font-weight:600">💸 ${cb.descontoDesc||'Desconto'}: -${R(cb.descontoAplicado)}${parcInfo}</div>`:''}
       <div style="font-size:11px;color:var(--dmr);margin-top:1px">Vence: ${FD(cb.venc)}</div>
       ${rp?`<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
         ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop)}</span>`:''}
         ${rp.imob>0?`<span class="rep rep-im">Imob: ${R(rp.imob)}</span>`:''}
+        ${cb.descontoAplicado>0?`<span class="rep" style="background:rgba(124,58,237,.12);color:#7c3aed;border:1px solid rgba(124,58,237,.25)">Tx.Extra: ${R(cb.descontoAplicado)}</span>`:''}
       </div>`:''}
       ${cb.comprovantePath?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--gn);cursor:pointer" onclick="viewCobFile('${cb.id}')">✅ Comprovante</span></div>`:''}
       ${cb.boletoPath||cb.boletoEmitidoEm?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--ac2);cursor:pointer" onclick="openBoleto('${cb.id}')">📄 Boleto ${cb.boletoEmitidoEm?'('+FD(cb.boletoEmitidoEm)+')':''}</span></div>`:''}
