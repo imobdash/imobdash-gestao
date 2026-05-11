@@ -574,6 +574,19 @@ tr:hover td{background:rgba(255,255,255,.018);}
           </select>
         </div>
       </div>
+      <div class="fsec">🏦 Repasse Extra ao Proprietário</div>
+      <div class="g ff">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--te);text-transform:none;letter-spacing:0">
+          <input type="checkbox" id="frep_ativo" onchange="toggleRepasseBox()" style="width:15px;height:15px;accent-color:#059669">
+          Aplicar repasse extra mensal ao proprietário
+        </label>
+        <div style="font-size:12px;color:var(--dm);margin-top:4px">Ex: IPTU proporcional, condomínio do proprietário, etc. Valor cobrado do inquilino e repassado 100% ao proprietário.</div>
+      </div>
+      <div id="repasse-extra-box" style="display:none;contents:''">
+        <div class="g"><label>Descrição</label><input type="text" id="frep_desc" placeholder="Ex: IPTU Prop."></div>
+        <div class="g"><label>Valor Mensal (R$)</label><input type="number" id="frep_val" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="g"><label>Parcelas Restantes</label><input type="number" id="frep_parc" placeholder="Ex: 10" min="1" title="Número de meses em que o repasse extra será aplicado automaticamente"></div>
+      </div>
       <div class="fsec">🛡️ Seguro</div>
       <div class="g"><label>Validade da Apólice</label><input type="date" id="fsegvnc"></div>
       <div class="g"><label>Seguradora / Obs.</label><input type="text" id="fsegobs" placeholder="Ex: Allianz, apólice nº 12345..."></div>
@@ -1724,6 +1737,8 @@ function detail(id){
           ${ir('Administrado',c.adm==='sim'?'✅ Sim':'Não')}
           ${c.descontoValor>0?ir('Desconto',`-${R(c.descontoValor)} · ${c.descontoDesc||''} · ${c.descontoParc}x · ${(c.descontoOrigem||'prop')==='prop'?'Prop.':'Imob.'}`):''}
           ${c.descontoValor>0?ir('Valor c/ Desconto',R(c.valor-c.descontoValor)):''}
+          ${c.repasseExtraValor>0?ir('Rep.Extra Prop.',`+${R(c.repasseExtraValor)} · ${c.repasseExtraDesc||'Repasse Extra'} · ${c.repasseExtraParc}x restantes`):''}
+          ${c.repasseExtraValor>0?ir('Total c/ Rep.Extra',R(c.valor+c.repasseExtraValor)):''}
           ${ir('Início',FD(c.inicio))}${ir('Término',FD(c.fim))}
           ${prog?`<div style="margin-top:9px"><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Progresso do contrato · ${prog}%</div><div class="pw"><div class="pb" style="width:${prog}%"></div></div></div>`:''}
         </div>
@@ -2453,13 +2468,18 @@ function calcProp(){
   const dcDesc=document.getElementById('fdesc_desc').value;
   const dcInfo=dcAtivo&&dcVal>0?`<br><span style="color:var(--ac2)">💸 Desconto: -${R(dcVal)} (${dcDesc||'Desconto'}) → Valor líquido: ${R(Math.max(0,val-dcVal))}/mês</span>`:'';
   box.style.display='block';
-  box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}${dcInfo}</div>`;
+  box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}${dcInfo}${repInfo}</div>`;
 }
 function toggleDescontoBox(){
   const ativo=document.getElementById('fdc_ativo').checked;
   const box=document.getElementById('desconto-box');
   box.style.display=ativo?'contents':'none';
   calcProp();
+}
+function toggleRepasseBox(){
+  const ativo=document.getElementById('frep_ativo').checked;
+  const box=document.getElementById('repasse-extra-box');
+  if(box)box.style.display=ativo?'contents':'none';
 }
 
 // ══════════════════════════════════════════
@@ -2475,6 +2495,7 @@ async function gerarCobsSupabase(c,userId){
   let cur=new Date(ini.getFullYear(),ini.getMonth()+1,1);
   const cobsToInsert=[];
   let descParcsUsadas=0; // contador de parcelas de desconto aplicadas
+  let repExtraParcsUsadas=0; // contador de parcelas de repasse extra aplicadas
   while(cur<=fim){
     const y=cur.getFullYear(),m=cur.getMonth();
     const mesRef=`${y}-${String(m+1).padStart(2,'0')}`;
@@ -2489,6 +2510,13 @@ async function gerarCobsSupabase(c,userId){
       descontoAplicado=c.descontoValor;
       descontoDescCob=c.descontoDesc||'Desconto';
       descParcsUsadas++;
+    }
+    // ── REPASSE EXTRA AO PROPRIETÁRIO ──
+    let repasseExtraApl=0;let repasseExtraDescCob='';
+    if(c.repasseExtraValor>0&&c.repasseExtraParc>0&&repExtraParcsUsadas<c.repasseExtraParc){
+      repasseExtraApl=c.repasseExtraValor;
+      repasseExtraDescCob=c.repasseExtraDesc||'Repasse Extra';
+      repExtraParcsUsadas++;
     }
     const valorLiq=Math.max(0,valor-descontoAplicado);
     // repBase: se desconto é do proprietário, imob calcula comissão sobre valor original
@@ -2512,7 +2540,9 @@ async function gerarCobsSupabase(c,userId){
       repasse_imob:rep.imob,repasse_prop:rep.prop,repasse_tipo:rep.tipo,
       reajuste_pendente:reajPend,
       desconto_aplicado:descontoAplicado||null,
-      desconto_desc_cob:descontoDescCob||null
+      desconto_desc_cob:descontoDescCob||null,
+      repasse_extra_valor:repasseExtraApl||null,
+      repasse_extra_desc:repasseExtraDescCob||null
     });
     cur=new Date(y,m+1,1);
   }
@@ -2524,6 +2554,12 @@ async function gerarCobsSupabase(c,userId){
       const novoParc=Math.max(0,c.descontoParc-descParcsUsadas);
       await sb.from('contratos').update({desconto_parcelas:novoParc}).eq('id',c.id);
       const ci=D.c.findIndex(x=>x.id===c.id);if(ci>=0)D.c[ci].descontoParc=novoParc;
+    }
+    // Atualizar parcelas restantes do repasse extra no contrato
+    if(c.repasseExtraValor>0&&repExtraParcsUsadas>0){
+      const novoRep=Math.max(0,c.repasseExtraParc-repExtraParcsUsadas);
+      await sb.from('contratos').update({repasse_extra_parcelas:novoRep}).eq('id',c.id);
+      const ci=D.c.findIndex(x=>x.id===c.id);if(ci>=0)D.c[ci].repasseExtraParc=novoRep;
     }
   }
 }
@@ -2578,6 +2614,11 @@ function clearForm(){
   document.getElementById('fdesc_parc').value='';
   document.getElementById('fdesc_origem').value='prop';
   document.getElementById('desconto-box').style.display='none';
+  const frepAtC=document.getElementById('frep_ativo');if(frepAtC)frepAtC.checked=false;
+  const frepDescC=document.getElementById('frep_desc');if(frepDescC)frepDescC.value='';
+  const frepValC=document.getElementById('frep_val');if(frepValC)frepValC.value='';
+  const frepParcC=document.getElementById('frep_parc');if(frepParcC)frepParcC.value='';
+  const frepBoxC=document.getElementById('repasse-extra-box');if(frepBoxC)frepBoxC.style.display='none';
   _renovandoDeId=null;
 }
 document.getElementById('pdfin').addEventListener('change',function(e){
@@ -2700,7 +2741,10 @@ async function saveContract(){
     desconto_valor:document.getElementById('fdc_ativo').checked?(parseFloat(document.getElementById('fdesc_val').value)||0):0,
     desconto_desc:document.getElementById('fdc_ativo').checked?(document.getElementById('fdesc_desc').value||null):null,
     desconto_parcelas:document.getElementById('fdc_ativo').checked?(parseInt(document.getElementById('fdesc_parc').value)||0):0,
-    desconto_origem:document.getElementById('fdc_ativo').checked?(document.getElementById('fdesc_origem').value||'prop'):'prop'
+    desconto_origem:document.getElementById('fdc_ativo').checked?(document.getElementById('fdesc_origem').value||'prop'):'prop',
+    repasse_extra_valor:document.getElementById('frep_ativo').checked?(parseFloat(document.getElementById('frep_val').value)||0):0,
+    repasse_extra_desc:document.getElementById('frep_ativo').checked?(document.getElementById('frep_desc').value||null):null,
+    repasse_extra_parcelas:document.getElementById('frep_ativo').checked?(parseInt(document.getElementById('frep_parc').value)||0):0
   };
   let newCon,error;
   if(_editContratoId){
@@ -2797,6 +2841,46 @@ async function saveContract(){
         const novoParc=Math.max(0,c.descontoParc-usadas);
         await sb.from('contratos').update({desconto_parcelas:novoParc}).eq('id',c.id);
         const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].descontoParc=novoParc;
+      }
+    }
+  }
+  // ── APLICAR REPASSE EXTRA ÀS COBRANÇAS PENDENTES (edição) ──
+  if(wasEdit && c.repasseExtraValor>0 && c.repasseExtraParc>0){
+    const pendAlugRep=D.cb
+      .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel')
+      .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+    if(pendAlugRep.length>0){
+      const qtdRep=Math.min(pendAlugRep.length,c.repasseExtraParc);
+      const ok=confirm(`Aplicar repasse extra em ${qtdRep} cobranças de aluguel pendentes:
+
+🏦 +${R(c.repasseExtraValor)} (${c.repasseExtraDesc||'Repasse Extra'}) → 100% Proprietário
+
+O inquilino pagará R$ ${R((pendAlugRep[0].valor+(pendAlugRep[0].descontoAplicado||0))+c.repasseExtraValor - (pendAlugRep[0].descontoAplicado||0))}/mês e o proprietário receberá este valor adicional.
+
+Clicar OK atualizará todas as cobranças pendentes.`);
+      if(ok){
+        let usadasRep=0;
+        for(const cb of pendAlugRep){
+          if(usadasRep>=c.repasseExtraParc)break;
+          const repPropNovo=cb.repasse.prop+c.repasseExtraValor;
+          const{error:eu}=await sb.from('cobrancas').update({
+            repasse_prop:repPropNovo,
+            repasse_extra_valor:c.repasseExtraValor,
+            repasse_extra_desc:c.repasseExtraDesc||'Repasse Extra'
+          }).eq('id',cb.id);
+          if(!eu){
+            const ci=D.cb.findIndex(x=>x.id===cb.id);
+            if(ci>=0){
+              D.cb[ci].repasse={...D.cb[ci].repasse,prop:repPropNovo};
+              D.cb[ci].repasseExtraValor=c.repasseExtraValor;
+              D.cb[ci].repasseExtraDesc=c.repasseExtraDesc||'Repasse Extra';
+            }
+            usadasRep++;
+          }
+        }
+        const novoRepParc=Math.max(0,c.repasseExtraParc-usadasRep);
+        await sb.from('contratos').update({repasse_extra_parcelas:novoRepParc}).eq('id',c.id);
+        const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].repasseExtraParc=novoRepParc;
       }
     }
   }
@@ -4474,6 +4558,11 @@ function editContrato(cid){
   set('fdesc_desc',c.descontoDesc);set('fdesc_val',c.descontoValor||'');set('fdesc_parc',c.descontoParc||'');
   const fdoE=document.getElementById('fdesc_origem');if(fdoE)fdoE.value=c.descontoOrigem||'prop';
   const dbox=document.getElementById('desconto-box');if(dbox)dbox.style.display=dcAtivo?'contents':'none';
+  // Repasse Extra
+  const repAtivo=c.repasseExtraValor>0;
+  const frepAt=document.getElementById('frep_ativo');if(frepAt)frepAt.checked=repAtivo;
+  set('frep_desc',c.repasseExtraDesc);set('frep_val',c.repasseExtraValor||'');set('frep_parc',c.repasseExtraParc||'');
+  const rbox=document.getElementById('repasse-extra-box');if(rbox)rbox.style.display=repAtivo?'contents':'none';
   const fgc=document.getElementById('fgc');if(fgc){fgc.checked=false;fgc.parentElement.parentElement.style.display='none';}
   _seguroFile=null;
   document.getElementById('fsegfilename').textContent='Clique para selecionar (substitui apólice atual)';
@@ -4504,6 +4593,11 @@ function renovarContrato(cid){
   set('fdesc_desc',c.descontoDesc);set('fdesc_val',c.descontoValor||'');set('fdesc_parc',c.descontoParc||'');
   const fdoR=document.getElementById('fdesc_origem');if(fdoR)fdoR.value=c.descontoOrigem||'prop';
   const dboxR=document.getElementById('desconto-box');if(dboxR)dboxR.style.display=dcAtivoR?'contents':'none';
+  // Repasse Extra (herdar do contrato anterior)
+  const repAtivoR=c.repasseExtraValor>0&&c.repasseExtraParc>0;
+  const frepAtR=document.getElementById('frep_ativo');if(frepAtR)frepAtR.checked=repAtivoR;
+  set('frep_desc',c.repasseExtraDesc);set('frep_val',c.repasseExtraValor||'');set('frep_parc',c.repasseExtraParc||'');
+  const rboxR=document.getElementById('repasse-extra-box');if(rboxR)rboxR.style.display=repAtivoR?'contents':'none';
   const fgc=document.getElementById('fgc');if(fgc){fgc.checked=true;fgc.parentElement.parentElement.style.display='';}
   _seguroFile=null;
   if(document.getElementById('fsegfilename'))document.getElementById('fsegfilename').textContent='Clique para selecionar a apólice';
