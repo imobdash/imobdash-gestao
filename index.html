@@ -2467,6 +2467,10 @@ function calcProp(){
   const dcVal=parseFloat(document.getElementById('fdesc_val').value)||0;
   const dcDesc=document.getElementById('fdesc_desc').value;
   const dcInfo=dcAtivo&&dcVal>0?`<br><span style="color:var(--ac2)">💸 Desconto: -${R(dcVal)} (${dcDesc||'Desconto'}) → Valor líquido: ${R(Math.max(0,val-dcVal))}/mês</span>`:'';
+  const repAtivo=document.getElementById('frep_ativo')?.checked;
+  const repVal=parseFloat(document.getElementById('frep_val')?.value)||0;
+  const repDesc=document.getElementById('frep_desc')?.value||'';
+  const repInfo=repAtivo&&repVal>0?`<br><span style="color:#059669">🏦 Rep.Extra: +${R(repVal)} (${repDesc||'Repasse Extra'}) → 100% Prop.</span>`:'';  
   box.style.display='block';
   box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}${dcInfo}${repInfo}</div>`;
 }
