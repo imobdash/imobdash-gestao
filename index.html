@@ -2143,7 +2143,7 @@ function renderCobrancas(){
     ${(_cobFiltroEmpresa||_cobFiltroProp||_cobFiltroDataIni||_cobFiltroDataFim)?`<button class="btn bg bsm" onclick="limparFiltrosCob()">✕ Limpar</button>`:''}
     ${_encCobCount>0?`<button class="btn bsm" style="margin-left:auto;background:${_cobShowEncerrado?'var(--rd)':'var(--sf2)'};color:${_cobShowEncerrado?'var(--re)':'var(--dm)'};border:1px solid var(--bd)" onclick="toggleCobEncerrado()">${_cobShowEncerrado?'🔒 Ocultar encerrados':'🔒 Ver encerrados ('+_encCobCount+')'}</button>`:`<span style='flex:1'></span>`}
     <span style="font-size:11px;color:var(--dm);align-self:center">${list.length} cobranças</span>
-  </div>\`;
+  </div>`;
   if(!list.length){el.innerHTML=filterBar+`<div class="empty"><div class="ei">💰</div><h3>Nenhuma cobrança</h3><p>Cadastre um contrato ou registre manualmente</p></div>`;return;}
   const byContract={};
   list.forEach(c=>{const key=c.contratoId||'avulso';if(!byContract[key])byContract[key]=[];byContract[key].push(c);});
