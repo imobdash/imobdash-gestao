@@ -689,6 +689,13 @@ tr:hover td{background:rgba(255,255,255,.018);}
         </div>
       </div>
       <div id="ecob-repview" class="g ff" style="font-size:12px;color:var(--dm);padding:8px;background:var(--sf2);border-radius:7px;border:1px solid var(--bd)"></div>
+      <div style="border-top:1px solid var(--bd);margin-top:4px;padding-top:8px">
+        <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:6px">🏦 REPASSE EXTRA AO PROPR. <span style="font-size:10px;font-weight:400;color:var(--dm)">(opcional)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Valor (R$)</div><input type="number" id="ecob-rext-val" min="0" step="0.01" placeholder="0,00" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Descrição</div><input type="text" id="ecob-rext-desc" placeholder="Ex: IPTU Prop. Parcela 2/10" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
+        </div>
+      </div>
     </div>
     <div class="fa"><button class="btn bg" onclick="cM('meditcob')">Cancelar</button><button class="btn bp" id="btnSaveEditCob" onclick="saveEditCob()">✓ Salvar</button></div>
   </div>
@@ -1193,7 +1200,9 @@ function rowToCobranca(row){
     descontoAplicado:Number(row.desconto_aplicado||0),
     descontoDesc:row.desconto_desc_cob||'',
     boletoPath:row.boleto_path||null,
-    boletoEmitidoEm:row.boleto_emitido_em||null
+    boletoEmitidoEm:row.boleto_emitido_em||null,
+    repasseExtraValor:Number(row.repasse_extra_valor||0),
+    repasseExtraDesc:row.repasse_extra_desc||''
   };
 }
 function rowToOS(row){
@@ -2027,8 +2036,9 @@ function cobItem(cb,inDetail=false){
   const m=(cb.mes||'').split('-');
   const rp=cb.repasse;
   const atrasadoForte=!cb.pago&&DA(cb.venc)<-5;
-  // Desconto: valor original e info de parcela
   const valorOriginal=cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor;
+  const repasseExtra=cb.repasseExtraValor||0;
+  const totalInquilino=cb.valor+repasseExtra;
   let parcInfo='';
   if(cb.descontoAplicado>0){
     const con=D.c.find(x=>x.id===cb.contratoId);
@@ -2050,11 +2060,13 @@ function cobItem(cb,inDetail=false){
       </div>
       <div style="font-size:12px;color:var(--dm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</div>
       ${cb.descontoAplicado>0?`<div style="font-size:11px;color:var(--ac2);margin-top:2px;font-weight:600">💸 ${cb.descontoDesc||'Desconto'}: -${R(cb.descontoAplicado)}${parcInfo}</div>`:''}
+      ${repasseExtra>0?`<div style="font-size:11px;color:#059669;margin-top:2px;font-weight:600">🏦 ${cb.repasseExtraDesc||'Repasse Extra'}: +${R(repasseExtra)} → Prop.</div>`:''}
       <div style="font-size:11px;color:var(--dmr);margin-top:1px">Vence: ${FD(cb.venc)}</div>
       ${rp?`<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
         ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop)}</span>`:''}
         ${rp.imob>0?`<span class="rep rep-im">Imob: ${R(rp.imob)}</span>`:''}
         ${cb.descontoAplicado>0?`<span class="rep" style="background:rgba(124,58,237,.12);color:#7c3aed;border:1px solid rgba(124,58,237,.25)">Tx.Extra: ${R(cb.descontoAplicado)}</span>`:''}
+        ${repasseExtra>0?`<span class="rep" style="background:rgba(5,150,105,.12);color:#059669;border:1px solid rgba(5,150,105,.25)">Rep.Extra: +${R(repasseExtra)}</span>`:''}
       </div>`:''}
       ${cb.comprovantePath?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--gn);cursor:pointer" onclick="viewCobFile('${cb.id}')">✅ Comprovante</span></div>`:''}
       ${cb.boletoPath||cb.boletoEmitidoEm?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--ac2);cursor:pointer" onclick="openBoleto('${cb.id}')">📄 Boleto ${cb.boletoEmitidoEm?'('+FD(cb.boletoEmitidoEm)+')':''}</span></div>`:''}
@@ -2221,6 +2233,8 @@ function openEditCob(id){
   } else {
     divbox.style.display='none';
   }
+  document.getElementById('ecob-rext-val').value=cb.repasseExtraValor>0?cb.repasseExtraValor:'';
+  document.getElementById('ecob-rext-desc').value=cb.repasseExtraDesc||'';
   ecobRepUpdate();
   oM('meditcob');
 }
@@ -2247,7 +2261,9 @@ function ecobRepUpdate(){
   const imob=parseFloat(document.getElementById('ecob-imob')?.value)||0;
   const prop=parseFloat(document.getElementById('ecob-prop')?.value)||0;
   const diff=Math.round((val-imob-prop)*100)/100;
-  rv.innerHTML=`🏢 Imob: <strong>${R(imob)}</strong> · 🏦 Prop: <strong>${R(prop)}</strong>${Math.abs(diff)>0.01?`<span style="color:var(--re)"> · ⚠️ dif. ${R(diff)}</span>`:'<span style="color:var(--gn)"> ✓</span>'}`;
+  const rext=parseFloat(document.getElementById('ecob-rext-val')?.value)||0;
+  const propTotal=prop+rext;
+  rv.innerHTML=`🏢 Imob: <strong>${R(imob)}</strong> · 🏦 Prop: <strong>${R(propTotal)}</strong>${rext>0?` <span style="color:#059669;font-size:11px">(+${R(rext)} rep.extra)</span>`:''}${Math.abs(diff)>0.01?`<span style="color:var(--re)"> · ⚠️ dif. ${R(diff)}</span>`:'<span style="color:var(--gn)"> ✓</span>'}\`;
 }
 async function saveEditCob(){
   const cb=D.cb.find(x=>x.id===_editCobId);
@@ -2262,17 +2278,22 @@ async function saveEditCob(){
   }
   const btn=document.getElementById('btnSaveEditCob');
   btn.disabled=true;btn.textContent='Salvando...';
+  const rextVal=parseFloat(document.getElementById('ecob-rext-val').value)||0;
+  const rextDesc=document.getElementById('ecob-rext-desc').value.trim();
+  if(rextVal>0)repProp+=rextVal;
   const{error}=await sb.from('cobrancas').update({
     descricao:document.getElementById('ecob-dsc').value,
     valor:val,
     venc:document.getElementById('ecob-vnc').value||cb.venc,
-    repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repTipo
+    repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repTipo,
+    repasse_extra_valor:rextVal||null,
+    repasse_extra_desc:rextDesc||null
   }).eq('id',_editCobId);
   btn.disabled=false;btn.textContent='✓ Salvar';
   if(error){alert('Erro ao salvar: '+error.message);return;}
   const i=D.cb.findIndex(x=>x.id===_editCobId);
   if(i>=0){
-    D.cb[i]={...D.cb[i],descricao:document.getElementById('ecob-dsc').value,valor:val,venc:document.getElementById('ecob-vnc').value||cb.venc,repasse:{imob:repImob,prop:repProp,tipo:repTipo}};
+    D.cb[i]={...D.cb[i],descricao:document.getElementById('ecob-dsc').value,valor:val,venc:document.getElementById('ecob-vnc').value||cb.venc,repasse:{imob:repImob,prop:repProp,tipo:repTipo},repasseExtraValor:rextVal,repasseExtraDesc:rextDesc};
   }
   cM('meditcob');renderCobrancas();renderRepasse();renderDash();
 }
