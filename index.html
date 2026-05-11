@@ -2263,7 +2263,7 @@ function ecobRepUpdate(){
   const diff=Math.round((val-imob-prop)*100)/100;
   const rext=parseFloat(document.getElementById('ecob-rext-val')?.value)||0;
   const propTotal=prop+rext;
-  rv.innerHTML=`🏢 Imob: <strong>${R(imob)}</strong> · 🏦 Prop: <strong>${R(propTotal)}</strong>${rext>0?` <span style="color:#059669;font-size:11px">(+${R(rext)} rep.extra)</span>`:''}${Math.abs(diff)>0.01?`<span style="color:var(--re)"> · ⚠️ dif. ${R(diff)}</span>`:'<span style="color:var(--gn)"> ✓</span>'}\`;
+  rv.innerHTML=`🏢 Imob: <strong>${R(imob)}</strong> · 🏦 Prop: <strong>${R(propTotal)}</strong>${rext>0?` <span style="color:#059669;font-size:11px">(+${R(rext)} rep.extra)</span>`:''}${Math.abs(diff)>0.01?`<span style="color:var(--re)"> · ⚠️ dif. ${R(diff)}</span>`:'<span style="color:var(--gn)"> ✓</span>'}`;
 }
 async function saveEditCob(){
   const cb=D.cb.find(x=>x.id===_editCobId);
