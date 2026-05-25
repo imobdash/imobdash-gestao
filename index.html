@@ -1805,10 +1805,10 @@ function detail(id){
         </div>
       </div>
       <div class="cb" style="padding:0 16px">
-        ${cobsPend.length?cobsPend.map(cb=>cobItem(cb,true)).join(''):`<div style="padding:16px;font-size:13px;color:var(--gn);text-align:center">✅ Todas as cobranças estão pagas</div>`}
+        ${cobsPend.length?groupCobsByMes(cobsPend).map(g=>cobGroup(g,true)).join(''):`<div style="padding:16px;font-size:13px;color:var(--gn);text-align:center">✅ Todas as cobranças estão pagas</div>`}
         <div id="det-cobs-pagas-${id}" style="display:none">
           ${cobsPago.length?`<div style="padding:8px 0 4px;font-size:11px;font-weight:700;color:var(--dm);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--bd);margin-top:4px">Parcelas Pagas</div>`:''}
-          ${cobsPago.map(cb=>cobItem(cb,true)).join('')}
+          ${groupCobsByMes(cobsPago).map(g=>cobGroup(g,true)).join('')}
         </div>
       </div>
     </div>
@@ -2001,20 +2001,37 @@ function renderRepasse(){
             <button class="btn bk bsm" onclick="openMarcarRepasse(${JSON.stringify(pendRep.map(x=>x.id))})">Marcar Repassado</button>
           </div>`:''}
           <div class="tbl-scroll"><table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Pgto</th><th>Repasse Prop.</th></tr></thead>
-          <tbody>${todaCobs.map(cb=>{const rp=cb.repasse;
-          const pgCl=cb.pago?'cg':'cy';const pgLbl=cb.pago?`Pago ${FD(cb.dataPago)||''}`:FD(cb.venc);
-          const repCl=!cb.pago?'cy':cb.repasseRealizado?'cg':'cr';
-          const repLbl=!cb.pago?'–':cb.repasseRealizado?`Repassado ${FD(cb.dataRepasse)||''}`:rp?.prop>0?'Pendente':'N/A';
-          return`<tr>
-            <td>${MF(cb.mes)}</td>
-            <td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td>
-            <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${cb.descricao||''}">${cb.descricao||''}</td>
-            <td style="font-weight:600">${R(cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor)}${cb.descontoAplicado>0?`<div style="font-size:10px;color:#7c3aed;font-weight:600">-${R(cb.descontoAplicado)}</div>`:''}</td>
-            <td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td>
-            <td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td>
-            <td><span class="chip ${pgCl}" style="font-size:10px">${pgLbl}</span></td>
-            <td>${cb.pago&&rp?.prop>0?`<span class="chip ${repCl}" style="font-size:10px;cursor:${!cb.repasseRealizado?'pointer':'default'}" ${!cb.repasseRealizado?`onclick="openMarcarRepasse('${cb.id}')"`:''}>${repLbl}</span>`:'<span style="font-size:11px;color:var(--dmr)">–</span>'}</td>
-          </tr>`;}).join('')}
+          <tbody>${(()=>{
+            const _cbMes={};
+            todaCobs.forEach(cb=>{const k=cb.mes||'0000-00';if(!_cbMes[k])_cbMes[k]=[];_cbMes[k].push(cb);});
+            return Object.entries(_cbMes).sort(([a],[b])=>a.localeCompare(b)).map(([mes,mcobs])=>{
+              const rows=mcobs.map(cb=>{const rp=cb.repasse;
+                const pgCl=cb.pago?'cg':'cy';const pgLbl=cb.pago?`Pago ${FD(cb.dataPago)||''}`:FD(cb.venc);
+                const repCl=!cb.pago?'cy':cb.repasseRealizado?'cg':'cr';
+                const repLbl=!cb.pago?'–':cb.repasseRealizado?`Repassado ${FD(cb.dataRepasse)||''}`:rp?.prop>0?'Pendente':'N/A';
+                return`<tr>
+                  <td>${MF(cb.mes)}</td>
+                  <td><span class="tt ${tpCl(cb.tipo)}">${cb.tipo}</span></td>
+                  <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${cb.descricao||''}">${cb.descricao||''}</td>
+                  <td style="font-weight:600">${R(cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor)}${cb.descontoAplicado>0?`<div style="font-size:10px;color:#7c3aed;font-weight:600">-${R(cb.descontoAplicado)}</div>`:''}</td>
+                  <td style="color:var(--gn);font-weight:600">${R(rp.prop+(cb.repasseExtraValor||0))}</td>
+                  <td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td>
+                  <td><span class="chip ${pgCl}" style="font-size:10px">${pgLbl}</span></td>
+                  <td>${cb.pago&&rp?.prop>0?`<span class="chip ${repCl}" style="font-size:10px;cursor:${!cb.repasseRealizado?'pointer':'default'}" ${!cb.repasseRealizado?`onclick="openMarcarRepasse('${cb.id}')"`:''}>${repLbl}</span>`:'<span style="font-size:11px;color:var(--dmr)">–</span>'}</td>
+                </tr>`;}).join('');
+              if(mcobs.length<=1)return rows;
+              const mProp=mcobs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
+              const mImob=mcobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+              const mTot=mcobs.reduce((a,b)=>a+(b.descontoAplicado>0?b.valor+b.descontoAplicado:b.valor),0);
+              return rows+`<tr style="background:rgba(34,197,94,.06);border-top:2px solid rgba(34,197,94,.25)">
+                <td colspan="3" style="font-size:11px;font-weight:700;color:var(--dm);text-align:right">▶ Total ${MF(mes)}:</td>
+                <td style="font-weight:700">${R(mTot)}</td>
+                <td style="color:var(--gn);font-weight:700">${R(mProp)}</td>
+                <td style="color:var(--ac2);font-weight:700">${R(mImob)}</td>
+                <td colspan="2"></td>
+              </tr>`;
+            }).join('');
+          })()}
           </tbody></table></div>`;
         })():'<div style="font-size:13px;color:var(--dm)">Nenhuma cobrança com repasse.</div>'}
       </div>`)}
@@ -2045,7 +2062,7 @@ function limparFiltrosCob(){
   renderCobrancas();
 }
 
-function cobItem(cb,inDetail=false){
+function cobItem(cb,inDetail=false,noBottomBorder=false){
   const s=stCob(cb);
   const f=getFase(cb);
   const m=(cb.mes||'').split('-');
@@ -2064,7 +2081,7 @@ function cobItem(cb,inDetail=false){
       if(parcNum>0)parcInfo=` · Parcela ${parcNum} de ${totalParc}`;
     }
   }
-  return`<div class="ci" id="ci-${cb.id}" style="${atrasadoForte?'border-left:3px solid var(--re);padding-left:7px':''}">
+  return`<div class="ci" id="ci-${cb.id}" style="${atrasadoForte?'border-left:3px solid var(--re);padding-left:7px':''}${noBottomBorder?';border-bottom:none':''}">
     <div class="cbg"><div class="m">${m[1]?MN[+m[1]-1]:'–'}</div><div class="y">${m[0]||''}</div></div>
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
@@ -2093,6 +2110,67 @@ function cobItem(cb,inDetail=false){
       <button class="btn bg bsm" onclick="openEditCob('${cb.id}')" title="Editar repasse">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
     </div>
+  </div>`;
+}
+
+// ── Agrupamento de cobranças por mês ──────────────────────
+function groupCobsByMes(cobList){
+  const byMes={};
+  cobList.forEach(c=>{const k=c.mes||'0000-00';if(!byMes[k])byMes[k]=[];byMes[k].push(c);});
+  return Object.entries(byMes).sort(([a],[b])=>a.localeCompare(b)).map(([,cbs])=>cbs);
+}
+
+// Sub-item compacto para cobranças extras no mesmo mês
+function cobSubItem(cb,inDetail=false){
+  const s=stCob(cb);
+  const prop=cb.repasse?.prop||0;
+  const imob=cb.repasse?.imob||0;
+  const isProp=prop>0&&imob===0;
+  const atrasado=!cb.pago&&DA(cb.venc)<-5;
+  const repasseExtra=cb.repasseExtraValor||0;
+  return`<div id="ci-${cb.id}" style="display:flex;align-items:flex-start;gap:10px;padding:7px 12px 7px 52px;background:var(--sf2);border-top:1px dashed rgba(48,54,61,.4)">
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:${atrasado?'var(--re)':isProp?'var(--gn)':'var(--te)'}">+${R(cb.valor)}</span>
+        <span class="tt ${tpCl(cb.tipo)}" style="font-size:10px">${cb.tipo}</span>
+        <span style="font-size:10px;font-weight:600;color:${isProp?'var(--gn)':'var(--ac2)'}">→ ${isProp?'Prop.':'Imob.'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--dm);margin-top:1px">${cb.descricao||''} · Vence: ${FD(cb.venc)}</div>
+      ${repasseExtra>0?`<div style="font-size:11px;color:#059669;margin-top:1px;font-weight:600">🏦 ${cb.repasseExtraDesc||'Repasse Extra'}: +${R(repasseExtra)} → Prop.</div>`:''}
+      ${prop>0||imob>0?`<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
+        ${prop>0?`<span class="rep rep-pr">Prop: +${R(prop+(cb.repasseExtraValor||0))}</span>`:''}
+        ${imob>0?`<span class="rep rep-im">Imob: +${R(imob)}</span>`:''}
+      </div>`:''}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+      <span class="chip ${s.cl}">${s.l}</span>
+      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<span style="font-size:10px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span>`}
+      <button class="btn bg bsm" onclick="openEditCob('${cb.id}')">✎</button>
+      <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
+    </div>
+  </div>`;
+}
+
+// Card unificado para cobranças do mesmo mês
+function cobGroup(monthCobs,inDetail=false){
+  if(monthCobs.length<=1)return cobItem(monthCobs[0],inDetail);
+  const sorted=[...monthCobs].sort((a,b)=>{
+    const aA=(a.tipo||'Aluguel')==='Aluguel';const bA=(b.tipo||'Aluguel')==='Aluguel';
+    if(aA&&!bA)return -1;if(!aA&&bA)return 1;
+    return(b.repasse?.prop||0)-(a.repasse?.prop||0);
+  });
+  const primary=sorted[0];const extras=sorted.slice(1);
+  const totalProp=monthCobs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
+  const totalImob=monthCobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
+  const extrasProp=extras.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  return`<div style="border-bottom:1px solid var(--bd)">
+    ${cobItem(primary,inDetail,true)}
+    ${extras.map(cb=>cobSubItem(cb,inDetail)).join('')}
+    ${extrasProp>0?`<div style="padding:5px 12px 7px 52px;display:flex;gap:5px;flex-wrap:wrap;align-items:center;background:rgba(34,197,94,.05);border-top:1px dashed rgba(48,54,61,.4)">
+      <span style="font-size:10px;font-weight:700;color:var(--dm);text-transform:uppercase;letter-spacing:.5px">Total do mês:</span>
+      ${totalProp>0?`<span class="rep rep-pr" style="font-weight:700">Prop: ${R(totalProp)}</span>`:''}
+      ${totalImob>0?`<span class="rep rep-im">Imob: ${R(totalImob)}</span>`:''}
+    </div>`:''}
   </div>`;
 }
 
@@ -2205,7 +2283,7 @@ function renderCobrancas(){
           <div style="font-size:12px;color:var(--dm)">${R(con?.valor||0)}/mês</div>
         </div>
       </div>
-      <div style="padding:0 12px;display:${collapsed?'none':'block'}">${cobs.map(cb=>cobItem(cb)).join('')}</div>
+      <div style="padding:0 12px;display:${collapsed?'none':'block'}">${groupCobsByMes(cobs).map(g=>cobGroup(g)).join('')}</div>
     </div>`;
   }).join('');
   badges();
@@ -2848,40 +2926,36 @@ async function saveContract(){
       }
     }
   }
-  // ── APLICAR REPASSE EXTRA ÀS COBRANÇAS PENDENTES (edição) ──
-  if(wasEdit && c.repasseExtraValor>0 && c.repasseExtraParc>0){
+  // ── APLICAR REPASSE EXTRA ÀS COBRANÇAS PENDENTES (edição — AUTOMÁTICO) ──
+  if(wasEdit){
     const pendAlugRep=D.cb
       .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel')
       .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
     if(pendAlugRep.length>0){
-      const qtdRep=Math.min(pendAlugRep.length,c.repasseExtraParc);
-      const ok=confirm(`Aplicar repasse extra em ${qtdRep} cobranças de aluguel pendentes:
-
-🏦 +${R(c.repasseExtraValor)} (${c.repasseExtraDesc||'Repasse Extra'}) → 100% Proprietário
-
-O inquilino pagará R$ ${R((pendAlugRep[0].valor+(pendAlugRep[0].descontoAplicado||0))+c.repasseExtraValor - (pendAlugRep[0].descontoAplicado||0))}/mês e o proprietário receberá este valor adicional.
-
-Clicar OK atualizará todas as cobranças pendentes.`);
-      if(ok){
-        let usadasRep=0;
-        for(const cb of pendAlugRep){
-          if(usadasRep>=c.repasseExtraParc)break;
-          const repPropNovo=cb.repasse.prop+c.repasseExtraValor;
-          const{error:eu}=await sb.from('cobrancas').update({
-            repasse_prop:repPropNovo,
-            repasse_extra_valor:c.repasseExtraValor,
-            repasse_extra_desc:c.repasseExtraDesc||'Repasse Extra'
-          }).eq('id',cb.id);
-          if(!eu){
-            const ci=D.cb.findIndex(x=>x.id===cb.id);
-            if(ci>=0){
-              D.cb[ci].repasse={...D.cb[ci].repasse,prop:repPropNovo};
-              D.cb[ci].repasseExtraValor=c.repasseExtraValor;
-              D.cb[ci].repasseExtraDesc=c.repasseExtraDesc||'Repasse Extra';
-            }
-            usadasRep++;
+      let usadasRep=0;
+      const maxParc=c.repasseExtraValor>0?Math.min(pendAlugRep.length,c.repasseExtraParc):pendAlugRep.length;
+      for(const cb of pendAlugRep){
+        const oldExtra=cb.repasseExtraValor||0;
+        const novoExtra=usadasRep<maxParc&&c.repasseExtraValor>0?c.repasseExtraValor:0;
+        // Só atualiza se o valor mudou
+        if(oldExtra===novoExtra&&(novoExtra===0||(cb.repasseExtraDesc||'')===(c.repasseExtraDesc||'Repasse Extra')))continue;
+        const repPropNovo=Math.max(0,(cb.repasse.prop-oldExtra)+novoExtra);
+        const{error:eu}=await sb.from('cobrancas').update({
+          repasse_prop:repPropNovo,
+          repasse_extra_valor:novoExtra||null,
+          repasse_extra_desc:novoExtra>0?(c.repasseExtraDesc||'Repasse Extra'):null
+        }).eq('id',cb.id);
+        if(!eu){
+          const ci=D.cb.findIndex(x=>x.id===cb.id);
+          if(ci>=0){
+            D.cb[ci].repasse={...D.cb[ci].repasse,prop:repPropNovo};
+            D.cb[ci].repasseExtraValor=novoExtra;
+            D.cb[ci].repasseExtraDesc=novoExtra>0?(c.repasseExtraDesc||'Repasse Extra'):'';
           }
         }
+        if(novoExtra>0)usadasRep++;
+      }
+      if(c.repasseExtraValor>0&&usadasRep>0){
         const novoRepParc=Math.max(0,c.repasseExtraParc-usadasRep);
         await sb.from('contratos').update({repasse_extra_parcelas:novoRepParc}).eq('id',c.id);
         const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].repasseExtraParc=novoRepParc;
