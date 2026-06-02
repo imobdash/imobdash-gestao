@@ -667,12 +667,24 @@ tr:hover td{background:rgba(255,255,255,.018);}
 
 <!-- MODAL: MARCAR REPASSADO -->
 <div class="mo" id="mrep">
-<div class="md" style="max-width:400px">
+<div class="md" style="max-width:480px">
   <div class="mh"><div><h2>Marcar como Repassado</h2><p id="mrep-info" style="font-size:13px;color:var(--dm)"></p></div><button class="mx" onclick="cM('mrep')">✕</button></div>
   <div class="mb">
     <div class="fg">
       <div class="g ff"><label>Data do Repasse</label><input type="date" id="mrep-dt"></div>
-      <div id="mrep-vals" style="font-size:13px;padding:10px;background:var(--sf2);border-radius:8px;border:1px solid var(--bd)"></div>
+      <div id="mrep-vals" style="font-size:13px;padding:10px;background:var(--sf2);border-radius:8px;border:1px solid var(--bd);margin-bottom:4px"></div>
+      <!-- Despesas abatidas -->
+      <div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden">
+        <div style="padding:8px 12px;background:var(--sf2);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:700;color:var(--te)">💸 Despesas pagas pela imobiliária (abatidas do repasse)</span>
+          <button class="btn bsm" style="background:var(--ac);color:#fff;border:none;padding:3px 10px" onclick="addDespesaRepasse()">＋ Adicionar</button>
+        </div>
+        <div id="mrep-despesas" style="padding:8px 12px;min-height:32px;font-size:12px;color:var(--dm)">
+          <span id="mrep-desp-empty" style="color:var(--dm);font-size:12px">Nenhuma despesa adicionada.</span>
+        </div>
+      </div>
+      <!-- Totais líquidos -->
+      <div id="mrep-liquido" style="display:none;margin-top:6px;padding:10px 12px;background:var(--gd);border:1px solid rgba(34,197,94,.25);border-radius:8px;font-size:13px"></div>
     </div>
     <div class="fa"><button class="btn bg" onclick="cM('mrep')">Cancelar</button><button class="btn bk" id="btnConfRep" onclick="confirmRepasse()">✓ Confirmar Repasse</button></div>
   </div>
@@ -1183,7 +1195,11 @@ function rowToContrato(row){
     descontoOrigem:row.desconto_origem||'prop',
     dadosAnalise:row.dados_analise_credito||null,
     dadosVistoria:row.dados_vistoria||null,
-    dadosContAdm:row.dados_contrato_adm||null
+    dadosContAdm:row.dados_contrato_adm||null,
+    // REPASSE EXTRA AO PROPRIETÁRIO
+    repasseExtraValor:Number(row.repasse_extra_valor||0),
+    repasseExtraDesc:row.repasse_extra_desc||'',
+    repasseExtraParc:Number(row.repasse_extra_parcelas||0)
   };
 }
 function rowToCobranca(row){
@@ -1215,7 +1231,8 @@ function rowToCobranca(row){
     boletoPath:row.boleto_path||null,
     boletoEmitidoEm:row.boleto_emitido_em||null,
     repasseExtraValor:Number(row.repasse_extra_valor||0),
-    repasseExtraDesc:row.repasse_extra_desc||''
+    repasseExtraDesc:row.repasse_extra_desc||'',
+    despesasRepasse:row.despesas_repasse||[]
   };
 }
 function rowToOS(row){
@@ -1401,6 +1418,7 @@ function gerarSugestoes(){
 // MARCAR REPASSADO
 // ══════════════════════════════════════════
 let _repCobIds=[];
+let _mrepDespesas=[];
 function openMarcarRepasse(ids){
   _repCobIds=Array.isArray(ids)?ids:[ids];
   const cbs=D.cb.filter(x=>_repCobIds.includes(x.id));
@@ -1408,8 +1426,54 @@ function openMarcarRepasse(ids){
   const desc=cbs.length===1?cbs[0].descricao:`${cbs.length} cobranças selecionadas`;
   document.getElementById('mrep-info').textContent=desc;
   document.getElementById('mrep-dt').value=TD();
-  document.getElementById('mrep-vals').innerHTML=`🏦 Valor a repassar ao Proprietário: <strong style="color:var(--gn)">${R(totalProp)}</strong>`;
+  document.getElementById('mrep-vals').innerHTML=`🏦 Bruto ao Proprietário: <strong style="color:var(--gn)">${R(totalProp)}</strong>`;
+  // Carregar despesas já salvas (se reabrindo)
+  const existingDesp=cbs.length===1?(cbs[0].despesasRepasse||[]):[];
+  _mrepDespesas=[...existingDesp];
+  renderDespesasModal();
   oM('mrep');
+}
+function addDespesaRepasse(){
+  const tipos=['IPTU','Condomínio','Taxa de Lixo','Outro'];
+  const tipo=prompt('Tipo de despesa:\n1 IPTU\n2 Condomínio\n3 Taxa de Lixo\n4 Outro\n\nDigite o número ou o nome:');
+  if(!tipo)return;
+  const desc=tipos[parseInt(tipo)-1]||tipo;
+  const vlStr=prompt(`Valor da despesa (${desc}):`);
+  if(!vlStr)return;
+  const vl=parseFloat(vlStr.replace(',','.'));
+  if(!vl||vl<=0){alert('Valor inválido.');return;}
+  const obs=prompt('Observação (opcional, ex: "6 parcelas"):','')||'';
+  _mrepDespesas.push({desc:obs?`${desc} — ${obs}`:desc,valor:vl});
+  renderDespesasModal();
+}
+function removeDespesa(i){_mrepDespesas.splice(i,1);renderDespesasModal();}
+function renderDespesasModal(){
+  const cbs=D.cb.filter(x=>_repCobIds.includes(x.id));
+  const bruto=cbs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const totalDesp=_mrepDespesas.reduce((a,b)=>a+b.valor,0);
+  const liquido=bruto-totalDesp;
+  const el=document.getElementById('mrep-despesas');
+  const empty=document.getElementById('mrep-desp-empty');
+  const liqEl=document.getElementById('mrep-liquido');
+  if(!_mrepDespesas.length){
+    el.innerHTML='';el.appendChild(Object.assign(document.createElement('span'),{id:'mrep-desp-empty',textContent:'Nenhuma despesa adicionada.',style:'color:var(--dm);font-size:12px'}));
+    liqEl.style.display='none';
+  } else {
+    el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+      ${_mrepDespesas.map((d,i)=>`<tr style="border-bottom:1px solid var(--bd)">
+        <td style="padding:5px 4px;color:var(--te)">${d.desc}</td>
+        <td style="padding:5px 4px;text-align:right;color:var(--rd);font-weight:700">-${R(d.valor)}</td>
+        <td style="padding:5px 4px;text-align:right"><button onclick="removeDespesa(${i})" style="background:none;border:none;cursor:pointer;color:var(--dm);font-size:13px">✕</button></td>
+      </tr>`).join('')}
+      <tr style="background:var(--sf2)"><td style="padding:5px 4px;font-weight:700">Total despesas</td><td style="padding:5px 4px;text-align:right;font-weight:700;color:var(--rd)">-${R(totalDesp)}</td><td></td></tr>
+    </table>`;
+    liqEl.style.display='block';
+    liqEl.innerHTML=`<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">
+      <span>Bruto: <strong>${R(bruto)}</strong></span>
+      <span style="color:var(--rd)">Despesas: <strong>-${R(totalDesp)}</strong></span>
+      <span style="color:var(--gn);font-size:14px;font-weight:800">✅ Repasse líquido: <strong>${R(liquido)}</strong></span>
+    </div>`;
+  }
 }
 async function confirmRepasse(){
   const dt=document.getElementById('mrep-dt').value;
@@ -1417,10 +1481,11 @@ async function confirmRepasse(){
   const btn=document.getElementById('btnConfRep');
   btn.disabled=true;btn.textContent='Salvando...';
   for(const id of _repCobIds){
-    const{error}=await sb.from('cobrancas').update({repasse_realizado:true,data_repasse:dt}).eq('id',id);
+    const payload={repasse_realizado:true,data_repasse:dt,despesas_repasse:_mrepDespesas.length?_mrepDespesas:null};
+    const{error}=await sb.from('cobrancas').update(payload).eq('id',id);
     if(!error){
       const i=D.cb.findIndex(x=>x.id===id);
-      if(i>=0){D.cb[i]={...D.cb[i],repasseRealizado:true,dataRepasse:dt};}
+      if(i>=0){D.cb[i]={...D.cb[i],repasseRealizado:true,dataRepasse:dt,despesasRepasse:_mrepDespesas};}
     }
   }
   btn.disabled=false;btn.textContent='✓ Confirmar Repasse';
@@ -4118,34 +4183,84 @@ function gerarPDF(titulo,htmlContent){
     <meta charset="UTF-8">
     <title>${titulo}</title>
     <style>
+      @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
       * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1c2128; padding: 20px; }
-      .header { display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:2px solid #2563eb; margin-bottom:16px; }
-      .logo { font-size:20px; font-weight:800; color:#1c2128; } .logo span{color:#2563eb;}
-      .rdate { font-size:11px; color:#57606a; }
-      h2 { font-size:16px; font-weight:700; margin-bottom:12px; color:#1c2128; }
-      h3 { font-size:13px; font-weight:700; margin:12px 0 6px; color:#1c2128; }
-      table { width:100%; border-collapse:collapse; margin-bottom:12px; }
-      th { font-size:10px; font-weight:700; text-align:left; padding:6px 8px; background:#f0f4f8; border-bottom:2px solid #d0d7de; color:#57606a; text-transform:uppercase; letter-spacing:.3px; }
-      td { padding:6px 8px; border-bottom:1px solid #d0d7de; font-size:11px; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11.5px; color: #1c2128; background:#fff; }
+      /* ── HEADER ── */
+      .pdf-header { display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:10px; border-bottom:3px solid #1e3a8a; margin-bottom:18px; }
+      .pdf-logo { font-size:22px; font-weight:800; color:#1e3a8a; letter-spacing:-0.5px; }
+      .pdf-logo span { color:#2563eb; }
+      .pdf-meta { text-align:right; font-size:10px; color:#64748b; line-height:1.6; }
+      .pdf-meta strong { display:block; font-size:12px; color:#1e3a8a; font-weight:700; }
+      /* ── SECOES ── */
+      .section { margin-bottom:18px; padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; page-break-inside:avoid; }
+      .section-title { font-size:12px; font-weight:700; color:#1e3a8a; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:6px; }
+      h2 { font-size:15px; font-weight:700; margin-bottom:4px; color:#1e3a8a; }
+      h3 { font-size:12px; font-weight:700; margin:10px 0 6px; color:#334155; }
+      p { font-size:11px; color:#475569; margin-bottom:8px; }
+      /* ── TABELAS ── */
+      table { width:100%; border-collapse:collapse; margin-bottom:10px; font-size:10.5px; }
+      thead tr { background:#1e3a8a; color:#fff; }
+      th { font-size:9.5px; font-weight:700; text-align:left; padding:6px 8px; letter-spacing:.3px; text-transform:uppercase; }
+      td { padding:5px 8px; border-bottom:1px solid #e2e8f0; color:#374151; }
+      tbody tr:nth-child(even) { background:#f8fafc; }
       tr:last-child td { border-bottom:none; }
-      .chip { display:inline-block; padding:1px 7px; border-radius:20px; font-size:10px; font-weight:700; }
-      .cg { background:#dcfce7; color:#16a34a; } .cr { background:#fee2e2; color:#dc2626; } .cy { background:#fef9c3; color:#d97706; }
-      .total-row { background:#f0f4f8; font-weight:700; }
-      .section { margin-bottom:20px; padding:14px; border:1px solid #d0d7de; border-radius:8px; }
-      .footer { margin-top:20px; padding-top:10px; border-top:1px solid #d0d7de; font-size:10px; color:#57606a; text-align:center; }
-      @media print { body { padding:10px; } }
+      .total-row { background:#dbeafe !important; font-weight:700; color:#1e3a8a !important; }
+      .total-row td { color:#1e3a8a; border-top:2px solid #93c5fd; }
+      /* ── CHIPS / BADGES ── */
+      .chip { display:inline-block; padding:2px 8px; border-radius:20px; font-size:9.5px; font-weight:700; }
+      .cg { background:#dcfce7; color:#15803d; }
+      .cr { background:#fee2e2; color:#dc2626; }
+      .cy { background:#fef9c3; color:#b45309; }
+      /* ── SUMÁRIO CARDS ── */
+      .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+      .summary-card { background:#f0f4f8; border-radius:8px; padding:10px 12px; border-left:3px solid #2563eb; }
+      .summary-card.green { border-left-color:#16a34a; }
+      .summary-card.red { border-left-color:#dc2626; }
+      .summary-card.dark { background:#1e3a8a; color:#fff; border-left-color:#3b82f6; }
+      .summary-card .label { font-size:9px; text-transform:uppercase; letter-spacing:.5px; color:#64748b; font-weight:600; margin-bottom:3px; }
+      .summary-card.dark .label { color:#93c5fd; }
+      .summary-card .value { font-size:14px; font-weight:800; color:#1e3a8a; }
+      .summary-card.green .value { color:#15803d; }
+      .summary-card.red .value { color:#dc2626; }
+      .summary-card.dark .value { color:#fff; }
+      /* ── RODAPÉ ── */
+      .pdf-footer { margin-top:24px; padding-top:12px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; }
+      .pdf-footer-brand { font-size:10px; color:#94a3b8; }
+      .pdf-footer-brand strong { color:#1e3a8a; }
+      .pdf-stamp { font-size:9.5px; color:#94a3b8; }
+      /* ── PRINT ── */
+      @media print {
+        body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        .no-print { display:none !important; }
+        .section { page-break-inside:avoid; }
+      }
+      /* ── BARRA DE AÇÃO (só tela) ── */
+      .print-bar { position:fixed; top:0; left:0; right:0; background:#1e3a8a; color:#fff; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,.25); }
+      .print-bar button { background:#fff; color:#1e3a8a; border:none; border-radius:6px; padding:6px 18px; font-size:12px; font-weight:700; cursor:pointer; }
+      .print-bar button:hover { background:#dbeafe; }
+      @media print { .print-bar { display:none; } body { padding-top:0; } }
+      body.has-bar { padding-top:48px; }
     </style>
-  </head><body>
-    <div class="header">
-      <div class="logo">Imob<span>.</span>Gestão</div>
-      <div class="rdate">${titulo} · Gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+  </head><body class="has-bar">
+    <div class="print-bar no-print">
+      <span>📄 ${titulo}</span>
+      <button onclick="window.print()">🖨️ Salvar PDF / Imprimir</button>
+    </div>
+    <div class="pdf-header">
+      <div class="pdf-logo">Imob<span>.</span>Gestão</div>
+      <div class="pdf-meta">
+        <strong>${titulo}</strong>
+        Gerado em ${new Date().toLocaleString('pt-BR',{dateStyle:'long',timeStyle:'short'})}
+      </div>
     </div>
     ${htmlContent}
-    <div class="footer">ImobGestão · Gestão Inteligente de Imóveis · Gerado em ${new Date().toLocaleString('pt-BR')}</div>
+    <div class="pdf-footer">
+      <div class="pdf-footer-brand"><strong>ImobGestão</strong> · Gestão Inteligente de Imóveis</div>
+      <div class="pdf-stamp">Documento gerado em ${new Date().toLocaleString('pt-BR')}</div>
+    </div>
   </body></html>`);
   w.document.close();
-  setTimeout(()=>{w.print();},400);
 }
 function enviarWhatsApp(texto){
   const url='https://wa.me/?text='+encodeURIComponent(texto);
@@ -4303,42 +4418,69 @@ function gerarRelRepasse(){
     if(propFiltro&&propFiltro!==prop)return;
     const key=c?.id||cb.contratoId;
     if(!byProp[prop])byProp[prop]={label:propRaw,contratos:{}};
-    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0,totDesc:0};
+    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0,totDesc:0,totDesp:0,despesas:[]};
     const rec=+(cb.valorPago||cb.valor||0);
     const imob=+(cb.repasse?.imob||0);
     const prop_v=+(cb.repasse?.prop||0);
     const pend=prop_v&&!cb.repasseRealizado?prop_v:0;
     const desc=+(cb.descontoAplicado||0);
-    byProp[prop].contratos[key].rows.push({mes:cb.mes,tipo:cb.tipo||'Aluguel',rec,imob,prop_v,pend,desc});
+    const despesas=cb.despesasRepasse||[];
+    const totDesp=despesas.reduce((a,b)=>a+b.valor,0);
+    byProp[prop].contratos[key].rows.push({mes:cb.mes,tipo:cb.tipo||'Aluguel',rec,imob,prop_v,pend,desc,despesas,totDesp});
     byProp[prop].contratos[key].totRec+=rec;
     byProp[prop].contratos[key].totImob+=imob;
     byProp[prop].contratos[key].totProp+=prop_v;
     byProp[prop].contratos[key].totPend+=pend;
     byProp[prop].contratos[key].totDesc=(byProp[prop].contratos[key].totDesc||0)+desc;
+    byProp[prop].contratos[key].totDesp+=totDesp;
+    byProp[prop].contratos[key].despesas.push(...despesas);
   });
   const pl=de===ate?relMesLabel(de):`${relMesLabel(de)} a ${relMesLabel(ate)}`;
   let html=`<h2 style="margin-bottom:4px">Repasse ao Proprietário</h2><p style="color:#666;font-size:13px;margin-bottom:20px">Período: ${pl}${propFiltro?' · '+propFiltro:''}</p>`;
   if(!Object.keys(byProp).length){html+=`<p>Nenhuma cobrança paga no período.</p>`;gerarPDF('Repasse ao Proprietário',html);return;}
-  let gRec=0,gImob=0,gProp=0,gPend=0,gDesc=0;
+  let gRec=0,gImob=0,gProp=0,gPend=0,gDesc=0,gDesp=0;
   Object.entries(byProp).forEach(([prop,data])=>{
     const propLabel=data.label||prop;
-    let pRec=0,pImob=0,pProp=0,pPend=0,pDesc=0;
-    html+=`<div class="section"><h3 style="font-size:15px;margin-bottom:14px;color:#1e40af">👤 ${propLabel}</h3>`;
+    let pRec=0,pImob=0,pProp=0,pPend=0,pDesc=0,pDesp=0;
+    html+=`<div class="section"><div class="section-title">👤 ${propLabel}</div>`;
     Object.values(data.contratos).forEach(ct=>{
-      html+=`<p style="font-size:12px;margin-bottom:6px"><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
-      html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Desconto</th><th>Taxa Imob.</th><th>Ao Prop.</th><th>Pendente</th></tr></thead><tbody>`;
+      html+=`<p><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
+      html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Desconto</th><th>Taxa Imob.</th><th>Bruto Prop.</th><th>Pendente</th></tr></thead><tbody>`;
       ct.rows.sort((a,b)=>a.mes.localeCompare(b.mes)).forEach(r=>{
         const pc=r.pend>0?`<span style="color:#dc2626;font-weight:600">${R2(r.pend)}</span>`:`<span style="color:#16a34a">✓</span>`;
-        const dc=r.desc>0?`<span style="color:#7c3aed;font-weight:600">-${R2(r.desc)}</span>`:`<span style="color:#9ca3af">–</span>`;
+        const dc=r.desc>0?`<span style="color:#7c3aed;font-weight:600">-${R2(r.desc)}</span>`:`<span style="color:#94a3b8">–</span>`;
         html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.rec)}</td><td>${dc}</td><td>${R2(r.imob)}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
       });
-      html+=`<tr style="background:#f0f4f8;font-weight:700"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:600'>-${R2(ct.totDesc)}</span>`:`<span style='color:#9ca3af'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table><div style="height:10px"></div>`;
-      pRec+=ct.totRec;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;pDesc+=ct.totDesc||0;
+      html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
+      // Despesas abatidas do repasse
+      if(ct.totDesp>0){
+        html+=`<div style="margin:6px 0 10px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px">
+          <div style="font-size:10px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">💸 Despesas pagas pela imobiliária (abatidas do repasse)</div>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            ${ct.despesas.map(d=>`<tr><td style="padding:3px 0;color:#7c3aed">${d.desc}</td><td style="text-align:right;color:#dc2626;font-weight:700">-${R2(d.valor)}</td></tr>`).join('')}
+            <tr style="border-top:1px solid #fed7aa"><td style="padding:3px 0;font-weight:700;color:#9a3412">Total despesas</td><td style="text-align:right;font-weight:700;color:#dc2626">-${R2(ct.totDesp)}</td></tr>
+            <tr><td style="padding:3px 0;font-weight:700;color:#15803d">✅ Repasse líquido</td><td style="text-align:right;font-weight:800;color:#15803d;font-size:12px">${R2(ct.totProp-ct.totDesp)}</td></tr>
+          </table>
+        </div>`;
+      }
+      pRec+=ct.totRec;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;pDesc+=ct.totDesc||0;pDesp+=ct.totDesp||0;
     });
-    html+=`<div style="background:#dbeafe;padding:10px 14px;border-radius:6px;margin-top:6px;font-size:13px;display:flex;gap:20px;flex-wrap:wrap"><span><strong>${propLabel}</strong></span><span>Recebido: <strong>${R2(pRec)}</strong></span>${pDesc>0?`<span style="color:#7c3aed">Desc.: <strong>-${R2(pDesc)}</strong></span>`:''}<span>Taxa Imob.: <strong>${R2(pImob)}</strong></span><span>Repassado: <strong>${R2(pProp)}</strong></span>${pPend>0?`<span style="color:#dc2626">⚠️ Pendente: <strong>${R2(pPend)}</strong></span>`:`<span style="color:#16a34a">✅ Sem pendências</span>`}</div></div>`;
-    gRec+=pRec;gImob+=pImob;gProp+=pProp;gPend+=pPend;gDesc+=pDesc;
+    const pLiquido=pProp-pDesp;
+    html+=`<div class="summary-grid" style="margin-top:10px;grid-template-columns:repeat(${pDesp>0?4:3},1fr)">
+      <div class="summary-card"><div class="label">Recebido</div><div class="value">${R2(pRec)}</div></div>
+      <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob)}</div></div>
+      ${pDesp>0?`<div class="summary-card red"><div class="label">Despesas Abatidas</div><div class="value">-${R2(pDesp)}</div></div>`:''}
+      <div class="summary-card ${pPend>0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pDesp>0?'✅ Repasse Líquido':'✅ Repassado'}</div><div class="value">${pPend>0?R2(pPend):pDesp>0?R2(pLiquido):R2(pProp)}</div></div>
+    </div></div>`;
+    gRec+=pRec;gImob+=pImob;gProp+=pProp;gPend+=pPend;gDesc+=pDesc;gDesp+=pDesp;
   });
-  html+=`<div style="background:#1e3a8a;color:#fff;padding:14px 18px;border-radius:8px;margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px"><span><strong>TOTAL GERAL</strong></span><span>Recebido: <strong>${R2(gRec)}</strong></span>${gDesc>0?`<span style="color:#c4b5fd">Desc.: <strong>-${R2(gDesc)}</strong></span>`:''}<span>Taxa Imob.: <strong>${R2(gImob)}</strong></span><span>Repassado: <strong>${R2(gProp)}</strong></span>${gPend>0?`<span>⚠️ Pendente: <strong>${R2(gPend)}</strong></span>`:`<span>✅ Sem pendências</span>`}</div>`;
+  const gLiquido=gProp-gDesp;
+  html+=`<div class="summary-grid" style="margin-top:4px;grid-template-columns:repeat(${gDesp>0?4:3},1fr)">
+    <div class="summary-card dark"><div class="label">Total Recebido</div><div class="value">${R2(gRec)}</div></div>
+    <div class="summary-card dark"><div class="label">Total Taxa Imob.</div><div class="value">${R2(gImob)}</div></div>
+    ${gDesp>0?`<div class="summary-card dark" style="border-left-color:#f87171"><div class="label">Total Despesas</div><div class="value">-${R2(gDesp)}</div></div>`:''}
+    <div class="summary-card dark" style="border-left-color:#4ade80"><div class="label">${gPend>0?'⚠️ Total Pendente':gDesp>0?'✅ Repasse Líquido':'✅ Total Repassado'}</div><div class="value">${gPend>0?R2(gPend):gDesp>0?R2(gLiquido):R2(gProp)}</div></div>
+  </div>`;
   gerarPDF('Repasse ao Proprietário',html);
 }
 function shareRelRepasse(){
