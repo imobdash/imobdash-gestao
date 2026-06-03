@@ -388,12 +388,12 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <div class="view" id="view-cobrancas">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:8px">
         <div class="tabs">
-          <div class="tab on" onclick="fCob('todas',this)">Todas</div>
-          <div class="tab" onclick="fCob('pendente',this)">Pendentes</div>
-          <div class="tab" onclick="fCob('pago',this)">Pagas</div>
-          <div class="tab" onclick="fCob('atrasado',this)">Atrasadas</div>
-          <div class="tab" onclick="fCob('lembrete',this)">Ação Necessária</div>
-          <div class="tab" onclick="fCob('encargos',this)">📋 Encargos</div>
+          <div class="tab on" onclick="fCob('ativas',this)">A Receber</div>
+                    <div class="tab" onclick="fCob('atrasado',this)">Atrasadas</div>
+                              <div class="tab" onclick="fCob('lembrete',this)">Ação Necessária</div>
+                                        <div class="tab" onclick="fCob('pago',this)">Pagas</div>
+                                                  <div class="tab" onclick="fCob('todas',this)">Todas</div>
+                                                            <div class="tab" onclick="fCob('encargos',this)">📋 Encargos</div>
         </div>
         <button class="btn bg" onclick="openNCob()">＋ Nova Cobrança</button>
       </div>
@@ -1011,7 +1011,7 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY,{
 let D={c:[],cb:[],o:[],d:[],p:[]}; // d=despesas_imob p=pretendentes
 let currentUser=null;
 let _loadingApp=false;
-let cobFiltro='todas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
+let cobFiltro='ativas',cobPagoId=null,pdfFile=null,pdfB64=null,docsExtras=[];
 let _repCollapsed=new Set();
 let _editContratoId=null;
 let _renovandoDeId=null; // ID do contrato original na renovação
@@ -2301,7 +2301,8 @@ function renderCobrancas(){
   // Colapsar tudo na primeira abertura
   if(!_cobInitialized){D.c.forEach(c=>_cobCollapsed.add(c.id));_cobInitialized=true;}
   let list=[...D.cb];
-  if(cobFiltro==='pendente')list=list.filter(c=>!c.pago&&DA(c.venc)>=0);
+    if(cobFiltro==='ativas')list=list.filter(c=>!c.pago);
+    else if(cobFiltro==='pendente')list=list.filter(c=>!c.pago&&DA(c.venc)>=0);
   else if(cobFiltro==='pago')list=list.filter(c=>c.pago);
   else if(cobFiltro==='atrasado')list=list.filter(c=>!c.pago&&DA(c.venc)<0);
   else if(cobFiltro==='lembrete')list=list.filter(c=>!c.pago&&DA(c.venc)<=3);
