@@ -3020,10 +3020,10 @@ async function saveContract(){
         }
         if(novoExtra>0)usadasRep++;
       }
-      if(c.repasseExtraValor>0&&usadasRep>0){
-        const novoRepParc=Math.max(0,c.repasseExtraParc-usadasRep);
-        await sb.from('contratos').update({repasse_extra_parcelas:novoRepParc}).eq('id',c.id);
-        const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].repasseExtraParc=novoRepParc;
+      if(c.repasseExtraValor>0){
+                const totalComExtra=D.cb.filter(x=>x.contratoId===c.id&&x.tipo==='Aluguel'&&!x.pago&&x.repasseExtraValor>0).length;
+                        await sb.from('contratos').update({repasse_extra_parcelas:totalComExtra}).eq('id',c.id);
+                                const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].repasseExtraParc=totalComExtra;
       }
     }
   }
