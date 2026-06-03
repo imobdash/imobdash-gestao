@@ -2170,7 +2170,7 @@ function cobItem(cb,inDetail=false,noBottomBorder=false){
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
-      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span><button class="btn bd2 bsm" style="font-size:10px;padding:2px 7px" onclick="estornarPagamento('${cb.id}')">↩ Estornar</button></div>`}
+      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px">✓ Marcar Pago</button>`:`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span><button class="btn bd2 bsm" style="font-size:10px;padding:2px 7px" onclick="estornarPagamento('${cb.id}')">↩ Estornar</button></div>`}
       <button class="btn bg bsm" onclick="openBoleto('${cb.id}')" title="${cb.boletoPath?'Ver/editar boleto':'Registrar boleto'}">📄</button>
       <button class="btn bg bsm" onclick="openEditCob('${cb.id}')" title="Editar repasse">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
@@ -2209,7 +2209,7 @@ function cobSubItem(cb,inDetail=false){
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
-      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')">✓ Pago</button>`:`<span style="font-size:10px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span>`}
+      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px">✓ Marcar Pago</button>`:`<span style="font-size:10px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span>`}
       <button class="btn bg bsm" onclick="openEditCob('${cb.id}')">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
     </div>
@@ -2560,7 +2560,7 @@ function renderVenc(){
       </div>
       <div style="text-align:right">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">${R(c.valor)}</div>
-        <button class="btn bk bsm" style="margin-top:3px" onclick="openPago('${c.id}')">✓ Pago</button>
+        <button class="btn bk bsm" style="margin-top:3px" onclick="openPago('${c.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px">✓ Marcar Pago</button>
       </div>
     </div>`;
   }).join(''):`<div class="empty" style="padding:34px"><div class="ei">✅</div><p>Sem cobranças pendentes</p></div>`;
