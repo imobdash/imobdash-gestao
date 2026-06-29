@@ -4304,6 +4304,8 @@ function enviarWhatsApp(texto){
 }
 function relMesLabel(ym){if(!ym)return'–';const[y,m]=ym.split('-');return['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+m-1]+'/'+y;}
 function relMeses(n=24){const hoje=new Date();return[...Array(n)].map((_,i)=>{const d=new Date(hoje.getFullYear(),hoje.getMonth()-i);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;});}
+// Meses para relatório de boletos: passados + futuros (para emissão antecipada)
+function relMesesBoleto(passados=6,futuros=12){const hoje=new Date();const lista=[];for(let i=futuros;i>=-passados;i--){const d=new Date(hoje.getFullYear(),hoje.getMonth()+i);lista.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}return lista;}
 function R2(v){return'R$'+(+v||0).toFixed(2).replace('.',',');}
 
 function renderRelatorios(){
@@ -4432,13 +4434,13 @@ function renderRelatorios(){
             <div>
               <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">De</label>
               <select id="rb-de" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
-                ${(()=>{const ms=relMeses(36);return ms.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('');})()}
+                ${(()=>{const ms=relMesesBoleto(12,12);const hoje=new Date();const proximo=`${hoje.getFullYear()}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;const anoProx=hoje.getMonth()+2>12?hoje.getFullYear()+1:hoje.getFullYear();const proxKey=`${anoProx}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;return ms.map(m=>`<option value="${m}" ${m===proxKey?'selected':''}>${relMesLabel(m)}${m===proxKey?' ← próximo':''}</option>`).join('');})()}
               </select>
             </div>
             <div>
               <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Até</label>
               <select id="rb-ate" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
-                ${(()=>{const ms=relMeses(36);return ms.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('');})()}
+                ${(()=>{const ms=relMesesBoleto(12,12);const hoje=new Date();const anoProx=hoje.getMonth()+2>12?hoje.getFullYear()+1:hoje.getFullYear();const proxKey=`${anoProx}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;return ms.map(m=>`<option value="${m}" ${m===proxKey?'selected':''}>${relMesLabel(m)}${m===proxKey?' ← próximo':''}</option>`).join('');})()}
               </select>
             </div>
             <div>
@@ -4471,14 +4473,15 @@ function renderRelatorios(){
   `;
 }
 function rbQuick(n){
-  const ms=relMeses(36);
   const hoje=new Date();
+  const mesAtual=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
   const addMes=(base,delta)=>{const d=new Date(base+'-01');d.setMonth(d.getMonth()+delta);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
+  const proxMes=addMes(mesAtual,1);
   const setDe=v=>{const s=document.getElementById('rb-de');if(s)s.value=v;};
   const setAte=v=>{const s=document.getElementById('rb-ate');if(s)s.value=v;};
-  if(n===0){setDe(ms[0]);setAte(ms[0]);}
-  else if(n===1){setDe(ms[1]||ms[0]);setAte(ms[1]||ms[0]);}
-  else{setDe(ms[0]);setAte(addMes(ms[0],n-1));}
+  if(n===0){setDe(mesAtual);setAte(mesAtual);}           // este mês
+  else if(n===1){const ant=addMes(mesAtual,-1);setDe(ant);setAte(ant);}  // mês anterior
+  else{setDe(proxMes);setAte(addMes(proxMes,n-1));}     // próximos N meses (a partir do próximo)
 }
 function gerarRelatorioBoletos(){
   const de=document.getElementById('rb-de')?.value||'';
