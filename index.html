@@ -4304,8 +4304,25 @@ function enviarWhatsApp(texto){
 }
 function relMesLabel(ym){if(!ym)return'–';const[y,m]=ym.split('-');return['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+m-1]+'/'+y;}
 function relMeses(n=24){const hoje=new Date();return[...Array(n)].map((_,i)=>{const d=new Date(hoje.getFullYear(),hoje.getMonth()-i);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;});}
-// Meses para relatório de boletos: passados + futuros (para emissão antecipada)
 function relMesesBoleto(passados=6,futuros=12){const hoje=new Date();const lista=[];for(let i=futuros;i>=-passados;i--){const d=new Date(hoje.getFullYear(),hoje.getMonth()+i);lista.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}return lista;}
+function gerarOpcoesRbMes(tipo){
+  const hoje=new Date();
+  const MES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  // próximo mês como padrão
+  const dProx=new Date(hoje.getFullYear(),hoje.getMonth()+1);
+  const proxKey=`${dProx.getFullYear()}-${String(dProx.getMonth()+1).padStart(2,'0')}`;
+  const opts=[];
+  // 12 meses futuros → mês atual → 12 meses passados (do mais recente ao mais antigo)
+  for(let i=12;i>=-12;i--){
+    const d=new Date(hoje.getFullYear(),hoje.getMonth()+i);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const lbl=`${MES[d.getMonth()]}/${d.getFullYear()}`;
+    const tag=key===proxKey?' ← próximo mês':(i===0?' ← este mês':'');
+    const sel=key===proxKey?'selected':'';
+    opts.push(`<option value="${key}" ${sel}>${lbl}${tag}</option>`);
+  }
+  return opts.join('');
+}
 function R2(v){return'R$'+(+v||0).toFixed(2).replace('.',',');}
 
 function renderRelatorios(){
@@ -4434,13 +4451,13 @@ function renderRelatorios(){
             <div>
               <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">De</label>
               <select id="rb-de" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
-                ${(()=>{const ms=relMesesBoleto(12,12);const hoje=new Date();const proximo=`${hoje.getFullYear()}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;const anoProx=hoje.getMonth()+2>12?hoje.getFullYear()+1:hoje.getFullYear();const proxKey=`${anoProx}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;return ms.map(m=>`<option value="${m}" ${m===proxKey?'selected':''}>${relMesLabel(m)}${m===proxKey?' ← próximo':''}</option>`).join('');})()}
+                ${gerarOpcoesRbMes('de')}
               </select>
             </div>
             <div>
               <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Até</label>
               <select id="rb-ate" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
-                ${(()=>{const ms=relMesesBoleto(12,12);const hoje=new Date();const anoProx=hoje.getMonth()+2>12?hoje.getFullYear()+1:hoje.getFullYear();const proxKey=`${anoProx}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;return ms.map(m=>`<option value="${m}" ${m===proxKey?'selected':''}>${relMesLabel(m)}${m===proxKey?' ← próximo':''}</option>`).join('');})()}
+                ${gerarOpcoesRbMes('ate')}
               </select>
             </div>
             <div>
