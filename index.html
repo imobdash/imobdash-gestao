@@ -1796,7 +1796,7 @@ function detail(id){
           ${ir('Vencimento','Todo dia '+(c.diaVenc||'–'))}${ir('Índice',c.indice)}${ir('Multa',c.multa+'%')}
           ${c.caucao?ir('Caução',R(c.caucao)+' — '+(c.caucaoTp==='imob'?'Imobiliária':'Proprietário')):''}
           ${ir('Administrado',c.adm==='sim'?'✅ Sim':'Não')}
-          ${(()=>{const ds=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}]:[]);return ds.map(d=>ir('Desconto',`-${R(d.valor)} · ${d.desc||''} · ${d.parc}x · ${(d.origem||'prop')==='prop'?'Prop.':'Imob.'}`)).join('')+(ds.length>0?ir('Valor c/ Desconto',R(c.valor-ds.reduce((s,d)=>s+d.valor,0))):'');})()}
+          ${(()=>{const ds=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop',inicio:''}]:[]);const fmtMes=m=>{if(!m)return'';const[y,mo]=m.split('-');return`${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo-1]}/${y}`;};return ds.map(d=>ir('Desconto',`-${R(d.valor)} · ${d.desc||''} · ${d.parc}x · ${(d.origem||'prop')==='prop'?'Prop.':'Imob.'}${d.inicio?` · Início: ${fmtMes(d.inicio)}`:''}`)).join('')+(ds.length>0?ir('Valor c/ Desconto',R(c.valor-ds.reduce((s,d)=>s+d.valor,0))):'');})()}
           ${c.repasseExtraValor>0?ir('Rep.Extra Prop.',`+${R(c.repasseExtraValor)} · ${c.repasseExtraDesc||'Repasse Extra'} · ${c.repasseExtraParc}x restantes`):''}
           ${c.repasseExtraValor>0?ir('Total c/ Rep.Extra',R(c.valor+c.repasseExtraValor)):''}
           ${ir('Início',FD(c.inicio))}${ir('Término',FD(c.fim))}
@@ -2615,20 +2615,21 @@ function calcProp(){
   box.style.display='block';
   box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}${dcInfo}${repInfo}</div>`;
 }
-function addDescontoRow(desc='',valor='',parc='',origem='prop'){
+function addDescontoRow(desc='',valor='',parc='',origem='prop',inicio=''){
   const list=document.getElementById('fdesc_list');
-  const idx=list.children.length;
   const wrap=document.createElement('div');
   wrap.className='fdesc-item';
   wrap.style.cssText='display:contents';
   wrap.innerHTML=`
-    <div class="g" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 110px 90px 1fr auto;gap:8px;align-items:end;margin-bottom:4px">
+    <div class="g" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 100px 80px 120px 1fr auto;gap:8px;align-items:end;margin-bottom:4px">
       <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Descrição</label>
         <input type="text" class="fdesc-desc" placeholder="Ex: Fundo de Reserva" value="${desc}" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box"></div>
       <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Valor (R$)</label>
         <input type="number" class="fdesc-val" placeholder="0,00" step="0.01" min="0" value="${valor}" oninput="calcProp()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box"></div>
       <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Parcelas</label>
         <input type="number" class="fdesc-parc" placeholder="Ex: 12" min="1" value="${parc}" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Início (mês/ano)</label>
+        <input type="month" class="fdesc-inicio" value="${inicio}" title="Mês em que o desconto começa a ser aplicado" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box"></div>
       <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Absorvido por</label>
         <select class="fdesc-origem" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
           <option value="prop"${origem==='prop'?' selected':''}>Proprietário</option>
@@ -2647,7 +2648,8 @@ function getDescontos(){
     desc:item.querySelector('.fdesc-desc').value.trim(),
     valor:parseFloat(item.querySelector('.fdesc-val').value)||0,
     parc:parseInt(item.querySelector('.fdesc-parc').value)||0,
-    origem:item.querySelector('.fdesc-origem').value
+    origem:item.querySelector('.fdesc-origem').value,
+    inicio:item.querySelector('.fdesc-inicio')?.value||''
   })).filter(d=>d.valor>0);
 }
 function toggleDescontoBox(){
@@ -2690,7 +2692,7 @@ async function gerarCobsSupabase(c,userId){
     // ── DESCONTOS MENSAIS (múltiplos) ──
     let descontoAplicado=0;let descontoDescCob='';
     const descsAplicadas=[];
-    descontosAtivos.forEach((d,i)=>{if(d.valor>0&&d.parc>0&&descContadores[i]<d.parc){descontoAplicado+=d.valor;descsAplicadas.push(d.desc||'Desconto');descContadores[i]++;}});
+    descontosAtivos.forEach((d,i)=>{if(d.valor>0&&d.parc>0&&descContadores[i]<d.parc&&(!d.inicio||mesRef>=d.inicio)){descontoAplicado+=d.valor;descsAplicadas.push(d.desc||'Desconto');descContadores[i]++;}});
     if(descsAplicadas.length>0)descontoDescCob=descsAplicadas.join(', ');
     // ── REPASSE EXTRA AO PROPRIETÁRIO ──
     let repasseExtraApl=0;let repasseExtraDescCob='';
@@ -2995,7 +2997,8 @@ async function saveContract(){
         for(const cb of pendAlug){
           if(usadas>=maxParcEdit)break;
           let dcTotal=0;const dcDescArr=[];
-          dsEdEdit.forEach((d,i)=>{if(d.parc>0&&dcContEdit[i]<d.parc){dcTotal+=d.valor;dcDescArr.push(d.desc||'Desconto');dcContEdit[i]++;}});
+          const mesCb=cb.mes||cb.venc?.substring(0,7)||'';
+          dsEdEdit.forEach((d,i)=>{if(d.parc>0&&dcContEdit[i]<d.parc&&(!d.inicio||mesCb>=d.inicio)){dcTotal+=d.valor;dcDescArr.push(d.desc||'Desconto');dcContEdit[i]++;}});
           if(dcTotal===0)break;
           const valorOriginal=cb.valor+(cb.descontoAplicado||0);
           const novoValor=Math.max(0,valorOriginal-dcTotal);
@@ -4991,7 +4994,7 @@ function editContrato(cid){
   // Desconto (múltiplos)
   const dcAtivo=c.descontoValor>0||(c.descontos&&c.descontos.length>0);
   const fdc=document.getElementById('fdc_ativo');if(fdc)fdc.checked=dcAtivo;
-  const fdescListE=document.getElementById('fdesc_list');if(fdescListE){fdescListE.innerHTML='';const descsE=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}]:[]);descsE.forEach(d=>addDescontoRow(d.desc||'',d.valor||'',d.parc||'',d.origem||'prop'));}
+  const fdescListE=document.getElementById('fdesc_list');if(fdescListE){fdescListE.innerHTML='';const descsE=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop',inicio:''}]:[]);descsE.forEach(d=>addDescontoRow(d.desc||'',d.valor||'',d.parc||'',d.origem||'prop',d.inicio||''));}
   const dbox=document.getElementById('desconto-box');if(dbox)dbox.style.display=dcAtivo?'contents':'none';
   // Repasse Extra
   const repAtivo=c.repasseExtraValor>0;
@@ -5025,7 +5028,7 @@ function renovarContrato(cid){
   // Desconto (herdar do contrato anterior — múltiplos)
   const dcAtivoR=c.descontoValor>0&&c.descontoParc>0;
   const fdcR=document.getElementById('fdc_ativo');if(fdcR)fdcR.checked=dcAtivoR;
-  const fdescListR=document.getElementById('fdesc_list');if(fdescListR){fdescListR.innerHTML='';const descsR=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}]:[]);descsR.forEach(d=>addDescontoRow(d.desc||'',d.valor||'',d.parc||'',d.origem||'prop'));}
+  const fdescListR=document.getElementById('fdesc_list');if(fdescListR){fdescListR.innerHTML='';const descsR=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop',inicio:''}]:[]);descsR.forEach(d=>addDescontoRow(d.desc||'',d.valor||'',d.parc||'',d.origem||'prop',d.inicio||''));}
   const dboxR=document.getElementById('desconto-box');if(dboxR)dboxR.style.display=dcAtivoR?'contents':'none';
   // Repasse Extra (herdar do contrato anterior)
   const repAtivoR=c.repasseExtraValor>0&&c.repasseExtraParc>0;
