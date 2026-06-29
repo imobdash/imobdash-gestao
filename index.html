@@ -4428,11 +4428,17 @@ function renderRelatorios(){
         <div class="ch">🧾 Relatório de Boletos</div>
         <div class="cb">
           <p style="font-size:12px;color:var(--dm);margin-bottom:14px">Folha de controle por cobrança: valor bruto, descontos, repasse ao proprietário e à imobiliária, com campo para anotar manualmente o número do boleto após impressão.</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
             <div>
-              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Mês de vencimento</label>
-              <select id="rb-mes" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
-                ${(()=>{const ms=relMeses(24);return ms.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('');})()}
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">De</label>
+              <select id="rb-de" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                ${(()=>{const ms=relMeses(36);return ms.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('');})()}
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Até</label>
+              <select id="rb-ate" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                ${(()=>{const ms=relMeses(36);return ms.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('');})()}
               </select>
             </div>
             <div>
@@ -4454,7 +4460,9 @@ function renderRelatorios(){
           <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">
             <button class="btn" onclick="rbQuick(0)" style="font-size:11px;padding:3px 8px">Este mês</button>
             <button class="btn" onclick="rbQuick(1)" style="font-size:11px;padding:3px 8px">Mês anterior</button>
-            <button class="btn" onclick="rbQuick(2)" style="font-size:11px;padding:3px 8px">Próximo mês</button>
+            <button class="btn" onclick="rbQuick(3)" style="font-size:11px;padding:3px 8px">Próximos 3 meses</button>
+            <button class="btn" onclick="rbQuick(6)" style="font-size:11px;padding:3px 8px">Próximos 6 meses</button>
+            <button class="btn" onclick="rbQuick(12)" style="font-size:11px;padding:3px 8px">Próximos 12 meses</button>
           </div>
           <button class="btn bp" onclick="gerarRelatorioBoletos()" style="padding:9px 18px">🖨️ Imprimir Relatório de Boletos</button>
         </div>
@@ -4463,22 +4471,23 @@ function renderRelatorios(){
   `;
 }
 function rbQuick(n){
-  const ms=relMeses(24);
-  // ms[0]=mês atual, ms[1]=anterior. Para próximo, geramos manualmente
+  const ms=relMeses(36);
   const hoje=new Date();
-  const proximo=`${hoje.getFullYear()}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;
-  const ano=hoje.getMonth()+2>12?hoje.getFullYear()+1:hoje.getFullYear();
-  const proxMes=`${ano}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;
-  if(n===0&&document.getElementById('rb-mes'))document.getElementById('rb-mes').value=ms[0];
-  if(n===1&&document.getElementById('rb-mes'))document.getElementById('rb-mes').value=ms[1]||ms[0];
-  if(n===2&&document.getElementById('rb-mes')){const sel=document.getElementById('rb-mes');const opts=Array.from(sel.options).map(o=>o.value);const next=opts.find(o=>o>ms[0]);if(next)sel.value=next;}
+  const addMes=(base,delta)=>{const d=new Date(base+'-01');d.setMonth(d.getMonth()+delta);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
+  const setDe=v=>{const s=document.getElementById('rb-de');if(s)s.value=v;};
+  const setAte=v=>{const s=document.getElementById('rb-ate');if(s)s.value=v;};
+  if(n===0){setDe(ms[0]);setAte(ms[0]);}
+  else if(n===1){setDe(ms[1]||ms[0]);setAte(ms[1]||ms[0]);}
+  else{setDe(ms[0]);setAte(addMes(ms[0],n-1));}
 }
 function gerarRelatorioBoletos(){
-  const mes=document.getElementById('rb-mes')?.value||'';
+  const de=document.getElementById('rb-de')?.value||'';
+  const ate=document.getElementById('rb-ate')?.value||de;
   const status=document.getElementById('rb-status')?.value||'pend';
   const tipoFiltro=document.getElementById('rb-tipo')?.value||'';
   let cobs=D.cb.filter(cb=>{
-    if(mes&&cb.mes!==mes)return false;
+    if(de&&cb.mes<de)return false;
+    if(ate&&cb.mes>ate)return false;
     if(status==='pend'&&cb.pago)return false;
     if(tipoFiltro&&cb.tipo!==tipoFiltro)return false;
     return true;
@@ -4563,8 +4572,8 @@ function gerarRelatorioBoletos(){
       </div>
     </div>`;
   });
-  const [yM,moM]=mes.split('-');
-  const mesLabel=mes?`${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][+moM-1]}/${yM}`:'Geral';
+  const fmtMesL=m=>{if(!m)return'';const[y,mo]=m.split('-');return`${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][+mo-1]}/${y}`;};
+  const mesLabel=de===ate||!ate?fmtMesL(de)||'Geral':`${fmtMesL(de)} a ${fmtMesL(ate)}`;
   const totalBruto=cobs.reduce((s,cb)=>s+(cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor),0);
   const totalLiq=cobs.reduce((s,cb)=>s+cb.valor,0);
   const totalDc=cobs.reduce((s,cb)=>s+(cb.descontoAplicado||0),0);
