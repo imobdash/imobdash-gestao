@@ -389,11 +389,11 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:8px">
         <div class="tabs">
           <div class="tab on" onclick="fCob('ativas',this)">A Receber</div>
-                    <div class="tab" onclick="fCob('atrasado',this)">Atrasadas</div>
-                              <div class="tab" onclick="fCob('lembrete',this)">Ação Necessária</div>
-                                        <div class="tab" onclick="fCob('pago',this)">Pagas</div>
-                                                  <div class="tab" onclick="fCob('todas',this)">Todas</div>
-                                                            <div class="tab" onclick="fCob('encargos',this)">📋 Encargos</div>
+          <div class="tab" onclick="fCob('atrasado',this)">Atrasadas</div>
+          <div class="tab" onclick="fCob('lembrete',this)">Ação Necessária</div>
+          <div class="tab" onclick="fCob('pago',this)">Pagas</div>
+          <div class="tab" onclick="fCob('todas',this)">Todas</div>
+          <div class="tab" onclick="fCob('encargos',this)">📋 Encargos</div>
         </div>
         <button class="btn bg" onclick="openNCob()">＋ Nova Cobrança</button>
       </div>
@@ -564,14 +564,9 @@ tr:hover td{background:rgba(255,255,255,.018);}
         <div style="font-size:12px;color:var(--dm);margin-top:4px">Ex: taxa de condomínio paga pelo inquilino diretamente no boleto.</div>
       </div>
       <div id="desconto-box" style="display:none;contents:''">
-        <div class="g"><label>Descrição do Desconto</label><input type="text" id="fdesc_desc" placeholder="Ex: Taxa de Condomínio"></div>
-        <div class="g"><label>Valor do Desconto (R$)</label><input type="number" id="fdesc_val" placeholder="0,00" step="0.01" min="0" oninput="calcProp()"></div>
-        <div class="g"><label>Parcelas Restantes</label><input type="number" id="fdesc_parc" placeholder="Ex: 38" min="1" title="Número de meses em que o desconto será aplicado automaticamente"></div>
-        <div class="g"><label>Desconto absorvido por</label>
-          <select id="fdesc_origem" title="Define quem paga o custo do desconto">
-            <option value="prop">Proprietário — comissão calculada sobre valor original</option>
-            <option value="imob">Imobiliária — comissão calculada sobre valor líquido</option>
-          </select>
+        <div id="fdesc_list" style="display:contents"></div>
+        <div class="g ff" style="margin-top:4px">
+          <button type="button" class="btn bg bsm" onclick="addDescontoRow()" style="color:var(--ac2);border-color:var(--ac2)">+ Adicionar Desconto</button>
         </div>
       </div>
       <div class="fsec">🏦 Repasse Extra ao Proprietário</div>
@@ -1188,11 +1183,12 @@ function rowToContrato(row){
     encerrado:row.encerrado||false,
     encerradoEm:row.encerrado_em,
     encerradoMotivo:row.encerrado_motivo,
-    // FEATURE 5: DESCONTO MENSAL
+    // FEATURE 5: DESCONTO MENSAL (suporte a múltiplos descontos via JSON)
     descontoValor:Number(row.desconto_valor||0),
     descontoDesc:row.desconto_desc||'',
     descontoParc:Number(row.desconto_parcelas||0),
     descontoOrigem:row.desconto_origem||'prop',
+    descontos:(()=>{const d=row.desconto_desc||'';if(d.startsWith('[')){try{return JSON.parse(d);}catch(e){}}return row.desconto_valor>0?[{desc:d,valor:Number(row.desconto_valor||0),parc:Number(row.desconto_parcelas||0),origem:row.desconto_origem||'prop'}]:[];})(),
     dadosAnalise:row.dados_analise_credito||null,
     dadosVistoria:row.dados_vistoria||null,
     dadosContAdm:row.dados_contrato_adm||null,
@@ -1800,8 +1796,7 @@ function detail(id){
           ${ir('Vencimento','Todo dia '+(c.diaVenc||'–'))}${ir('Índice',c.indice)}${ir('Multa',c.multa+'%')}
           ${c.caucao?ir('Caução',R(c.caucao)+' — '+(c.caucaoTp==='imob'?'Imobiliária':'Proprietário')):''}
           ${ir('Administrado',c.adm==='sim'?'✅ Sim':'Não')}
-          ${c.descontoValor>0?ir('Desconto',`-${R(c.descontoValor)} · ${c.descontoDesc||''} · ${c.descontoParc}x · ${(c.descontoOrigem||'prop')==='prop'?'Prop.':'Imob.'}`):''}
-          ${c.descontoValor>0?ir('Valor c/ Desconto',R(c.valor-c.descontoValor)):''}
+          ${(()=>{const ds=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}]:[]);return ds.map(d=>ir('Desconto',`-${R(d.valor)} · ${d.desc||''} · ${d.parc}x · ${(d.origem||'prop')==='prop'?'Prop.':'Imob.'}`)).join('')+(ds.length>0?ir('Valor c/ Desconto',R(c.valor-ds.reduce((s,d)=>s+d.valor,0))):'');})()}
           ${c.repasseExtraValor>0?ir('Rep.Extra Prop.',`+${R(c.repasseExtraValor)} · ${c.repasseExtraDesc||'Repasse Extra'} · ${c.repasseExtraParc}x restantes`):''}
           ${c.repasseExtraValor>0?ir('Total c/ Rep.Extra',R(c.valor+c.repasseExtraValor)):''}
           ${ir('Início',FD(c.inicio))}${ir('Término',FD(c.fim))}
@@ -2170,7 +2165,7 @@ function cobItem(cb,inDetail=false,noBottomBorder=false){
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
-      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px">✓ Marcar Pago</button>`:`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span><button class="btn bd2 bsm" style="font-size:10px;padding:2px 7px" onclick="estornarPagamento('${cb.id}')">↩ Estornar</button></div>`}
+      ${!cb.pago?`<button onclick="openPago('${cb.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;min-width:90px">✓ Marcar Pago</button>`:`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span style="font-size:11px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span><button class="btn bd2 bsm" style="font-size:10px;padding:2px 7px" onclick="estornarPagamento('${cb.id}')">↩ Estornar</button></div>`}
       <button class="btn bg bsm" onclick="openBoleto('${cb.id}')" title="${cb.boletoPath?'Ver/editar boleto':'Registrar boleto'}">📄</button>
       <button class="btn bg bsm" onclick="openEditCob('${cb.id}')" title="Editar repasse">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
@@ -2209,7 +2204,7 @@ function cobSubItem(cb,inDetail=false){
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
-      ${!cb.pago?`<button class="btn bk bsm" onclick="openPago('${cb.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px">✓ Marcar Pago</button>`:`<span style="font-size:10px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span>`}
+      ${!cb.pago?`<button onclick="openPago('${cb.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Marcar Pago</button>`:`<span style="font-size:10px;color:var(--gn);font-weight:600">✓ Pago ${FD(cb.dataPago)}</span>`}
       <button class="btn bg bsm" onclick="openEditCob('${cb.id}')">✎</button>
       <button class="btn bd2 bsm" onclick="delCob('${cb.id}'${inDetail?`,'${cb.contratoId}'`:''})">🗑</button>
     </div>
@@ -2301,8 +2296,8 @@ function renderCobrancas(){
   // Colapsar tudo na primeira abertura
   if(!_cobInitialized){D.c.forEach(c=>_cobCollapsed.add(c.id));_cobInitialized=true;}
   let list=[...D.cb];
-    if(cobFiltro==='ativas')list=list.filter(c=>!c.pago);
-    else if(cobFiltro==='pendente')list=list.filter(c=>!c.pago&&DA(c.venc)>=0);
+  if(cobFiltro==='ativas')list=list.filter(c=>!c.pago);
+  else if(cobFiltro==='pendente')list=list.filter(c=>!c.pago&&DA(c.venc)>=0);
   else if(cobFiltro==='pago')list=list.filter(c=>c.pago);
   else if(cobFiltro==='atrasado')list=list.filter(c=>!c.pago&&DA(c.venc)<0);
   else if(cobFiltro==='lembrete')list=list.filter(c=>!c.pago&&DA(c.venc)<=3);
@@ -2560,7 +2555,7 @@ function renderVenc(){
       </div>
       <div style="text-align:right">
         <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px">${R(c.valor)}</div>
-        <button class="btn bk bsm" style="margin-top:3px" onclick="openPago('${c.id}')" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:90px">✓ Marcar Pago</button>
+        <button class="btn bk bsm" style="margin-top:3px" onclick="openPago('${c.id}')">✓ Pago</button>
       </div>
     </div>`;
   }).join(''):`<div class="empty" style="padding:34px"><div class="ei">✅</div><p>Sem cobranças pendentes</p></div>`;
@@ -2608,9 +2603,11 @@ function calcProp(){
   else{const dm=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();const dr=dm-dia;const vp=Math.round((val/dm)*dr*100)/100;msg=`Contrato inicia dia ${dia}. 1º aluguel em ${MN[proxMes.getMonth()]}/${proxMes.getFullYear()}: ${dr}/${dm} dias = <strong>${R(vp)}</strong>. Demais meses: ${R(val)}.`;}
   // Mostrar info de desconto no propbox se houver
   const dcAtivo=document.getElementById('fdc_ativo').checked;
-  const dcVal=parseFloat(document.getElementById('fdesc_val').value)||0;
-  const dcDesc=document.getElementById('fdesc_desc').value;
-  const dcInfo=dcAtivo&&dcVal>0?`<br><span style="color:var(--ac2)">💸 Desconto: -${R(dcVal)} (${dcDesc||'Desconto'}) → Valor líquido: ${R(Math.max(0,val-dcVal))}/mês</span>`:'';
+  const dcDescs=dcAtivo?getDescontos():[];
+  const dcVal=dcDescs.reduce((s,d)=>s+d.valor,0);
+  const dcInfo=dcAtivo&&dcVal>0?`<br><span style="color:var(--ac2)">💸 Descontos: -${R(dcVal)} (${dcDescs.map(d=>d.desc||'Desconto').join(', ')}) → Valor líquido: ${R(Math.max(0,val-dcVal))}/mês</span>`:'';
+  // compatibilidade retroativa (não usada diretamente, mas evita erro se chamado antes da lista existir)
+  const dcDesc=dcDescs.map(d=>d.desc).join(', ');
   const repAtivo=document.getElementById('frep_ativo')?.checked;
   const repVal=parseFloat(document.getElementById('frep_val')?.value)||0;
   const repDesc=document.getElementById('frep_desc')?.value||'';
@@ -2618,10 +2615,46 @@ function calcProp(){
   box.style.display='block';
   box.innerHTML=`<div class="ibox ibox-y">⚠️ ${msg}${dcInfo}${repInfo}</div>`;
 }
+function addDescontoRow(desc='',valor='',parc='',origem='prop'){
+  const list=document.getElementById('fdesc_list');
+  const idx=list.children.length;
+  const wrap=document.createElement('div');
+  wrap.className='fdesc-item';
+  wrap.style.cssText='display:contents';
+  wrap.innerHTML=`
+    <div class="g" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 110px 90px 1fr auto;gap:8px;align-items:end;margin-bottom:4px">
+      <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Descrição</label>
+        <input type="text" class="fdesc-desc" placeholder="Ex: Fundo de Reserva" value="${desc}" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Valor (R$)</label>
+        <input type="number" class="fdesc-val" placeholder="0,00" step="0.01" min="0" value="${valor}" oninput="calcProp()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Parcelas</label>
+        <input type="number" class="fdesc-parc" placeholder="Ex: 12" min="1" value="${parc}" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box"></div>
+      <div><label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px">Absorvido por</label>
+        <select class="fdesc-origem" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
+          <option value="prop"${origem==='prop'?' selected':''}>Proprietário</option>
+          <option value="imob"${origem==='imob'?' selected':''}>Imobiliária</option>
+        </select></div>
+      <div style="padding-bottom:2px"><button type="button" onclick="removeDescontoRow(this)" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:16px;padding:6px 4px;line-height:1" title="Remover">✕</button></div>
+    </div>`;
+  list.appendChild(wrap);
+}
+function removeDescontoRow(btn){
+  btn.closest('.fdesc-item').remove();
+  calcProp();
+}
+function getDescontos(){
+  return Array.from(document.querySelectorAll('.fdesc-item')).map(item=>({
+    desc:item.querySelector('.fdesc-desc').value.trim(),
+    valor:parseFloat(item.querySelector('.fdesc-val').value)||0,
+    parc:parseInt(item.querySelector('.fdesc-parc').value)||0,
+    origem:item.querySelector('.fdesc-origem').value
+  })).filter(d=>d.valor>0);
+}
 function toggleDescontoBox(){
   const ativo=document.getElementById('fdc_ativo').checked;
   const box=document.getElementById('desconto-box');
   box.style.display=ativo?'contents':'none';
+  if(ativo&&document.getElementById('fdesc_list').children.length===0)addDescontoRow();
   calcProp();
 }
 function toggleRepasseBox(){
@@ -2642,7 +2675,9 @@ async function gerarCobsSupabase(c,userId){
   let primMes=true;
   let cur=new Date(ini.getFullYear(),ini.getMonth()+1,1);
   const cobsToInsert=[];
-  let descParcsUsadas=0; // contador de parcelas de desconto aplicadas
+  // contadores por desconto (suporte múltiplos)
+  const descontosAtivos=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}]:[]);
+  const descContadores=descontosAtivos.map(()=>0);
   let repExtraParcsUsadas=0; // contador de parcelas de repasse extra aplicadas
   while(cur<=fim){
     const y=cur.getFullYear(),m=cur.getMonth();
@@ -2652,13 +2687,11 @@ async function gerarCobsSupabase(c,userId){
     let valor=c.valor,descExtra='';
     if(primMes){const diaIni=ini.getDate();if(diaIni!==1){const dm=new Date(ini.getFullYear(),ini.getMonth()+1,0).getDate();const dr=dm-diaIni;valor=Math.round((c.valor/dm)*dr*100)/100;descExtra=` (${dr}/${dm} dias)`;}}
     const isFirst=primMes;primMes=false;
-    // ── DESCONTO MENSAL ──
+    // ── DESCONTOS MENSAIS (múltiplos) ──
     let descontoAplicado=0;let descontoDescCob='';
-    if(c.descontoValor>0&&c.descontoParc>0&&descParcsUsadas<c.descontoParc){
-      descontoAplicado=c.descontoValor;
-      descontoDescCob=c.descontoDesc||'Desconto';
-      descParcsUsadas++;
-    }
+    const descsAplicadas=[];
+    descontosAtivos.forEach((d,i)=>{if(d.valor>0&&d.parc>0&&descContadores[i]<d.parc){descontoAplicado+=d.valor;descsAplicadas.push(d.desc||'Desconto');descContadores[i]++;}});
+    if(descsAplicadas.length>0)descontoDescCob=descsAplicadas.join(', ');
     // ── REPASSE EXTRA AO PROPRIETÁRIO ──
     let repasseExtraApl=0;let repasseExtraDescCob='';
     if(c.repasseExtraValor>0&&c.repasseExtraParc>0&&repExtraParcsUsadas<c.repasseExtraParc){
@@ -2697,11 +2730,14 @@ async function gerarCobsSupabase(c,userId){
   if(cobsToInsert.length){
     const{data:newCobs}=await sb.from('cobrancas').insert(cobsToInsert).select();
     if(newCobs)D.cb.push(...newCobs.map(rowToCobranca));
-    // Atualizar parcelas restantes do desconto no contrato
-    if(c.descontoValor>0&&descParcsUsadas>0){
-      const novoParc=Math.max(0,c.descontoParc-descParcsUsadas);
-      await sb.from('contratos').update({desconto_parcelas:novoParc}).eq('id',c.id);
-      const ci=D.c.findIndex(x=>x.id===c.id);if(ci>=0)D.c[ci].descontoParc=novoParc;
+    // Atualizar parcelas restantes de cada desconto no contrato
+    if(descontosAtivos.length>0&&descContadores.some(n=>n>0)){
+      const novosDescs=descontosAtivos.map((d,i)=>({...d,parc:Math.max(0,d.parc-descContadores[i])})).filter(d=>d.parc>0||descontosAtivos.length===1);
+      const novoTotal=novosDescs.reduce((s,d)=>s+d.valor,0);
+      const novoMaxParc=novosDescs.reduce((m,d)=>Math.max(m,d.parc),0);
+      const novoDesc=novosDescs.length>0?JSON.stringify(novosDescs):null;
+      await sb.from('contratos').update({desconto_parcelas:novoMaxParc,desconto_valor:novoTotal,desconto_desc:novoDesc}).eq('id',c.id);
+      const ci=D.c.findIndex(x=>x.id===c.id);if(ci>=0){D.c[ci].descontoParc=novoMaxParc;D.c[ci].descontoValor=novoTotal;D.c[ci].descontos=novosDescs;}
     }
     // Atualizar parcelas restantes do repasse extra no contrato
     if(c.repasseExtraValor>0&&repExtraParcsUsadas>0){
@@ -2757,10 +2793,7 @@ function clearForm(){
   document.getElementById('fadm').value='sim';
   document.getElementById('pdfin').value='';
   document.getElementById('fdc_ativo').checked=false;
-  document.getElementById('fdesc_desc').value='';
-  document.getElementById('fdesc_val').value='';
-  document.getElementById('fdesc_parc').value='';
-  document.getElementById('fdesc_origem').value='prop';
+  const fdescListClr=document.getElementById('fdesc_list');if(fdescListClr)fdescListClr.innerHTML='';
   document.getElementById('desconto-box').style.display='none';
   const frepAtC=document.getElementById('frep_ativo');if(frepAtC)frepAtC.checked=false;
   const frepDescC=document.getElementById('frep_desc');if(frepDescC)frepDescC.value='';
@@ -2886,10 +2919,7 @@ async function saveContract(){
     reajuste_indice:document.getElementById('freajind').value||'IGP-M',
     seguro_vence:document.getElementById('fsegvnc').value||null,
     seguro_obs:document.getElementById('fsegobs').value||null,
-    desconto_valor:document.getElementById('fdc_ativo').checked?(parseFloat(document.getElementById('fdesc_val').value)||0):0,
-    desconto_desc:document.getElementById('fdc_ativo').checked?(document.getElementById('fdesc_desc').value||null):null,
-    desconto_parcelas:document.getElementById('fdc_ativo').checked?(parseInt(document.getElementById('fdesc_parc').value)||0):0,
-    desconto_origem:document.getElementById('fdc_ativo').checked?(document.getElementById('fdesc_origem').value||'prop'):'prop',
+    ...(()=>{const ativo=document.getElementById('fdc_ativo').checked;const descs=ativo?getDescontos():[];const totalVal=descs.reduce((s,d)=>s+d.valor,0);const maxParc=descs.reduce((m,d)=>Math.max(m,d.parc),0);return{desconto_valor:totalVal||0,desconto_desc:descs.length>0?JSON.stringify(descs):null,desconto_parcelas:maxParc||0,desconto_origem:descs[0]?.origem||'prop'};})(),
     repasse_extra_valor:document.getElementById('frep_ativo').checked?(parseFloat(document.getElementById('frep_val').value)||0):0,
     repasse_extra_desc:document.getElementById('frep_ativo').checked?(document.getElementById('frep_desc').value||null):null,
     repasse_extra_parcelas:document.getElementById('frep_ativo').checked?(parseInt(document.getElementById('frep_parc').value)||0):0
@@ -2943,27 +2973,32 @@ async function saveContract(){
     _seguroFile=null;
   }
   const wasEdit=_editContratoId!==null;
-  // ── APLICAR DESCONTO ÀS COBRANÇAS PENDENTES (edição) ──
+  // ── APLICAR DESCONTOS ÀS COBRANÇAS PENDENTES (edição — múltiplos) ──
   if(wasEdit && c.descontoValor>0 && c.descontoParc>0){
+    const dsEdEdit=(c.descontos&&c.descontos.length>0)?c.descontos:[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}];
+    const totalDcEdit=dsEdEdit.reduce((s,d)=>s+d.valor,0);
+    const maxParcEdit=dsEdEdit.reduce((m,d)=>Math.max(m,d.parc),0);
     const pendAlug=D.cb
       .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel')
       .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
-    if(pendAlug.length>0){
-      const qtd=Math.min(pendAlug.length,c.descontoParc);
-      const origemLabel=(c.descontoOrigem||'prop')==='prop'?'Proprietário (comissão sobre valor original)':'Imobiliária (comissão sobre valor líquido)';
-      const valorBase=pendAlug[0].descontoAplicado>0?pendAlug[0].valor:pendAlug[0].valor; // valor atual da cobrança
-      const novoExemplo=Math.max(0,valorBase-c.descontoValor+(pendAlug[0].descontoAplicado||0));
-      const ok=confirm(`Recalcular ${qtd} cobranças de aluguel pendentes com o desconto:\n\n💸 -${R(c.descontoValor)} (${c.descontoDesc||'Desconto'})\n📋 Absorvido por: ${origemLabel}\n\nValor cobrado → ${R(novoExemplo)}/mês\n\nClicar OK atualizará todas as cobranças pendentes.`);
+    if(pendAlug.length>0&&totalDcEdit>0){
+      const qtd=Math.min(pendAlug.length,maxParcEdit);
+      const descLabelEdit=dsEdEdit.map(d=>d.desc||'Desconto').join(', ');
+      const valorBase=pendAlug[0].valor+(pendAlug[0].descontoAplicado||0);
+      const novoExemplo=Math.max(0,valorBase-totalDcEdit);
+      const ok=confirm(`Recalcular ${qtd} cobranças de aluguel pendentes com os descontos:\n\n💸 -${R(totalDcEdit)} (${descLabelEdit})\n\nValor cobrado → ${R(novoExemplo)}/mês\n\nClicar OK atualizará todas as cobranças pendentes.`);
       if(ok){
         const adm=c.adm==='sim';
-        const origemPropE=(c.descontoOrigem||'prop')==='prop';
+        const origemPropE=(dsEdEdit[0]?.origem||'prop')==='prop';
         let usadas=0;
+        const dcContEdit=dsEdEdit.map(()=>0);
         for(const cb of pendAlug){
-          if(usadas>=c.descontoParc)break;
-          // Restaurar valor original se a cobrança já tinha desconto aplicado
+          if(usadas>=maxParcEdit)break;
+          let dcTotal=0;const dcDescArr=[];
+          dsEdEdit.forEach((d,i)=>{if(d.parc>0&&dcContEdit[i]<d.parc){dcTotal+=d.valor;dcDescArr.push(d.desc||'Desconto');dcContEdit[i]++;}});
+          if(dcTotal===0)break;
           const valorOriginal=cb.valor+(cb.descontoAplicado||0);
-          const novoValor=Math.max(0,valorOriginal-c.descontoValor);
-          // Se desconto é do prop: comissão calculada sobre valor original do aluguel
+          const novoValor=Math.max(0,valorOriginal-dcTotal);
           const repBase=origemPropE?valorOriginal:novoValor;
           const repRaw=calcRepasse('Aluguel',repBase,false,adm);
           const repImob=Math.min(repRaw.imob,novoValor);
@@ -2971,24 +3006,20 @@ async function saveContract(){
           const{error:eu}=await sb.from('cobrancas').update({
             valor:novoValor,
             repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
-            desconto_aplicado:c.descontoValor,
-            desconto_desc_cob:c.descontoDesc||'Desconto'
+            desconto_aplicado:dcTotal,
+            desconto_desc_cob:dcDescArr.join(', ')
           }).eq('id',cb.id);
           if(!eu){
             const ci=D.cb.findIndex(x=>x.id===cb.id);
-            if(ci>=0){
-              D.cb[ci].valor=novoValor;
-              D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};
-              D.cb[ci].descontoAplicado=c.descontoValor;
-              D.cb[ci].descontoDesc=c.descontoDesc||'Desconto';
-            }
+            if(ci>=0){D.cb[ci].valor=novoValor;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=dcTotal;D.cb[ci].descontoDesc=dcDescArr.join(', ');}
             usadas++;
           }
         }
-        // Atualizar parcelas restantes no contrato
-        const novoParc=Math.max(0,c.descontoParc-usadas);
-        await sb.from('contratos').update({desconto_parcelas:novoParc}).eq('id',c.id);
-        const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].descontoParc=novoParc;
+        const novosDescsEdit=dsEdEdit.map((d,i)=>({...d,parc:Math.max(0,d.parc-dcContEdit[i])}));
+        const novoTotalEdit=novosDescsEdit.reduce((s,d)=>s+d.valor,0);
+        const novoMaxEdit=novosDescsEdit.reduce((m,d)=>Math.max(m,d.parc),0);
+        await sb.from('contratos').update({desconto_parcelas:novoMaxEdit,desconto_valor:novoTotalEdit,desconto_desc:JSON.stringify(novosDescsEdit)}).eq('id',c.id);
+        const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0){D.c[ci2].descontoParc=novoMaxEdit;D.c[ci2].descontoValor=novoTotalEdit;D.c[ci2].descontos=novosDescsEdit;}
       }
     }
   }
@@ -3022,9 +3053,10 @@ async function saveContract(){
         if(novoExtra>0)usadasRep++;
       }
       if(c.repasseExtraValor>0){
-                const totalComExtra=D.cb.filter(x=>x.contratoId===c.id&&x.tipo==='Aluguel'&&!x.pago&&x.repasseExtraValor>0).length;
-                        await sb.from('contratos').update({repasse_extra_parcelas:totalComExtra}).eq('id',c.id);
-                                const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].repasseExtraParc=totalComExtra;
+        // Conta quantas cobranças PENDENTES ainda têm o repasse extra aplicado
+        const totalComExtra=D.cb.filter(x=>x.contratoId===c.id&&x.tipo==='Aluguel'&&!x.pago&&x.repasseExtraValor>0).length;
+        await sb.from('contratos').update({repasse_extra_parcelas:totalComExtra}).eq('id',c.id);
+        const ci2=D.c.findIndex(x=>x.id===c.id);if(ci2>=0)D.c[ci2].repasseExtraParc=totalComExtra;
       }
     }
   }
@@ -4389,8 +4421,191 @@ function renderRelatorios(){
           </div>
         </div>
       </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">🧾 Relatório de Boletos</div>
+        <div class="cb">
+          <p style="font-size:12px;color:var(--dm);margin-bottom:14px">Folha de controle por cobrança: valor bruto, descontos, repasse ao proprietário e à imobiliária, com campo para anotar manualmente o número do boleto após impressão.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Mês de vencimento</label>
+              <select id="rb-mes" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                ${(()=>{const ms=relMeses(24);return ms.map((m,i)=>`<option value="${m}" ${i===0?'selected':''}>${relMesLabel(m)}</option>`).join('');})()}
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Status</label>
+              <select id="rb-status" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                <option value="pend">Só pendentes</option>
+                <option value="todos">Todos</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">Tipo</label>
+              <select id="rb-tipo" style="width:100%;padding:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--te);font-size:12px">
+                <option value="">Todos os tipos</option>
+                <option value="Aluguel">Aluguel</option>
+                <option value="Caução">Caução</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn" onclick="rbQuick(0)" style="font-size:11px;padding:3px 8px">Este mês</button>
+            <button class="btn" onclick="rbQuick(1)" style="font-size:11px;padding:3px 8px">Mês anterior</button>
+            <button class="btn" onclick="rbQuick(2)" style="font-size:11px;padding:3px 8px">Próximo mês</button>
+          </div>
+          <button class="btn bp" onclick="gerarRelatorioBoletos()" style="padding:9px 18px">🖨️ Imprimir Relatório de Boletos</button>
+        </div>
+      </div>
     </div>
   `;
+}
+function rbQuick(n){
+  const ms=relMeses(24);
+  // ms[0]=mês atual, ms[1]=anterior. Para próximo, geramos manualmente
+  const hoje=new Date();
+  const proximo=`${hoje.getFullYear()}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;
+  const ano=hoje.getMonth()+2>12?hoje.getFullYear()+1:hoje.getFullYear();
+  const proxMes=`${ano}-${String(hoje.getMonth()+2>12?1:hoje.getMonth()+2).padStart(2,'0')}`;
+  if(n===0&&document.getElementById('rb-mes'))document.getElementById('rb-mes').value=ms[0];
+  if(n===1&&document.getElementById('rb-mes'))document.getElementById('rb-mes').value=ms[1]||ms[0];
+  if(n===2&&document.getElementById('rb-mes')){const sel=document.getElementById('rb-mes');const opts=Array.from(sel.options).map(o=>o.value);const next=opts.find(o=>o>ms[0]);if(next)sel.value=next;}
+}
+function gerarRelatorioBoletos(){
+  const mes=document.getElementById('rb-mes')?.value||'';
+  const status=document.getElementById('rb-status')?.value||'pend';
+  const tipoFiltro=document.getElementById('rb-tipo')?.value||'';
+  let cobs=D.cb.filter(cb=>{
+    if(mes&&cb.mes!==mes)return false;
+    if(status==='pend'&&cb.pago)return false;
+    if(tipoFiltro&&cb.tipo!==tipoFiltro)return false;
+    return true;
+  }).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+  if(!cobs.length){alert('Nenhuma cobrança encontrada para os filtros selecionados.');return;}
+  const fmtD=d=>{if(!d)return'–';const[y,m,di]=d.split('-');return`${di}/${m}/${y}`;};
+  const fmtM=m=>{if(!m)return'';const[y,mo]=m.split('-');return`${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo-1]}/${y}`;};
+  const stl=cb=>cb.pago?'Pago':(DA(cb.venc)<0?'Atrasado':'Pendente');
+  const stlCor=cb=>cb.pago?'#059669':(DA(cb.venc)<0?'#dc2626':'#d97706');
+  const rows=cobs.map(cb=>{
+    const con=D.c.find(c=>c.id===cb.contratoId);
+    const vBruto=cb.descontoAplicado>0?(cb.valor+cb.descontoAplicado):cb.valor;
+    const vLiq=cb.valor;
+    const repImob=cb.repasse?.imob||0;
+    const repProp=cb.repasse?.prop||0;
+    const repExtra=cb.repasseExtraValor||0;
+    const repExtraDesc=cb.repasseExtraDesc||'Repasse Extra';
+    const dcVal=cb.descontoAplicado||0;
+    const dcDesc=cb.descontoDesc||'Desconto';
+    // determinar quem absorve o desconto (do contrato)
+    const dcOrigem=con?.descontoOrigem||con?.descontos?.[0]?.origem||'prop';
+    const dcOrigemLabel=dcOrigem==='prop'?'Proprietário':'Imobiliária';
+    return`<div style="border:1.5px solid #cbd5e1;border-radius:10px;padding:18px 20px;margin-bottom:18px;page-break-inside:avoid;background:#fff">
+      <!-- Cabeçalho da cobrança -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e2e8f0">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:2px">${cb.inquilino||'–'}</div>
+          <div style="font-size:12px;color:#64748b">${cb.endereco||'–'}</div>
+          ${con?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">Proprietário: <strong style="color:#475569">${con.proprietario||'–'}</strong></div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:700;color:${stlCor(cb)};border:1.5px solid ${stlCor(cb)};border-radius:6px;padding:2px 10px;display:inline-block;margin-bottom:6px">${stl(cb)}</div>
+          <div style="font-size:12px;color:#475569"><strong>Ref:</strong> ${fmtM(cb.mes)}</div>
+          <div style="font-size:12px;color:#475569"><strong>Venc:</strong> ${fmtD(cb.venc)}</div>
+          <div style="font-size:11px;color:#94a3b8">${cb.tipo}</div>
+        </div>
+      </div>
+      <!-- Tabela de valores -->
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">
+        <tr style="background:#f8fafc">
+          <td style="padding:6px 10px;color:#475569;font-weight:600;width:50%;border-bottom:1px solid #e2e8f0">Descrição</td>
+          <td style="padding:6px 10px;color:#475569;font-weight:600;text-align:right;border-bottom:1px solid #e2e8f0">Valor</td>
+          <td style="padding:6px 10px;color:#475569;font-weight:600;text-align:right;border-bottom:1px solid #e2e8f0">Destino</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 10px;color:#1e293b;border-bottom:1px solid #f1f5f9">${cb.descricao||cb.tipo}</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#1e293b;border-bottom:1px solid #f1f5f9">${R(vBruto)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#64748b;border-bottom:1px solid #f1f5f9">Inquilino</td>
+        </tr>
+        ${dcVal>0?`<tr>
+          <td style="padding:7px 10px;color:#7c3aed;border-bottom:1px solid #f1f5f9">💸 Desconto: ${dcDesc}</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#7c3aed;border-bottom:1px solid #f1f5f9">−${R(dcVal)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#7c3aed;border-bottom:1px solid #f1f5f9">Absorve: ${dcOrigemLabel}</td>
+        </tr>`:''}
+        <tr style="background:#f0fdf4">
+          <td style="padding:7px 10px;color:#166534;font-weight:700;border-bottom:1px solid #bbf7d0">✅ Valor Líquido (a receber)</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:700;color:#166534;border-bottom:1px solid #bbf7d0">${R(vLiq)}</td>
+          <td style="padding:7px 10px;border-bottom:1px solid #bbf7d0"></td>
+        </tr>
+        ${repExtra>0?`<tr>
+          <td style="padding:7px 10px;color:#0369a1;border-bottom:1px solid #f1f5f9">🏦 ${repExtraDesc} (repasse extra)</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#0369a1;border-bottom:1px solid #f1f5f9">+${R(repExtra)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#0369a1;border-bottom:1px solid #f1f5f9">100% Proprietário</td>
+        </tr>`:''}
+        ${repImob>0?`<tr>
+          <td style="padding:7px 10px;color:#475569;border-bottom:1px solid #f1f5f9">🏢 Comissão Imobiliária</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repImob)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#475569;border-bottom:1px solid #f1f5f9">Imobiliária</td>
+        </tr>`:''}
+        ${repProp>0?`<tr>
+          <td style="padding:7px 10px;color:#475569;border-bottom:1px solid #f1f5f9">👤 Repasse ao Proprietário</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repProp+repExtra)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#475569;border-bottom:1px solid #f1f5f9">Proprietário</td>
+        </tr>`:''}
+      </table>
+      <!-- Campo número do boleto -->
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fafafa;border:1px dashed #94a3b8;border-radius:8px">
+        <span style="font-size:12px;font-weight:700;color:#475569;white-space:nowrap">Nº do Boleto:</span>
+        <span style="flex:1;border-bottom:1.5px dotted #94a3b8;display:block;height:18px"></span>
+        <span style="font-size:12px;font-weight:700;color:#475569;white-space:nowrap;margin-left:20px">Data Pgto:</span>
+        <span style="width:90px;border-bottom:1.5px dotted #94a3b8;display:block;height:18px"></span>
+      </div>
+    </div>`;
+  });
+  const [yM,moM]=mes.split('-');
+  const mesLabel=mes?`${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][+moM-1]}/${yM}`:'Geral';
+  const totalBruto=cobs.reduce((s,cb)=>s+(cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor),0);
+  const totalLiq=cobs.reduce((s,cb)=>s+cb.valor,0);
+  const totalDc=cobs.reduce((s,cb)=>s+(cb.descontoAplicado||0),0);
+  const totalImob=cobs.reduce((s,cb)=>s+(cb.repasse?.imob||0),0);
+  const totalProp=cobs.reduce((s,cb)=>s+(cb.repasse?.prop||0)+(cb.repasseExtraValor||0),0);
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <title>Relatório de Boletos — ${mesLabel}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f8fafc;color:#1e293b;padding:24px}
+    .no-print{margin-bottom:20px}
+    @media print{
+      body{background:#fff;padding:12px}
+      .no-print{display:none!important}
+      @page{margin:12mm 10mm;size:A4}
+    }
+    h1{font-size:20px;font-weight:700;color:#1e293b;margin-bottom:4px}
+    .sub{font-size:13px;color:#64748b;margin-bottom:20px}
+    .resumo{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px}
+    .rcard{flex:1;min-width:120px;text-align:center}
+    .rcard .v{font-size:16px;font-weight:700;color:#1e293b}
+    .rcard .l{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  </style>
+  </head><body>
+  <div class="no-print" style="display:flex;gap:10px;align-items:center">
+    <button onclick="window.print()" style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+    <button onclick="window.close()" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer">✕ Fechar</button>
+    <span style="font-size:13px;color:#64748b">${cobs.length} cobrança(s) — ${status==='pend'?'só pendentes':'todos os status'}${tipoFiltro?' · '+tipoFiltro:''}</span>
+  </div>
+  <h1>🧾 Relatório de Boletos</h1>
+  <div class="sub">Referência: <strong>${mesLabel}</strong> &nbsp;·&nbsp; Emitido em ${new Date().toLocaleDateString('pt-BR')}</div>
+  <div class="resumo">
+    <div class="rcard"><div class="v">${cobs.length}</div><div class="l">Cobranças</div></div>
+    <div class="rcard"><div class="v" style="color:#1e40af">${R(totalBruto)}</div><div class="l">Total Bruto</div></div>
+    ${totalDc>0?`<div class="rcard"><div class="v" style="color:#7c3aed">−${R(totalDc)}</div><div class="l">Descontos</div></div>`:''}
+    <div class="rcard"><div class="v" style="color:#166534">${R(totalLiq)}</div><div class="l">A Receber</div></div>
+    <div class="rcard"><div class="v" style="color:#475569">${R(totalImob)}</div><div class="l">Imobiliária</div></div>
+    <div class="rcard"><div class="v" style="color:#0369a1">${R(totalProp)}</div><div class="l">Proprietários</div></div>
+  </div>
+  ${rows.join('')}
+  </body></html>`;
+  const win=window.open('','_blank','width=900,height=700,scrollbars=yes');
+  if(win){win.document.write(html);win.document.close();}
+  else alert('Permita popups para este site e tente novamente.');
 }
 function rrQuick(n){
   const m=relMeses(24);
@@ -4773,11 +4988,10 @@ function editContrato(cid){
   set('fmul',c.multa);set('fcau',c.caucao);
   const fcautp=document.getElementById('fcautp');if(fcautp)fcautp.value=c.caucaoTp||'imob';
   set('fsegvnc',c.seguroVence);set('fsegobs',c.seguroObs);set('fobs',c.obs);
-  // Desconto
-  const dcAtivo=c.descontoValor>0;
+  // Desconto (múltiplos)
+  const dcAtivo=c.descontoValor>0||(c.descontos&&c.descontos.length>0);
   const fdc=document.getElementById('fdc_ativo');if(fdc)fdc.checked=dcAtivo;
-  set('fdesc_desc',c.descontoDesc);set('fdesc_val',c.descontoValor||'');set('fdesc_parc',c.descontoParc||'');
-  const fdoE=document.getElementById('fdesc_origem');if(fdoE)fdoE.value=c.descontoOrigem||'prop';
+  const fdescListE=document.getElementById('fdesc_list');if(fdescListE){fdescListE.innerHTML='';const descsE=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}]:[]);descsE.forEach(d=>addDescontoRow(d.desc||'',d.valor||'',d.parc||'',d.origem||'prop'));}
   const dbox=document.getElementById('desconto-box');if(dbox)dbox.style.display=dcAtivo?'contents':'none';
   // Repasse Extra
   const repAtivo=c.repasseExtraValor>0;
@@ -4808,11 +5022,10 @@ function renovarContrato(cid){
   set('fmul',c.multa);set('fcau',c.caucao);
   const fcautp=document.getElementById('fcautp');if(fcautp)fcautp.value=c.caucaoTp||'imob';
   set('fsegvnc','');set('fsegobs','');set('fobs',c.obs);
-  // Desconto (herdar do contrato anterior)
+  // Desconto (herdar do contrato anterior — múltiplos)
   const dcAtivoR=c.descontoValor>0&&c.descontoParc>0;
   const fdcR=document.getElementById('fdc_ativo');if(fdcR)fdcR.checked=dcAtivoR;
-  set('fdesc_desc',c.descontoDesc);set('fdesc_val',c.descontoValor||'');set('fdesc_parc',c.descontoParc||'');
-  const fdoR=document.getElementById('fdesc_origem');if(fdoR)fdoR.value=c.descontoOrigem||'prop';
+  const fdescListR=document.getElementById('fdesc_list');if(fdescListR){fdescListR.innerHTML='';const descsR=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}]:[]);descsR.forEach(d=>addDescontoRow(d.desc||'',d.valor||'',d.parc||'',d.origem||'prop'));}
   const dboxR=document.getElementById('desconto-box');if(dboxR)dboxR.style.display=dcAtivoR?'contents':'none';
   // Repasse Extra (herdar do contrato anterior)
   const repAtivoR=c.repasseExtraValor>0&&c.repasseExtraParc>0;
