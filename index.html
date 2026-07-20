@@ -3026,6 +3026,32 @@ async function saveContract(){
       }
     }
   }
+  // ── REMOVER DESCONTO DE COBRANÇAS PENDENTES (desconto foi desativado/zerado na edição) ──
+  if(wasEdit && !(c.descontoValor>0 && c.descontoParc>0)){
+    const pendComDesc=D.cb.filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel'&&(x.descontoAplicado||0)>0);
+    if(pendComDesc.length>0){
+      const ok=confirm(`O desconto foi removido/desativado no contrato.\n\nDeseja remover o desconto já aplicado em ${pendComDesc.length} cobrança(s) de aluguel pendente(s)?`);
+      if(ok){
+        const adm=c.adm==='sim';
+        for(const cb of pendComDesc){
+          const valorOriginal=cb.valor+(cb.descontoAplicado||0);
+          const repRaw=calcRepasse('Aluguel',valorOriginal,false,adm);
+          const repImob=Math.min(repRaw.imob,valorOriginal);
+          const repProp=Math.max(0,valorOriginal-repImob);
+          const{error:eu}=await sb.from('cobrancas').update({
+            valor:valorOriginal,
+            repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
+            desconto_aplicado:null,
+            desconto_desc_cob:null
+          }).eq('id',cb.id);
+          if(!eu){
+            const ci=D.cb.findIndex(x=>x.id===cb.id);
+            if(ci>=0){D.cb[ci].valor=valorOriginal;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';}
+          }
+        }
+      }
+    }
+  }
   // ── APLICAR REPASSE EXTRA ÀS COBRANÇAS PENDENTES (edição — AUTOMÁTICO) ──
   if(wasEdit){
     const pendAlugRep=D.cb
