@@ -2155,7 +2155,7 @@ function cobItem(cb,inDetail=false,noBottomBorder=false){
       ${repasseExtra>0?`<div style="font-size:11px;color:#059669;margin-top:2px;font-weight:600">🏦 ${cb.repasseExtraDesc||'Repasse Extra'}: +${R(repasseExtra)} → Prop.</div>`:''}
       <div style="font-size:11px;color:var(--dmr);margin-top:1px">Vence: ${FD(cb.venc)}</div>
       ${rp?`<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
-        ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop+repasseExtra)}</span>`:''}
+        ${(rp.prop+repasseExtra)!==0?(rp.prop+repasseExtra)<0?`<span class="rep" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.25)">⚠️ Prop. deve: ${R(Math.abs(rp.prop+repasseExtra))}</span>`:`<span class="rep rep-pr">Prop: ${R(rp.prop+repasseExtra)}</span>`:''}
         ${rp.imob>0?`<span class="rep rep-im">Imob: ${R(rp.imob)}</span>`:''}
         ${cb.descontoAplicado>0?`<span class="rep" style="background:rgba(124,58,237,.12);color:#7c3aed;border:1px solid rgba(124,58,237,.25)">Tx.Extra: ${R(cb.descontoAplicado)}</span>`:''}
         ${repasseExtra>0?`<span class="rep" style="background:rgba(5,150,105,.12);color:#059669;border:1px solid rgba(5,150,105,.25)">Rep.Extra: +${R(repasseExtra)}</span>`:''}
@@ -2708,8 +2708,11 @@ async function gerarCobsSupabase(c,userId){
       ?(isFirst?c.valor:valor)   // base = valor cheio (antes do desconto)
       :(isFirst?Math.max(0,c.valor-descontoAplicado):valorLiq); // base = valor líquido
     const repRaw=calcRepasse('Aluguel',repBase,isFirst,adm);
-    const repImob=Math.min(repRaw.imob,valorLiq); // nunca pode ser maior que o que foi cobrado
-    const rep={imob:repImob,prop:Math.max(0,valorLiq-repImob),tipo:repRaw.tipo};
+    // 1º mês (proporcional): comissão é 50% do aluguel CHEIO do contrato, mesmo que ultrapasse o valor
+    // proporcional cobrado — o proprietário pode ficar devendo nesse mês (compensado por outras cobranças do período).
+    // Meses normais: nunca ultrapassa o que foi cobrado (10% sempre cabe dentro do valor).
+    const repImob=isFirst?repRaw.imob:Math.min(repRaw.imob,valorLiq);
+    const rep={imob:repImob,prop:valorLiq-repImob,tipo:repRaw.tipo};
     // Flagear reajuste: meses além do período de reajuste (ex: a partir do 13º se reajuste=12)
     const monthIdx=(y-ini.getFullYear())*12+(m-ini.getMonth()); // 1-based
     const reajPend=!!(c.reajusteMeses&&c.reajusteMeses>0&&c.reajusteIndice!=='Nenhum'&&monthIdx>c.reajusteMeses);
@@ -3002,10 +3005,12 @@ async function saveContract(){
           if(dcTotal===0)break;
           const valorOriginal=cb.valor+(cb.descontoAplicado||0);
           const novoValor=Math.max(0,valorOriginal-dcTotal);
-          const repBase=origemPropE?valorOriginal:novoValor;
-          const repRaw=calcRepasse('Aluguel',repBase,false,adm);
-          const repImob=Math.min(repRaw.imob,novoValor);
-          const repProp=Math.max(0,novoValor-repImob);
+          // preserva o status de "1º mês" (comissão de 50% do aluguel cheio, sem teto) já aplicado a esta cobrança
+          const isFirstCb=cb.repasse?.tipo==='primeiro';
+          const repBase=isFirstCb?(origemPropE?c.valor:Math.max(0,c.valor-dcTotal)):(origemPropE?valorOriginal:novoValor);
+          const repRaw=calcRepasse('Aluguel',repBase,isFirstCb,adm);
+          const repImob=isFirstCb?repRaw.imob:Math.min(repRaw.imob,novoValor);
+          const repProp=novoValor-repImob;
           const{error:eu}=await sb.from('cobrancas').update({
             valor:novoValor,
             repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
@@ -3035,9 +3040,12 @@ async function saveContract(){
         const adm=c.adm==='sim';
         for(const cb of pendComDesc){
           const valorOriginal=cb.valor+(cb.descontoAplicado||0);
-          const repRaw=calcRepasse('Aluguel',valorOriginal,false,adm);
-          const repImob=Math.min(repRaw.imob,valorOriginal);
-          const repProp=Math.max(0,valorOriginal-repImob);
+          // preserva o status de "1º mês" (comissão de 50% do aluguel cheio, sem teto) já aplicado a esta cobrança
+          const isFirstCb=cb.repasse?.tipo==='primeiro';
+          const repBase=isFirstCb?(c.valor||valorOriginal):valorOriginal;
+          const repRaw=calcRepasse('Aluguel',repBase,isFirstCb,adm);
+          const repImob=isFirstCb?repRaw.imob:Math.min(repRaw.imob,valorOriginal);
+          const repProp=valorOriginal-repImob;
           const{error:eu}=await sb.from('cobrancas').update({
             valor:valorOriginal,
             repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
@@ -3053,7 +3061,13 @@ async function saveContract(){
     }
   }
   // ── APLICAR REPASSE EXTRA ÀS COBRANÇAS PENDENTES (edição — AUTOMÁTICO) ──
+  // IMPORTANTE: repasse.prop NUNCA deve incluir o repasse extra — ele é somado à parte em todas as
+  // telas/relatórios. Por isso, sempre que o repasse extra muda, recalculamos imob/prop do zero
+  // (a partir de cb.valor) em vez de só ajustar a diferença — isso também "limpa" cobranças antigas
+  // que ficaram com o extra embutido em repasse.prop por uma versão anterior desta rotina.
   if(wasEdit){
+    const adm=c.adm==='sim';
+    const origemPropE=(c.descontoOrigem||c.descontos?.[0]?.origem||'prop')==='prop';
     const pendAlugRep=D.cb
       .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel')
       .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
@@ -3063,23 +3077,34 @@ async function saveContract(){
       for(const cb of pendAlugRep){
         const oldExtra=cb.repasseExtraValor||0;
         const novoExtra=usadasRep<maxParc&&c.repasseExtraValor>0?c.repasseExtraValor:0;
-        // Só atualiza se o valor mudou
-        if(oldExtra===novoExtra&&(novoExtra===0||(cb.repasseExtraDesc||'')===(c.repasseExtraDesc||'Repasse Extra')))continue;
-        const repPropNovo=Math.max(0,(cb.repasse.prop-oldExtra)+novoExtra);
+        const oldDesc=cb.repasseExtraDesc||'';
+        const novoDesc=novoExtra>0?(c.repasseExtraDesc||'Repasse Extra'):'';
+        if(novoExtra>0)usadasRep++;
+        // Só atualiza se o valor/descrição mudou
+        if(oldExtra===novoExtra&&oldDesc===novoDesc)continue;
+        const valorOriginal=cb.valor+(cb.descontoAplicado||0);
+        const isFirstCb=cb.repasse?.tipo==='primeiro';
+        const repBase=isFirstCb
+          ?(origemPropE?c.valor:Math.max(0,c.valor-(cb.descontoAplicado||0)))
+          :(origemPropE?valorOriginal:cb.valor);
+        const repRaw=calcRepasse('Aluguel',repBase,isFirstCb,adm);
+        const repImob=isFirstCb?repRaw.imob:Math.min(repRaw.imob,cb.valor);
+        const repPropNovo=cb.valor-repImob;
         const{error:eu}=await sb.from('cobrancas').update({
+          repasse_imob:repImob,
           repasse_prop:repPropNovo,
+          repasse_tipo:repRaw.tipo,
           repasse_extra_valor:novoExtra||null,
-          repasse_extra_desc:novoExtra>0?(c.repasseExtraDesc||'Repasse Extra'):null
+          repasse_extra_desc:novoDesc||null
         }).eq('id',cb.id);
         if(!eu){
           const ci=D.cb.findIndex(x=>x.id===cb.id);
           if(ci>=0){
-            D.cb[ci].repasse={...D.cb[ci].repasse,prop:repPropNovo};
+            D.cb[ci].repasse={imob:repImob,prop:repPropNovo,tipo:repRaw.tipo};
             D.cb[ci].repasseExtraValor=novoExtra;
-            D.cb[ci].repasseExtraDesc=novoExtra>0?(c.repasseExtraDesc||'Repasse Extra'):'';
+            D.cb[ci].repasseExtraDesc=novoDesc;
           }
         }
-        if(novoExtra>0)usadasRep++;
       }
       if(c.repasseExtraValor>0){
         // Conta quantas cobranças PENDENTES ainda têm o repasse extra aplicado
@@ -3195,8 +3220,9 @@ function updateRepBox(){
   // Para 1º mês proporcional: calcular repasse sobre valor CHEIO do aluguel
   const repBase=(tp==='Aluguel'&&isFirst&&val<c.valor)?c.valor:val;
   const rp=calcRepasse(tp,repBase,isFirst,c.adm==='sim');
-  // Limitar imob ao valor cobrado (proporcional pode ser menor que 50% do cheio)
-  if(rp.imob>val){rp.imob=val;rp.prop=0;}
+  // 1º mês: comissão de 50% do aluguel cheio é fixa, mesmo que ultrapasse o valor proporcional cobrado
+  // (proprietário pode ficar devendo nesse mês, compensado por outras cobranças do período). Meses normais: nunca ultrapassa.
+  if(!isFirst&&rp.imob>val){rp.imob=val;rp.prop=0;}
   if(rp.tipo==='sem_adm'){box.innerHTML='';return;}
   let defDest='prop';
   if(rp.imob>=val&&rp.prop===0)defDest='imob';
@@ -4605,10 +4631,10 @@ function gerarRelatorioBoletos(){
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repImob)}</td>
           <td style="padding:7px 10px;text-align:right;color:#475569;border-bottom:1px solid #f1f5f9">Imobiliária</td>
         </tr>`:''}
-        ${repProp>0?`<tr>
-          <td style="padding:7px 10px;color:#475569;border-bottom:1px solid #f1f5f9">👤 Repasse ao Proprietário</td>
-          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repProp)}</td>
-          <td style="padding:7px 10px;text-align:right;color:#475569;border-bottom:1px solid #f1f5f9">Proprietário</td>
+        ${repProp!==0?`<tr>
+          <td style="padding:7px 10px;color:${repProp<0?'#dc2626':'#475569'};border-bottom:1px solid #f1f5f9">${repProp<0?'⚠️ Proprietário deve (comissão excede o valor cobrado)':'👤 Repasse ao Proprietário'}</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:${repProp<0?'#dc2626':'#475569'};border-bottom:1px solid #f1f5f9">${R(repProp)}</td>
+          <td style="padding:7px 10px;text-align:right;color:${repProp<0?'#dc2626':'#475569'};border-bottom:1px solid #f1f5f9">Proprietário</td>
         </tr>`:''}
       </table>
       <!-- Campo número do boleto -->
@@ -4730,12 +4756,12 @@ function gerarRelRepasse(){
       html+=`<p><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
       html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Desconto</th><th>Acréscimo</th><th>Taxa Imob.</th><th>Bruto Prop.</th><th>Pendente</th></tr></thead><tbody>`;
       ct.rows.sort((a,b)=>a.mes.localeCompare(b.mes)).forEach(r=>{
-        const pc=r.pend>0?`<span style="color:#dc2626;font-weight:600">${R2(r.pend)}</span>`:`<span style="color:#16a34a">✓</span>`;
+        const pc=r.pend>0?`<span style="color:#dc2626;font-weight:600">${R2(r.pend)}</span>`:r.pend<0?`<span style="color:#dc2626;font-weight:600">⚠️ Prop. deve ${R2(Math.abs(r.pend))}</span>`:`<span style="color:#16a34a">✓</span>`;
         const dc=r.desc>0?`<span style="color:#7c3aed;font-weight:600">-${R2(r.desc)}</span>`:`<span style="color:#94a3b8">–</span>`;
         const ac=r.repExtra>0?`<span style="color:#15803d;font-weight:600" title="${r.repExtraDesc}">+${R2(r.repExtra)}</span>`:`<span style="color:#94a3b8">–</span>`;
         html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.rec)}</td><td>${dc}</td><td>${ac}</td><td>${R2(r.imob)}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
       });
-      html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${ct.totRepExtra>0?`<span style='color:#15803d;font-weight:700'>+${R2(ct.totRepExtra)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
+      html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${ct.totRepExtra>0?`<span style='color:#15803d;font-weight:700'>+${R2(ct.totRepExtra)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:ct.totPend<0?`<span style="color:#dc2626">⚠️ Prop. deve ${R2(Math.abs(ct.totPend))}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
       // Acréscimos repassados ao proprietário (ex: IPTU proporcional)
       if(ct.totRepExtra>0){
         html+=`<div style="margin:6px 0 10px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px">
@@ -4764,7 +4790,7 @@ function gerarRelRepasse(){
       <div class="summary-card"><div class="label">Recebido</div><div class="value">${R2(pRec)}</div></div>
       <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob)}</div></div>
       ${pDesp>0?`<div class="summary-card red"><div class="label">Despesas Abatidas</div><div class="value">-${R2(pDesp)}</div></div>`:''}
-      <div class="summary-card ${pPend>0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pDesp>0?'✅ Repasse Líquido':'✅ Repassado'}</div><div class="value">${pPend>0?R2(pPend):pDesp>0?R2(pLiquido):R2(pProp)}</div></div>
+      <div class="summary-card ${pPend>0||pProp<0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pPend<0?'⚠️ Proprietário deve':pDesp>0?'✅ Repasse Líquido':pProp<0?'⚠️ Proprietário deve':'✅ Repassado'}</div><div class="value">${pPend!==0?R2(Math.abs(pPend)):pDesp>0?R2(pLiquido):R2(Math.abs(pProp))}</div></div>
     </div></div>`;
     gRec+=pRec;gImob+=pImob;gProp+=pProp;gPend+=pPend;gDesc+=pDesc;gDesp+=pDesp;
   });
@@ -4773,7 +4799,7 @@ function gerarRelRepasse(){
     <div class="summary-card dark"><div class="label">Total Recebido</div><div class="value">${R2(gRec)}</div></div>
     <div class="summary-card dark"><div class="label">Total Taxa Imob.</div><div class="value">${R2(gImob)}</div></div>
     ${gDesp>0?`<div class="summary-card dark" style="border-left-color:#f87171"><div class="label">Total Despesas</div><div class="value">-${R2(gDesp)}</div></div>`:''}
-    <div class="summary-card dark" style="border-left-color:#4ade80"><div class="label">${gPend>0?'⚠️ Total Pendente':gDesp>0?'✅ Repasse Líquido':'✅ Total Repassado'}</div><div class="value">${gPend>0?R2(gPend):gDesp>0?R2(gLiquido):R2(gProp)}</div></div>
+    <div class="summary-card dark" style="border-left-color:${gPend<0||gProp<0?'#f87171':'#4ade80'}"><div class="label">${gPend>0?'⚠️ Total Pendente':gPend<0?'⚠️ Proprietários devem':gDesp>0?'✅ Repasse Líquido':gProp<0?'⚠️ Proprietários devem':'✅ Total Repassado'}</div><div class="value">${gPend!==0?R2(Math.abs(gPend)):gDesp>0?R2(gLiquido):R2(Math.abs(gProp))}</div></div>
   </div>`;
   gerarPDF('Repasse ao Proprietário',html);
 }
