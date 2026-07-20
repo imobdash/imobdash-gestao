@@ -2155,7 +2155,7 @@ function cobItem(cb,inDetail=false,noBottomBorder=false){
       ${repasseExtra>0?`<div style="font-size:11px;color:#059669;margin-top:2px;font-weight:600">🏦 ${cb.repasseExtraDesc||'Repasse Extra'}: +${R(repasseExtra)} → Prop.</div>`:''}
       <div style="font-size:11px;color:var(--dmr);margin-top:1px">Vence: ${FD(cb.venc)}</div>
       ${rp?`<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
-        ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop)}</span>`:''}
+        ${rp.prop>0?`<span class="rep rep-pr">Prop: ${R(rp.prop+repasseExtra)}</span>`:''}
         ${rp.imob>0?`<span class="rep rep-im">Imob: ${R(rp.imob)}</span>`:''}
         ${cb.descontoAplicado>0?`<span class="rep" style="background:rgba(124,58,237,.12);color:#7c3aed;border:1px solid rgba(124,58,237,.25)">Tx.Extra: ${R(cb.descontoAplicado)}</span>`:''}
         ${repasseExtra>0?`<span class="rep" style="background:rgba(5,150,105,.12);color:#059669;border:1px solid rgba(5,150,105,.25)">Rep.Extra: +${R(repasseExtra)}</span>`:''}
@@ -4520,12 +4520,14 @@ function gerarRelatorioBoletos(){
   const rows=cobs.map(cb=>{
     const con=D.c.find(c=>c.id===cb.contratoId);
     const vBruto=cb.descontoAplicado>0?(cb.valor+cb.descontoAplicado):cb.valor;
-    const vLiq=cb.valor;
     const repImob=cb.repasse?.imob||0;
-    const repProp=cb.repasse?.prop||0;
     const repExtra=cb.repasseExtraValor||0;
     const repExtraDesc=cb.repasseExtraDesc||'Repasse Extra';
     const dcVal=cb.descontoAplicado||0;
+    // Valor Líquido = o que efetivamente é lançado/recebido no boleto: bruto - desconto + repasse extra (ex: IPTU repassado)
+    const vLiq=cb.valor+repExtra;
+    // Repasse ao Proprietário = Valor Líquido - Comissão (a comissão incide só sobre o aluguel, não sobre o repasse extra)
+    const repProp=vLiq-repImob;
     const dcDesc=cb.descontoDesc||'Desconto';
     // determinar quem absorve o desconto (do contrato)
     const dcOrigem=con?.descontoOrigem||con?.descontos?.[0]?.origem||'prop';
@@ -4562,16 +4564,16 @@ function gerarRelatorioBoletos(){
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#7c3aed;border-bottom:1px solid #f1f5f9">−${R(dcVal)}</td>
           <td style="padding:7px 10px;text-align:right;color:#7c3aed;border-bottom:1px solid #f1f5f9">Absorve: ${dcOrigemLabel}</td>
         </tr>`:''}
-        <tr style="background:#f0fdf4">
-          <td style="padding:7px 10px;color:#166534;font-weight:700;border-bottom:1px solid #bbf7d0">✅ Valor Líquido (a receber)</td>
-          <td style="padding:7px 10px;text-align:right;font-weight:700;color:#166534;border-bottom:1px solid #bbf7d0">${R(vLiq)}</td>
-          <td style="padding:7px 10px;border-bottom:1px solid #bbf7d0"></td>
-        </tr>
         ${repExtra>0?`<tr>
           <td style="padding:7px 10px;color:#0369a1;border-bottom:1px solid #f1f5f9">🏦 ${repExtraDesc} (repasse extra)</td>
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#0369a1;border-bottom:1px solid #f1f5f9">+${R(repExtra)}</td>
           <td style="padding:7px 10px;text-align:right;color:#0369a1;border-bottom:1px solid #f1f5f9">100% Proprietário</td>
         </tr>`:''}
+        <tr style="background:#f0fdf4">
+          <td style="padding:7px 10px;color:#166534;font-weight:700;border-bottom:1px solid #bbf7d0">✅ Valor Líquido (a receber)</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:700;color:#166534;border-bottom:1px solid #bbf7d0">${R(vLiq)}</td>
+          <td style="padding:7px 10px;border-bottom:1px solid #bbf7d0"></td>
+        </tr>
         ${repImob>0?`<tr>
           <td style="padding:7px 10px;color:#475569;border-bottom:1px solid #f1f5f9">🏢 Comissão Imobiliária</td>
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repImob)}</td>
@@ -4579,7 +4581,7 @@ function gerarRelatorioBoletos(){
         </tr>`:''}
         ${repProp>0?`<tr>
           <td style="padding:7px 10px;color:#475569;border-bottom:1px solid #f1f5f9">👤 Repasse ao Proprietário</td>
-          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repProp+repExtra)}</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repProp)}</td>
           <td style="padding:7px 10px;text-align:right;color:#475569;border-bottom:1px solid #f1f5f9">Proprietário</td>
         </tr>`:''}
       </table>
@@ -4595,10 +4597,11 @@ function gerarRelatorioBoletos(){
   const fmtMesL=m=>{if(!m)return'';const[y,mo]=m.split('-');return`${['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][+mo-1]}/${y}`;};
   const mesLabel=de===ate||!ate?fmtMesL(de)||'Geral':`${fmtMesL(de)} a ${fmtMesL(ate)}`;
   const totalBruto=cobs.reduce((s,cb)=>s+(cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor),0);
-  const totalLiq=cobs.reduce((s,cb)=>s+cb.valor,0);
   const totalDc=cobs.reduce((s,cb)=>s+(cb.descontoAplicado||0),0);
+  const totalRepExtra=cobs.reduce((s,cb)=>s+(cb.repasseExtraValor||0),0);
+  const totalLiq=cobs.reduce((s,cb)=>s+cb.valor+(cb.repasseExtraValor||0),0); // bruto - desconto + repasse extra (o que é efetivamente lançado no boleto)
   const totalImob=cobs.reduce((s,cb)=>s+(cb.repasse?.imob||0),0);
-  const totalProp=cobs.reduce((s,cb)=>s+(cb.repasse?.prop||0)+(cb.repasseExtraValor||0),0);
+  const totalProp=totalLiq-totalImob;
   const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
   <title>Relatório de Boletos — ${mesLabel}</title>
   <style>
@@ -4629,6 +4632,7 @@ function gerarRelatorioBoletos(){
     <div class="rcard"><div class="v">${cobs.length}</div><div class="l">Cobranças</div></div>
     <div class="rcard"><div class="v" style="color:#1e40af">${R(totalBruto)}</div><div class="l">Total Bruto</div></div>
     ${totalDc>0?`<div class="rcard"><div class="v" style="color:#7c3aed">−${R(totalDc)}</div><div class="l">Descontos</div></div>`:''}
+    ${totalRepExtra>0?`<div class="rcard"><div class="v" style="color:#0369a1">+${R(totalRepExtra)}</div><div class="l">Repasse Extra</div></div>`:''}
     <div class="rcard"><div class="v" style="color:#166534">${R(totalLiq)}</div><div class="l">A Receber</div></div>
     <div class="rcard"><div class="v" style="color:#475569">${R(totalImob)}</div><div class="l">Imobiliária</div></div>
     <div class="rcard"><div class="v" style="color:#0369a1">${R(totalProp)}</div><div class="l">Proprietários</div></div>
