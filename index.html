@@ -1418,7 +1418,7 @@ let _mrepDespesas=[];
 function openMarcarRepasse(ids){
   _repCobIds=Array.isArray(ids)?ids:[ids];
   const cbs=D.cb.filter(x=>_repCobIds.includes(x.id));
-  const totalProp=cbs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const totalProp=cbs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
   const desc=cbs.length===1?cbs[0].descricao:`${cbs.length} cobranças selecionadas`;
   document.getElementById('mrep-info').textContent=desc;
   document.getElementById('mrep-dt').value=TD();
@@ -1445,7 +1445,7 @@ function addDespesaRepasse(){
 function removeDespesa(i){_mrepDespesas.splice(i,1);renderDespesasModal();}
 function renderDespesasModal(){
   const cbs=D.cb.filter(x=>_repCobIds.includes(x.id));
-  const bruto=cbs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const bruto=cbs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
   const totalDesp=_mrepDespesas.reduce((a,b)=>a+b.valor,0);
   const liquido=bruto-totalDesp;
   const el=document.getElementById('mrep-despesas');
@@ -1975,7 +1975,7 @@ function repasseCard(cid){
   const c=D.c.find(x=>x.id===cid);
   const cobs=D.cb.filter(x=>x.contratoId===cid&&x.pago&&x.repasse);
   if(!cobs.length)return'<div style="font-size:13px;color:var(--dm)">Nenhum pagamento ainda.</div>';
-  const totalProp=cobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+  const totalProp=cobs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
   const totalImob=cobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
   const isAdm=c?.adm==='sim';
   return`${!isAdm?'<div style="font-size:11px;color:var(--dm);background:var(--sf2);border:1px solid var(--bd);border-radius:7px;padding:4px 10px;display:inline-block;margin-bottom:8px">Administração direta · 100% ao proprietário</div>':''}
@@ -1990,7 +1990,7 @@ function repasseCard(cid){
     </div>`:''}
   </div>
   <table class="rtable"><thead><tr><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Regra</th></tr></thead>
-  <tbody>${cobs.map(cb=>{const rp=cb.repasse;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop)}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
+  <tbody>${cobs.map(cb=>{const rp=cb.repasse;const rext=cb.repasseExtraValor||0;const regra=rp.tipo==='primeiro'?'50/50':rp.tipo==='normal'?'10/90':rp.tipo==='pintura'?'Pintura':rp.tipo==='caucao'?'Caução':'Repasse';return`<tr><td>${cb.descricao||cb.tipo}</td><td>${R(cb.valor)}</td><td style="color:var(--gn);font-weight:600">${R(rp.prop+rext)}${rext>0?`<div style="font-size:10px;color:#15803d;font-weight:600">+${R(rext)} ${cb.repasseExtraDesc||'repasse extra'}</div>`:''}</td><td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td><td style="font-size:11px;color:var(--dm)">${regra}</td></tr>`;}).join('')}</tbody></table>`;
 }
 
 let _repShowEncerrado=false;
@@ -2009,11 +2009,11 @@ function renderRepasse(){
     const todaCobs=D.cb.filter(x=>x.contratoId===c.id&&x.repasse).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
     const pagCobs=todaCobs.filter(x=>x.pago);
     const pendCobs=todaCobs.filter(x=>!x.pago);
-    const totalProp=pagCobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+    const totalProp=pagCobs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
     const totalImob=pagCobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
-    const pendProp=pendCobs.reduce((a,b)=>a+(b.repasse?.prop||0),0);
+    const pendProp=pendCobs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
     const pendImob=pendCobs.reduce((a,b)=>a+(b.repasse?.imob||0),0);
-    const pendRep=pagCobs.filter(x=>x.repasse?.prop>0&&!x.repasseRealizado);
+    const pendRep=pagCobs.filter(x=>(x.repasse?.prop>0||x.repasseExtraValor>0)&&!x.repasseRealizado);
     const collapsed=_repCollapsed.has(c.id);
     return`<div style="border:1px solid var(--bd);border-radius:var(--r);margin-bottom:13px;background:var(--sf);overflow:hidden">
       <div style="padding:12px 16px;background:var(--sf2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:${collapsed?'none':'1px solid var(--bd)'}" onclick="toggleRepContract('${c.id}')">
@@ -2057,7 +2057,7 @@ function renderRepasse(){
         </div>
         ${todaCobs.length?(()=>{
           return`${pendRep.length?`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:9px 12px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;flex-wrap:wrap;gap:8px">
-            <span style="font-size:13px;color:var(--gn)">💸 ${pendRep.length} cobrança(s) paga(s) aguardando repasse · ${R(pendRep.reduce((a,b)=>a+(b.repasse?.prop||0),0))}</span>
+            <span style="font-size:13px;color:var(--gn)">💸 ${pendRep.length} cobrança(s) paga(s) aguardando repasse · ${R(pendRep.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0))}</span>
             <button class="btn bk bsm" onclick="openMarcarRepasse(${JSON.stringify(pendRep.map(x=>x.id))})">Marcar Repassado</button>
           </div>`:''}
           <div class="tbl-scroll"><table class="rtable"><thead><tr><th>Mês</th><th>Tipo</th><th>Descrição</th><th>Total</th><th>Prop.</th><th>Imob.</th><th>Pgto</th><th>Repasse Prop.</th></tr></thead>
@@ -4666,22 +4666,27 @@ function gerarRelRepasse(){
     if(propFiltro&&propFiltro!==prop)return;
     const key=c?.id||cb.contratoId;
     if(!byProp[prop])byProp[prop]={label:propRaw,contratos:{}};
-    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0,totDesc:0,totDesp:0,despesas:[]};
+    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0,totDesc:0,totRepExtra:0,totDesp:0,despesas:[],repExtras:[]};
     const rec=+(cb.valorPago||cb.valor||0);
     const imob=+(cb.repasse?.imob||0);
-    const prop_v=+(cb.repasse?.prop||0);
+    const propBase=+(cb.repasse?.prop||0);
+    const repExtra=+(cb.repasseExtraValor||0);
+    const repExtraDesc=cb.repasseExtraDesc||'Repasse Extra';
+    const prop_v=propBase+repExtra;
     const pend=prop_v&&!cb.repasseRealizado?prop_v:0;
     const desc=+(cb.descontoAplicado||0);
     const despesas=cb.despesasRepasse||[];
     const totDesp=despesas.reduce((a,b)=>a+b.valor,0);
-    byProp[prop].contratos[key].rows.push({mes:cb.mes,tipo:cb.tipo||'Aluguel',rec,imob,prop_v,pend,desc,despesas,totDesp});
+    byProp[prop].contratos[key].rows.push({mes:cb.mes,tipo:cb.tipo||'Aluguel',rec,imob,prop_v,pend,desc,repExtra,repExtraDesc,despesas,totDesp});
     byProp[prop].contratos[key].totRec+=rec;
     byProp[prop].contratos[key].totImob+=imob;
     byProp[prop].contratos[key].totProp+=prop_v;
     byProp[prop].contratos[key].totPend+=pend;
     byProp[prop].contratos[key].totDesc=(byProp[prop].contratos[key].totDesc||0)+desc;
+    byProp[prop].contratos[key].totRepExtra=(byProp[prop].contratos[key].totRepExtra||0)+repExtra;
     byProp[prop].contratos[key].totDesp+=totDesp;
     byProp[prop].contratos[key].despesas.push(...despesas);
+    if(repExtra>0)byProp[prop].contratos[key].repExtras.push({desc:repExtraDesc,valor:repExtra,mes:cb.mes});
   });
   const pl=de===ate?relMesLabel(de):`${relMesLabel(de)} a ${relMesLabel(ate)}`;
   let html=`<h2 style="margin-bottom:4px">Repasse ao Proprietário</h2><p style="color:#666;font-size:13px;margin-bottom:20px">Período: ${pl}${propFiltro?' · '+propFiltro:''}</p>`;
@@ -4693,13 +4698,24 @@ function gerarRelRepasse(){
     html+=`<div class="section"><div class="section-title">👤 ${propLabel}</div>`;
     Object.values(data.contratos).forEach(ct=>{
       html+=`<p><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
-      html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Desconto</th><th>Taxa Imob.</th><th>Bruto Prop.</th><th>Pendente</th></tr></thead><tbody>`;
+      html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Desconto</th><th>Acréscimo</th><th>Taxa Imob.</th><th>Bruto Prop.</th><th>Pendente</th></tr></thead><tbody>`;
       ct.rows.sort((a,b)=>a.mes.localeCompare(b.mes)).forEach(r=>{
         const pc=r.pend>0?`<span style="color:#dc2626;font-weight:600">${R2(r.pend)}</span>`:`<span style="color:#16a34a">✓</span>`;
         const dc=r.desc>0?`<span style="color:#7c3aed;font-weight:600">-${R2(r.desc)}</span>`:`<span style="color:#94a3b8">–</span>`;
-        html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.rec)}</td><td>${dc}</td><td>${R2(r.imob)}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
+        const ac=r.repExtra>0?`<span style="color:#15803d;font-weight:600" title="${r.repExtraDesc}">+${R2(r.repExtra)}</span>`:`<span style="color:#94a3b8">–</span>`;
+        html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.rec)}</td><td>${dc}</td><td>${ac}</td><td>${R2(r.imob)}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
       });
-      html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
+      html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${ct.totRepExtra>0?`<span style='color:#15803d;font-weight:700'>+${R2(ct.totRepExtra)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
+      // Acréscimos repassados ao proprietário (ex: IPTU proporcional)
+      if(ct.totRepExtra>0){
+        html+=`<div style="margin:6px 0 10px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px">
+          <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">➕ Acréscimos repassados ao proprietário</div>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            ${ct.repExtras.map(e=>`<tr><td style="padding:3px 0;color:#15803d">${e.desc} (${relMesLabel(e.mes)})</td><td style="text-align:right;color:#15803d;font-weight:700">+${R2(e.valor)}</td></tr>`).join('')}
+            <tr style="border-top:1px solid #bbf7d0"><td style="padding:3px 0;font-weight:700;color:#15803d">Total acréscimos</td><td style="text-align:right;font-weight:700;color:#15803d">+${R2(ct.totRepExtra)}</td></tr>
+          </table>
+        </div>`;
+      }
       // Despesas abatidas do repasse
       if(ct.totDesp>0){
         html+=`<div style="margin:6px 0 10px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px">
@@ -4743,9 +4759,10 @@ function shareRelRepasse(){
     const prop=c?.proprietario||'Sem proprietário';
     if(propFiltro&&prop!==propFiltro)return;
     if(!byProp[prop])byProp[prop]={rec:0,prop_v:0,pend:0,qtd:0};
+    const propTot=+(cb.repasse?.prop||0)+(+(cb.repasseExtraValor||0));
     byProp[prop].rec+=+(cb.valorPago||cb.valor||0);
-    byProp[prop].prop_v+=+(cb.repasse?.prop||0);
-    if(cb.repasse?.prop&&!cb.repasseRealizado)byProp[prop].pend+=+(cb.repasse.prop);
+    byProp[prop].prop_v+=propTot;
+    if(propTot&&!cb.repasseRealizado)byProp[prop].pend+=propTot;
     byProp[prop].qtd++;
   });
   const linhas=['🏦 *Repasse ao Proprietário*',`📅 Período: ${pl}`,`📍 ${propFiltro||'Todos os proprietários'}`,''];
@@ -4780,12 +4797,12 @@ function gerarRelFinanceiro(){
     if(!byTipo[t])byTipo[t]={total:0,imob:0,prop:0,qtd:0};
     byTipo[t].total+=+(cb.valorPago||cb.valor||0);
     byTipo[t].imob+=+(cb.repasse?.imob||0);
-    byTipo[t].prop+=+(cb.repasse?.prop||0);
+    byTipo[t].prop+=+(cb.repasse?.prop||0)+(+(cb.repasseExtraValor||0));
     byTipo[t].qtd++;
   });
   const totRec=pagas.reduce((a,b)=>a+(+(b.valorPago||b.valor||0)),0);
   const totImob=pagas.reduce((a,b)=>a+(+(b.repasse?.imob||0)),0);
-  const totProp=pagas.reduce((a,b)=>a+(+(b.repasse?.prop||0)),0);
+  const totProp=pagas.reduce((a,b)=>a+(+(b.repasse?.prop||0))+(+(b.repasseExtraValor||0)),0);
   const totPend=pendentes.reduce((a,b)=>a+(+(b.valor||0)),0);
   const totAtr=atrasadas.reduce((a,b)=>a+(+(b.valor||0)),0);
   const pctInad=(pagas.length+pendentes.length>0)?((atrasadas.length/(pagas.length+pendentes.length))*100).toFixed(1):'0.0';
