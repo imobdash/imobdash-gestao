@@ -879,6 +879,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
           </select>
         </div>
         <div class="g"><label>Em quantas parcelas</label><input type="number" id="desp-remb-parc" value="1" min="1"></div>
+        <div class="g ff"><label>A partir de qual mês</label><input type="month" id="desp-remb-mes"></div>
       </div>
     </div>
     <div class="fa"><button class="btn bg" onclick="cM('mdesp')">Cancelar</button><button class="btn bp" id="btnSaveDesp" onclick="saveDespesa()">✓ Salvar Despesa</button></div>
@@ -1009,6 +1010,10 @@ tr:hover td{background:rgba(255,255,255,.018);}
 // ALTER TABLE cobrancas ADD COLUMN reembolso_desc TEXT;
 // ALTER TABLE cobrancas ADD COLUMN reembolso_origem TEXT; -- 'proprietario' | 'inquilino'
 // ALTER TABLE cobrancas ADD COLUMN despesa_origem_id UUID REFERENCES despesas_imob(id) ON DELETE SET NULL;
+// -- v2: permite escolher o mês inicial e empilhar mais de um reembolso na mesma cobrança
+// -- (os 4 campos acima ficam mantidos só para compatibilidade com o que já foi aplicado, não são mais usados)
+// ALTER TABLE cobrancas ADD COLUMN reembolsos JSONB DEFAULT '[]';
+// ALTER TABLE despesas_imob ADD COLUMN reembolso_mes_inicial TEXT; -- formato 'AAAA-MM'
 
 // ══════════════════════════════════════════
 // SUPABASE INIT
@@ -1250,10 +1255,9 @@ function rowToCobranca(row){
     repasseExtraValor:Number(row.repasse_extra_valor||0),
     repasseExtraDesc:row.repasse_extra_desc||'',
     despesasRepasse:row.despesas_repasse||[],
-    reembolsoValor:Number(row.reembolso_valor||0),
-    reembolsoDesc:row.reembolso_desc||'',
-    reembolsoOrigem:row.reembolso_origem||'',
-    despesaOrigemId:row.despesa_origem_id||null
+    // reembolsos: array de {despesaId,desc,valor,origem} — permite empilhar mais de um na mesma cobrança.
+    // Compatibilidade: se ainda não tiver o array mas tiver os campos antigos (v1), sintetiza um item.
+    reembolsos:(row.reembolsos&&row.reembolsos.length)?row.reembolsos:(Number(row.reembolso_valor||0)>0?[{despesaId:row.despesa_origem_id||null,desc:row.reembolso_desc||'Despesa',valor:Number(row.reembolso_valor||0),origem:row.reembolso_origem||'proprietario'}]:[])
   };
 }
 function rowToOS(row){
@@ -1302,7 +1306,7 @@ async function loadAll(){
   // Despesas — carregada separada para não quebrar caso tabela ainda não exista
   try{
     const r5=await sb.from('despesas_imob').select('*').order('data',{ascending:false});
-    D.d=(r5.data||[]).map(row=>({id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.criado_em,reembolsoDe:row.reembolso_de||'',reembolsoParcelas:Number(row.reembolso_parcelas||0),reembolsoAplicadas:Number(row.reembolso_aplicadas||0)}));
+    D.d=(r5.data||[]).map(row=>({id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.criado_em,reembolsoDe:row.reembolso_de||'',reembolsoParcelas:Number(row.reembolso_parcelas||0),reembolsoAplicadas:Number(row.reembolso_aplicadas||0),reembolsoMesInicial:row.reembolso_mes_inicial||''}));
   }catch(e){console.warn('despesas_imob não disponível:',e);D.d=[];}
   // Pretendentes
   try{
@@ -2155,7 +2159,8 @@ function cobItem(cb,inDetail=false,noBottomBorder=false){
   const atrasadoForte=!cb.pago&&DA(cb.venc)<-5;
   const valorOriginal=cb.descontoAplicado>0?cb.valor+cb.descontoAplicado:cb.valor;
   const repasseExtra=cb.repasseExtraValor||0;
-  const reembolso=cb.reembolsoValor||0;
+  const reembolsos=cb.reembolsos||[];
+  const reembolso=reembolsos.reduce((a,r)=>a+(r.valor||0),0);
   const totalInquilino=cb.valor+repasseExtra;
   let parcInfo='';
   if(cb.descontoAplicado>0){
@@ -2179,7 +2184,7 @@ function cobItem(cb,inDetail=false,noBottomBorder=false){
       <div style="font-size:12px;color:var(--dm);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cb.descricao||''}</div>
       ${cb.descontoAplicado>0?`<div style="font-size:11px;color:var(--ac2);margin-top:2px;font-weight:600">💸 ${cb.descontoDesc||'Desconto'}: -${R(cb.descontoAplicado)}${parcInfo}</div>`:''}
       ${repasseExtra>0?`<div style="font-size:11px;color:#059669;margin-top:2px;font-weight:600">🏦 ${cb.repasseExtraDesc||'Repasse Extra'}: +${R(repasseExtra)} → Prop.</div>`:''}
-      ${reembolso>0?`<div style="font-size:11px;color:#b45309;margin-top:2px;font-weight:600">💰 Reembolso: ${cb.reembolsoDesc||'Despesa'} — ${R(reembolso)} ${cb.reembolsoOrigem==='inquilino'?'(acréscimo no aluguel → Imob.)':'(reduz repasse do Prop. → Imob.)'}</div>`:''}
+      ${reembolsos.map(r=>`<div style="font-size:11px;color:#b45309;margin-top:2px;font-weight:600">💰 Reembolso: ${r.desc||'Despesa'} — ${R(r.valor)} ${r.origem==='inquilino'?'(acréscimo no aluguel → Imob.)':'(reduz repasse do Prop. → Imob.)'}</div>`).join('')}
       <div style="font-size:11px;color:var(--dmr);margin-top:1px">Vence: ${FD(cb.venc)}</div>
       ${rp?`<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
         ${(rp.prop+repasseExtra)!==0?(rp.prop+repasseExtra)<0?`<span class="rep" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.25)">⚠️ Prop. deve: ${R(Math.abs(rp.prop+repasseExtra))}</span>`:`<span class="rep rep-pr">Prop: ${R(rp.prop+repasseExtra)}</span>`:''}
@@ -3707,17 +3712,19 @@ function openNDespesa(id){
   document.getElementById('desp-remb-ativo').checked=!!desp?.reembolsoDe;
   document.getElementById('desp-remb-de').value=desp?.reembolsoDe||'proprietario';
   document.getElementById('desp-remb-parc').value=desp?.reembolsoParcelas||1;
+  document.getElementById('desp-remb-mes').value=desp?.reembolsoMesInicial||new Date().toISOString().substring(0,7);
   toggleDespRemb();
   oM('mdesp');
 }
-// Aplica o reembolso desta despesa nas próximas cobranças de Aluguel pendentes do contrato,
-// dividindo o valor em N parcelas. origem='proprietario' reduz o repasse do proprietário (a
-// imobiliária recupera); origem='inquilino' aumenta o valor cobrado do inquilino, 100% p/ imobiliária.
-async function aplicarReembolsoDespesa(despesaId,conId,valorTotal,parcelas,origem,descricao){
+// Aplica o reembolso desta despesa nas cobranças de Aluguel pendentes do contrato a partir do mês
+// escolhido, dividindo o valor em N parcelas. origem='proprietario' reduz o repasse do proprietário
+// (a imobiliária recupera); origem='inquilino' aumenta o valor cobrado do inquilino, 100% p/ imobiliária.
+// Suporta empilhar vários reembolsos (de despesas diferentes) na mesma cobrança/mês.
+async function aplicarReembolsoDespesa(despesaId,conId,valorTotal,parcelas,origem,descricao,mesInicial){
   if(!conId||!(valorTotal>0)||!(parcelas>0))return 0;
   const pendAlug=D.cb
-    .filter(x=>x.contratoId===conId&&!x.pago&&x.tipo==='Aluguel'&&!x.despesaOrigemId)
-    .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+    .filter(x=>x.contratoId===conId&&!x.pago&&x.tipo==='Aluguel'&&(!mesInicial||(x.mes||'')>=mesInicial))
+    .sort((a,b)=>(a.mes||'').localeCompare(b.mes||'')||new Date(a.venc)-new Date(b.venc));
   const qtd=Math.min(parcelas,pendAlug.length);
   if(qtd===0)return 0;
   const base=Math.floor((valorTotal/qtd)*100)/100;
@@ -3730,16 +3737,17 @@ async function aplicarReembolsoDespesa(despesaId,conId,valorTotal,parcelas,orige
     const novoImob=imobAtual+parcVal;
     const novoValor=origem==='inquilino'?cb.valor+parcVal:cb.valor;
     const novoProp=origem==='inquilino'?propAtual:propAtual-parcVal;
+    const novosReembolsos=[...(cb.reembolsos||[]),{despesaId,desc:descricao,valor:parcVal,origem}];
     const{error:eu}=await sb.from('cobrancas').update({
       valor:novoValor,repasse_imob:novoImob,repasse_prop:novoProp,
-      reembolso_valor:parcVal,reembolso_desc:descricao,reembolso_origem:origem,despesa_origem_id:despesaId
+      reembolsos:novosReembolsos
     }).eq('id',cb.id);
     if(!eu){
       const ci=D.cb.findIndex(x=>x.id===cb.id);
       if(ci>=0){
         D.cb[ci].valor=novoValor;
         D.cb[ci].repasse={...D.cb[ci].repasse,imob:novoImob,prop:novoProp};
-        D.cb[ci].reembolsoValor=parcVal;D.cb[ci].reembolsoDesc=descricao;D.cb[ci].reembolsoOrigem=origem;D.cb[ci].despesaOrigemId=despesaId;
+        D.cb[ci].reembolsos=novosReembolsos;
       }
     }
   }
@@ -3747,23 +3755,26 @@ async function aplicarReembolsoDespesa(despesaId,conId,valorTotal,parcelas,orige
 }
 // Remove o reembolso desta despesa das cobranças ainda pendentes (cobranças já pagas não são mexidas)
 async function reverterReembolsoDespesa(despesaId){
-  const afetadas=D.cb.filter(x=>x.despesaOrigemId===despesaId&&!x.pago);
+  const afetadas=D.cb.filter(x=>!x.pago&&(x.reembolsos||[]).some(r=>r.despesaId===despesaId));
   for(const cb of afetadas){
-    const parcVal=cb.reembolsoValor||0;
+    const item=(cb.reembolsos||[]).find(r=>r.despesaId===despesaId);
+    if(!item)continue;
+    const parcVal=item.valor||0;
     const imobAtual=cb.repasse?.imob||0,propAtual=cb.repasse?.prop||0;
     const novoImob=imobAtual-parcVal;
-    const novoValor=cb.reembolsoOrigem==='inquilino'?cb.valor-parcVal:cb.valor;
-    const novoProp=cb.reembolsoOrigem==='inquilino'?propAtual:propAtual+parcVal;
+    const novoValor=item.origem==='inquilino'?cb.valor-parcVal:cb.valor;
+    const novoProp=item.origem==='inquilino'?propAtual:propAtual+parcVal;
+    const novosReembolsos=(cb.reembolsos||[]).filter(r=>r.despesaId!==despesaId);
     const{error:eu}=await sb.from('cobrancas').update({
       valor:novoValor,repasse_imob:novoImob,repasse_prop:novoProp,
-      reembolso_valor:null,reembolso_desc:null,reembolso_origem:null,despesa_origem_id:null
+      reembolsos:novosReembolsos
     }).eq('id',cb.id);
     if(!eu){
       const ci=D.cb.findIndex(x=>x.id===cb.id);
       if(ci>=0){
         D.cb[ci].valor=novoValor;
         D.cb[ci].repasse={...D.cb[ci].repasse,imob:novoImob,prop:novoProp};
-        D.cb[ci].reembolsoValor=0;D.cb[ci].reembolsoDesc='';D.cb[ci].reembolsoOrigem='';D.cb[ci].despesaOrigemId=null;
+        D.cb[ci].reembolsos=novosReembolsos;
       }
     }
   }
@@ -3780,8 +3791,9 @@ async function saveDespesa(){
   const rembAtivo=document.getElementById('desp-remb-ativo').checked&&conId;
   const rembDe=rembAtivo?document.getElementById('desp-remb-de').value:null;
   const rembParc=rembAtivo?(parseInt(document.getElementById('desp-remb-parc').value)||1):0;
+  const rembMes=rembAtivo?(document.getElementById('desp-remb-mes').value||null):null;
   btn.disabled=true;btn.textContent='Salvando...';
-  const payload={contrato_id:conId,descricao:desc,valor:val,data:dt,tipo,reembolso_de:rembDe,reembolso_parcelas:rembParc,reembolso_aplicadas:0};
+  const payload={contrato_id:conId,descricao:desc,valor:val,data:dt,tipo,reembolso_de:rembDe,reembolso_parcelas:rembParc,reembolso_aplicadas:0,reembolso_mes_inicial:rembMes};
   let result;
   if(_despEditId){
     await reverterReembolsoDespesa(_despEditId); // limpa aplicação anterior antes de recalcular
@@ -3793,12 +3805,12 @@ async function saveDespesa(){
   const row=result.data;
   let aplicadas=0;
   if(rembAtivo){
-    aplicadas=await aplicarReembolsoDespesa(row.id,conId,val,rembParc,rembDe,desc);
+    aplicadas=await aplicarReembolsoDespesa(row.id,conId,val,rembParc,rembDe,desc,rembMes);
     if(aplicadas>0)await sb.from('despesas_imob').update({reembolso_aplicadas:aplicadas}).eq('id',row.id);
-    if(aplicadas<rembParc)alert(`Atenção: só havia ${aplicadas} cobrança(s) de aluguel pendente(s) neste contrato — o reembolso foi dividido apenas entre elas.`);
+    if(aplicadas<rembParc)alert(`Atenção: só havia ${aplicadas} cobrança(s) de aluguel pendente(s) a partir do mês escolhido — o reembolso foi dividido apenas entre elas.`);
   }
   btn.disabled=false;btn.textContent='✓ Salvar Despesa';
-  const mapped={id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.created_at,reembolsoDe:rembDe||'',reembolsoParcelas:rembParc,reembolsoAplicadas:aplicadas};
+  const mapped={id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.created_at,reembolsoDe:rembDe||'',reembolsoParcelas:rembParc,reembolsoAplicadas:aplicadas,reembolsoMesInicial:rembMes||''};
   if(_despEditId){const i=D.d.findIndex(x=>x.id===_despEditId);if(i>=0)D.d[i]=mapped;}
   else D.d.unshift(mapped);
   cM('mdesp');renderDespesas();
@@ -4685,9 +4697,11 @@ function gerarRelatorioBoletos(){
     const repExtra=cb.repasseExtraValor||0;
     const repExtraDesc=cb.repasseExtraDesc||'Repasse Extra';
     const dcVal=cb.descontoAplicado||0;
-    const rembVal=cb.reembolsoValor||0;
-    const rembDesc=cb.reembolsoDesc||'Despesa';
-    const rembOrigem=cb.reembolsoOrigem||'';
+    const reembolsos=cb.reembolsos||[];
+    const rembInquilino=reembolsos.filter(r=>r.origem==='inquilino');
+    const rembProp=reembolsos.filter(r=>r.origem!=='inquilino');
+    const rembValInquilino=rembInquilino.reduce((a,r)=>a+(r.valor||0),0);
+    const rembValProp=rembProp.reduce((a,r)=>a+(r.valor||0),0);
     // Valor Líquido = o que efetivamente é lançado/recebido no boleto: bruto - desconto + repasse extra (ex: IPTU repassado)
     // obs.: se o reembolso é do inquilino, ele já está somado dentro de cb.valor (cobrado junto do boleto)
     const vLiq=cb.valor+repExtra;
@@ -4734,26 +4748,26 @@ function gerarRelatorioBoletos(){
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#0369a1;border-bottom:1px solid #f1f5f9">+${R(repExtra)}</td>
           <td style="padding:7px 10px;text-align:right;color:#0369a1;border-bottom:1px solid #f1f5f9">100% Proprietário</td>
         </tr>`:''}
-        ${rembVal>0&&rembOrigem==='inquilino'?`<tr>
-          <td style="padding:7px 10px;color:#b45309;border-bottom:1px solid #f1f5f9">💰 ${rembDesc} (reembolso — acréscimo cobrado do inquilino)</td>
-          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#b45309;border-bottom:1px solid #f1f5f9">${R(rembVal)} (já incluso no valor acima)</td>
+        ${rembInquilino.map(r=>`<tr>
+          <td style="padding:7px 10px;color:#b45309;border-bottom:1px solid #f1f5f9">💰 ${r.desc||'Despesa'} (reembolso — acréscimo cobrado do inquilino)</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#b45309;border-bottom:1px solid #f1f5f9">${R(r.valor)} (já incluso no valor acima)</td>
           <td style="padding:7px 10px;text-align:right;color:#b45309;border-bottom:1px solid #f1f5f9">100% Imobiliária</td>
-        </tr>`:''}
+        </tr>`).join('')}
         <tr style="background:#f0fdf4">
           <td style="padding:7px 10px;color:#166534;font-weight:700;border-bottom:1px solid #bbf7d0">✅ Valor Líquido (a receber)</td>
           <td style="padding:7px 10px;text-align:right;font-weight:700;color:#166534;border-bottom:1px solid #bbf7d0">${R(vLiq)}</td>
           <td style="padding:7px 10px;border-bottom:1px solid #bbf7d0"></td>
         </tr>
         ${repImob>0?`<tr>
-          <td style="padding:7px 10px;color:#475569;border-bottom:1px solid #f1f5f9">🏢 Comissão Imobiliária${rembVal>0&&rembOrigem==='proprietario'?` (inclui ${R(rembVal)} de reembolso)`:''}</td>
+          <td style="padding:7px 10px;color:#475569;border-bottom:1px solid #f1f5f9">🏢 Comissão Imobiliária${rembValProp>0?` (inclui ${R(rembValProp)} de reembolso)`:''}</td>
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#475569;border-bottom:1px solid #f1f5f9">${R(repImob)}</td>
           <td style="padding:7px 10px;text-align:right;color:#475569;border-bottom:1px solid #f1f5f9">Imobiliária</td>
         </tr>`:''}
-        ${rembVal>0&&rembOrigem==='proprietario'?`<tr>
-          <td style="padding:7px 10px;color:#b45309;border-bottom:1px solid #f1f5f9">💰 ${rembDesc} (reembolso — descontado do repasse do proprietário)</td>
-          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#b45309;border-bottom:1px solid #f1f5f9">−${R(rembVal)}</td>
+        ${rembProp.map(r=>`<tr>
+          <td style="padding:7px 10px;color:#b45309;border-bottom:1px solid #f1f5f9">💰 ${r.desc||'Despesa'} (reembolso — descontado do repasse do proprietário)</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#b45309;border-bottom:1px solid #f1f5f9">−${R(r.valor)}</td>
           <td style="padding:7px 10px;text-align:right;color:#b45309;border-bottom:1px solid #f1f5f9">100% Imobiliária</td>
-        </tr>`:''}
+        </tr>`).join('')}
         ${repProp!==0?`<tr>
           <td style="padding:7px 10px;color:${repProp<0?'#dc2626':'#475569'};border-bottom:1px solid #f1f5f9">${repProp<0?'⚠️ Proprietário deve (comissão excede o valor cobrado)':'👤 Repasse ao Proprietário'}</td>
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:${repProp<0?'#dc2626':'#475569'};border-bottom:1px solid #f1f5f9">${R(repProp)}</td>
