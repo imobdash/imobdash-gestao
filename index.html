@@ -1014,6 +1014,8 @@ tr:hover td{background:rgba(255,255,255,.018);}
 // -- (os 4 campos acima ficam mantidos só para compatibilidade com o que já foi aplicado, não são mais usados)
 // ALTER TABLE cobrancas ADD COLUMN reembolsos JSONB DEFAULT '[]';
 // ALTER TABLE despesas_imob ADD COLUMN reembolso_mes_inicial TEXT; -- formato 'AAAA-MM'
+// -- Descontos individualizados por cobrança (para exibir cada desconto separadamente no relatório de boletos):
+// ALTER TABLE cobrancas ADD COLUMN descontos_aplicados JSONB DEFAULT '[]';
 
 // ══════════════════════════════════════════
 // SUPABASE INIT
@@ -1250,6 +1252,9 @@ function rowToCobranca(row){
     reajustePendente:row.reajuste_pendente||false,
     descontoAplicado:Number(row.desconto_aplicado||0),
     descontoDesc:row.desconto_desc_cob||'',
+    // descontosAplicados: array de {desc,valor,parcAtual,parcTotal} — um item por desconto do contrato.
+    // Compatibilidade: se ainda não tiver o array (cobrança antiga), sintetiza um item único com o total combinado.
+    descontosAplicados:(row.descontos_aplicados&&row.descontos_aplicados.length)?row.descontos_aplicados:(Number(row.desconto_aplicado||0)>0?[{desc:row.desconto_desc_cob||'Desconto',valor:Number(row.desconto_aplicado||0),origem:'prop'}]:[]),
     boletoPath:row.boleto_path||null,
     boletoEmitidoEm:row.boleto_emitido_em||null,
     repasseExtraValor:Number(row.repasse_extra_valor||0),
@@ -2725,7 +2730,8 @@ async function gerarCobsSupabase(c,userId){
     // ── DESCONTOS MENSAIS (múltiplos) ──
     let descontoAplicado=0;let descontoDescCob='';
     const descsAplicadas=[];
-    descontosAtivos.forEach((d,i)=>{if(d.valor>0&&d.parc>0&&descContadores[i]<d.parc&&(!d.inicio||mesRef>=d.inicio)){descontoAplicado+=d.valor;descsAplicadas.push(d.desc||'Desconto');descContadores[i]++;}});
+    const descontosDetalhe=[]; // {desc,valor,parcAtual,parcTotal} — para exibir cada desconto individualmente nos relatórios
+    descontosAtivos.forEach((d,i)=>{if(d.valor>0&&d.parc>0&&descContadores[i]<d.parc&&(!d.inicio||mesRef>=d.inicio)){descontoAplicado+=d.valor;descsAplicadas.push(d.desc||'Desconto');descontosDetalhe.push({desc:d.desc||'Desconto',valor:d.valor,parcAtual:descContadores[i]+1,parcTotal:d.parc,origem:d.origem||'prop'});descContadores[i]++;}});
     if(descsAplicadas.length>0)descontoDescCob=descsAplicadas.join(', ');
     // ── REPASSE EXTRA AO PROPRIETÁRIO ──
     let repasseExtraApl=0;let repasseExtraDescCob='';
@@ -2760,6 +2766,7 @@ async function gerarCobsSupabase(c,userId){
       reajuste_pendente:reajPend,
       desconto_aplicado:descontoAplicado||null,
       desconto_desc_cob:descontoDescCob||null,
+      descontos_aplicados:descontosDetalhe.length?descontosDetalhe:null,
       repasse_extra_valor:repasseExtraApl||null,
       repasse_extra_desc:repasseExtraDescCob||null
     });
@@ -3032,9 +3039,9 @@ async function saveContract(){
         const dcContEdit=dsEdEdit.map(()=>0);
         for(const cb of pendAlug){
           if(usadas>=maxParcEdit)break;
-          let dcTotal=0;const dcDescArr=[];
+          let dcTotal=0;const dcDescArr=[];const dcDetalheArr=[];
           const mesCb=cb.mes||cb.venc?.substring(0,7)||'';
-          dsEdEdit.forEach((d,i)=>{if(d.parc>0&&dcContEdit[i]<d.parc&&(!d.inicio||mesCb>=d.inicio)){dcTotal+=d.valor;dcDescArr.push(d.desc||'Desconto');dcContEdit[i]++;}});
+          dsEdEdit.forEach((d,i)=>{if(d.parc>0&&dcContEdit[i]<d.parc&&(!d.inicio||mesCb>=d.inicio)){dcTotal+=d.valor;dcDescArr.push(d.desc||'Desconto');dcDetalheArr.push({desc:d.desc||'Desconto',valor:d.valor,parcAtual:dcContEdit[i]+1,parcTotal:d.parc,origem:d.origem||'prop'});dcContEdit[i]++;}});
           if(dcTotal===0)break;
           const valorOriginal=cb.valor+(cb.descontoAplicado||0);
           const novoValor=Math.max(0,valorOriginal-dcTotal);
@@ -3048,11 +3055,12 @@ async function saveContract(){
             valor:novoValor,
             repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
             desconto_aplicado:dcTotal,
-            desconto_desc_cob:dcDescArr.join(', ')
+            desconto_desc_cob:dcDescArr.join(', '),
+            descontos_aplicados:dcDetalheArr
           }).eq('id',cb.id);
           if(!eu){
             const ci=D.cb.findIndex(x=>x.id===cb.id);
-            if(ci>=0){D.cb[ci].valor=novoValor;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=dcTotal;D.cb[ci].descontoDesc=dcDescArr.join(', ');}
+            if(ci>=0){D.cb[ci].valor=novoValor;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=dcTotal;D.cb[ci].descontoDesc=dcDescArr.join(', ');D.cb[ci].descontosAplicados=dcDetalheArr;}
             usadas++;
           }
         }
@@ -3083,11 +3091,12 @@ async function saveContract(){
             valor:valorOriginal,
             repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
             desconto_aplicado:null,
-            desconto_desc_cob:null
+            desconto_desc_cob:null,
+            descontos_aplicados:null
           }).eq('id',cb.id);
           if(!eu){
             const ci=D.cb.findIndex(x=>x.id===cb.id);
-            if(ci>=0){D.cb[ci].valor=valorOriginal;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';}
+            if(ci>=0){D.cb[ci].valor=valorOriginal;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';D.cb[ci].descontosAplicados=[];}
           }
         }
       }
@@ -4697,20 +4706,19 @@ function gerarRelatorioBoletos(){
     const repExtra=cb.repasseExtraValor||0;
     const repExtraDesc=cb.repasseExtraDesc||'Repasse Extra';
     const dcVal=cb.descontoAplicado||0;
+    const descontosItens=cb.descontosAplicados||[];
     const reembolsos=cb.reembolsos||[];
     const rembInquilino=reembolsos.filter(r=>r.origem==='inquilino');
     const rembProp=reembolsos.filter(r=>r.origem!=='inquilino');
     const rembValInquilino=rembInquilino.reduce((a,r)=>a+(r.valor||0),0);
     const rembValProp=rembProp.reduce((a,r)=>a+(r.valor||0),0);
-    // Valor Líquido = o que efetivamente é lançado/recebido no boleto: bruto - desconto + repasse extra (ex: IPTU repassado)
-    // obs.: se o reembolso é do inquilino, ele já está somado dentro de cb.valor (cobrado junto do boleto)
-    const vLiq=cb.valor+repExtra;
-    // Repasse ao Proprietário = Valor Líquido - Comissão (a comissão já inclui o reembolso, quando houver)
+    // Total Boleto = aluguel bruto + repasse extra (o reembolso do inquilino, se houver, já está embutido no bruto)
+    const totalBoleto=vBruto+repExtra;
+    // Total Líquido Boleto = Total Boleto - descontos (o que efetivamente é lançado/recebido no boleto)
+    const vLiq=totalBoleto-dcVal;
+    // Repasse ao Proprietário = Total Líquido - Comissão (a comissão já inclui o reembolso do proprietário, quando houver)
     const repProp=vLiq-repImob;
-    const dcDesc=cb.descontoDesc||'Desconto';
-    // determinar quem absorve o desconto (do contrato)
-    const dcOrigem=con?.descontoOrigem||con?.descontos?.[0]?.origem||'prop';
-    const dcOrigemLabel=dcOrigem==='prop'?'Proprietário':'Imobiliária';
+    const origemLabel=o=>o==='prop'?'Proprietário':'Imobiliária';
     return`<div style="border:1.5px solid #cbd5e1;border-radius:10px;padding:18px 20px;margin-bottom:18px;page-break-inside:avoid;background:#fff">
       <!-- Cabeçalho da cobrança -->
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e2e8f0">
@@ -4734,27 +4742,32 @@ function gerarRelatorioBoletos(){
           <td style="padding:6px 10px;color:#475569;font-weight:600;text-align:right;border-bottom:1px solid #e2e8f0">Destino</td>
         </tr>
         <tr>
-          <td style="padding:7px 10px;color:#1e293b;border-bottom:1px solid #f1f5f9">${cb.descricao||cb.tipo}</td>
+          <td style="padding:7px 10px;color:#1e293b;border-bottom:1px solid #f1f5f9">Valor Aluguel — ${cb.descricao||cb.tipo}</td>
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#1e293b;border-bottom:1px solid #f1f5f9">${R(vBruto)}</td>
           <td style="padding:7px 10px;text-align:right;color:#64748b;border-bottom:1px solid #f1f5f9">Inquilino</td>
         </tr>
-        ${dcVal>0?`<tr>
-          <td style="padding:7px 10px;color:#7c3aed;border-bottom:1px solid #f1f5f9">💸 Desconto: ${dcDesc}</td>
-          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#7c3aed;border-bottom:1px solid #f1f5f9">−${R(dcVal)}</td>
-          <td style="padding:7px 10px;text-align:right;color:#7c3aed;border-bottom:1px solid #f1f5f9">Absorve: ${dcOrigemLabel}</td>
-        </tr>`:''}
+        ${rembInquilino.map(r=>`<tr>
+          <td style="padding:7px 10px;color:#b45309;border-bottom:1px solid #f1f5f9">💰 ${r.desc||'Despesa'} (reembolso — já incluso no valor do aluguel acima)</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#b45309;border-bottom:1px solid #f1f5f9">${R(r.valor)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#b45309;border-bottom:1px solid #f1f5f9">100% Imobiliária</td>
+        </tr>`).join('')}
         ${repExtra>0?`<tr>
-          <td style="padding:7px 10px;color:#0369a1;border-bottom:1px solid #f1f5f9">🏦 ${repExtraDesc} (repasse extra)</td>
+          <td style="padding:7px 10px;color:#0369a1;border-bottom:1px solid #f1f5f9">🏦 Valor Repasse Extra — ${repExtraDesc}</td>
           <td style="padding:7px 10px;text-align:right;font-weight:600;color:#0369a1;border-bottom:1px solid #f1f5f9">+${R(repExtra)}</td>
           <td style="padding:7px 10px;text-align:right;color:#0369a1;border-bottom:1px solid #f1f5f9">100% Proprietário</td>
         </tr>`:''}
-        ${rembInquilino.map(r=>`<tr>
-          <td style="padding:7px 10px;color:#b45309;border-bottom:1px solid #f1f5f9">💰 ${r.desc||'Despesa'} (reembolso — acréscimo cobrado do inquilino)</td>
-          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#b45309;border-bottom:1px solid #f1f5f9">${R(r.valor)} (já incluso no valor acima)</td>
-          <td style="padding:7px 10px;text-align:right;color:#b45309;border-bottom:1px solid #f1f5f9">100% Imobiliária</td>
+        <tr style="background:#eff6ff">
+          <td style="padding:7px 10px;color:#1e40af;font-weight:700;border-bottom:1px solid #bfdbfe">= Total Boleto</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:700;color:#1e40af;border-bottom:1px solid #bfdbfe">${R(totalBoleto)}</td>
+          <td style="padding:7px 10px;border-bottom:1px solid #bfdbfe"></td>
+        </tr>
+        ${descontosItens.map(d=>`<tr>
+          <td style="padding:7px 10px;color:#7c3aed;border-bottom:1px solid #f1f5f9">💸 Desconto: ${d.desc||'Desconto'}${d.parcTotal>1?` — parcela ${d.parcAtual} de ${d.parcTotal}`:''}</td>
+          <td style="padding:7px 10px;text-align:right;font-weight:600;color:#7c3aed;border-bottom:1px solid #f1f5f9">−${R(d.valor)}</td>
+          <td style="padding:7px 10px;text-align:right;color:#7c3aed;border-bottom:1px solid #f1f5f9">Absorve: ${origemLabel(d.origem||'prop')}</td>
         </tr>`).join('')}
         <tr style="background:#f0fdf4">
-          <td style="padding:7px 10px;color:#166534;font-weight:700;border-bottom:1px solid #bbf7d0">✅ Valor Líquido (a receber)</td>
+          <td style="padding:7px 10px;color:#166534;font-weight:700;border-bottom:1px solid #bbf7d0">✅ Total Líquido Boleto</td>
           <td style="padding:7px 10px;text-align:right;font-weight:700;color:#166534;border-bottom:1px solid #bbf7d0">${R(vLiq)}</td>
           <td style="padding:7px 10px;border-bottom:1px solid #bbf7d0"></td>
         </tr>
