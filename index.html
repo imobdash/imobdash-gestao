@@ -4468,13 +4468,18 @@ function gerarPDF(titulo,htmlContent){
       * { margin:0; padding:0; box-sizing:border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11.5px; color: #1c2128; background:#fff; }
       /* ── HEADER ── */
-      .pdf-header { display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:10px; border-bottom:3px solid #1e3a8a; margin-bottom:18px; }
+      .pdf-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; border-bottom:3px solid #1e3a8a; margin-bottom:16px; }
+      .pdf-logo-img { height:42px; }
       .pdf-logo { font-size:22px; font-weight:800; color:#1e3a8a; letter-spacing:-0.5px; }
       .pdf-logo span { color:#2563eb; }
       .pdf-meta { text-align:right; font-size:10px; color:#64748b; line-height:1.6; }
       .pdf-meta strong { display:block; font-size:12px; color:#1e3a8a; font-weight:700; }
       /* ── SECOES ── */
       .section { margin-bottom:18px; padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; page-break-inside:avoid; }
+      /* owner-block: como .section, mas SEM avoid-break — pode conter vários contratos e é grande
+         demais pra forçar tudo numa página só (isso deixava a página anterior quase em branco) */
+      .owner-block { margin-bottom:18px; padding:12px 14px; border:1px solid #e2e8f0; border-radius:8px; }
+      .ct-block { page-break-inside:avoid; margin-bottom:14px; }
       .section-title { font-size:12px; font-weight:700; color:#1e3a8a; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:6px; }
       h2 { font-size:15px; font-weight:700; margin-bottom:4px; color:#1e3a8a; }
       h3 { font-size:12px; font-weight:700; margin:10px 0 6px; color:#334155; }
@@ -4529,7 +4534,7 @@ function gerarPDF(titulo,htmlContent){
       <button onclick="window.print()">🖨️ Salvar PDF / Imprimir</button>
     </div>
     <div class="pdf-header">
-      <div class="pdf-logo">Imob<span>.</span>Gestão</div>
+      <img class="pdf-logo-img" src="${LOGO_EDUARDO_SOUZA_B64}">
       <div class="pdf-meta">
         <strong>${titulo}</strong>
         Gerado em ${new Date().toLocaleString('pt-BR',{dateStyle:'long',timeStyle:'short'})}
@@ -4537,8 +4542,8 @@ function gerarPDF(titulo,htmlContent){
     </div>
     ${htmlContent}
     <div class="pdf-footer">
-      <div class="pdf-footer-brand"><strong>ImobGestão</strong> · Gestão Inteligente de Imóveis</div>
-      <div class="pdf-stamp">Documento gerado em ${new Date().toLocaleString('pt-BR')}</div>
+      <div class="pdf-footer-brand"><strong>${EMPRESA.razaoSocial}</strong> · CRECI ${EMPRESA.creciJ} · CNPJ ${EMPRESA.cnpj}</div>
+      <div class="pdf-stamp">${EMPRESA.telefone} · ${EMPRESA.email}</div>
     </div>
   </body></html>`);
   w.document.close();
@@ -5149,8 +5154,9 @@ function gerarRelRepasse(){
   Object.entries(byProp).forEach(([prop,data])=>{
     const propLabel=data.label||prop;
     let pRec=0,pImob=0,pProp=0,pPend=0,pDesc=0,pDesp=0,pRemb=0;
-    html+=`<div class="section"><div class="section-title">👤 ${propLabel}</div>`;
+    html+=`<div class="owner-block"><div class="section-title">👤 ${propLabel}</div>`;
     Object.values(data.contratos).forEach(ct=>{
+      html+=`<div class="ct-block">`;
       html+=`<p><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
       html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Recebido</th><th>Desconto</th><th>Acréscimo</th><th>Taxa Imob.</th><th>Bruto Prop.</th><th>Pendente</th></tr></thead><tbody>`;
       ct.rows.sort((a,b)=>a.mes.localeCompare(b.mes)).forEach(r=>{
@@ -5202,6 +5208,7 @@ function gerarRelRepasse(){
           </table>
         </div>`;
       }
+      html+=`</div>`;
       pRec+=ct.totRec;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;pDesc+=ct.totDesc||0;pDesp+=ct.totDesp||0;pRemb+=ct.totRemb||0;
     });
     const pLiquido=pProp-pDesp;
