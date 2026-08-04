@@ -4872,7 +4872,7 @@ function gerarRelRepasse(){
     if(propFiltro&&propFiltro!==prop)return;
     const key=c?.id||cb.contratoId;
     if(!byProp[prop])byProp[prop]={label:propRaw,contratos:{}};
-    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0,totDesc:0,totRepExtra:0,totDesp:0,despesas:[],repExtras:[],descontos:[]};
+    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totRec:0,totImob:0,totProp:0,totPend:0,totDesc:0,totRepExtra:0,totDesp:0,totRemb:0,despesas:[],repExtras:[],descontos:[],reembolsos:[]};
     const rec=+(cb.valorPago||cb.valor||0);
     const imob=+(cb.repasse?.imob||0);
     const propBase=+(cb.repasse?.prop||0);
@@ -4884,7 +4884,11 @@ function gerarRelRepasse(){
     const descDesc=cb.descontoDesc||'Desconto';
     const despesas=cb.despesasRepasse||[];
     const totDesp=despesas.reduce((a,b)=>a+b.valor,0);
-    byProp[prop].contratos[key].rows.push({mes:cb.mes,tipo:cb.tipo||'Aluguel',rec,imob,prop_v,pend,desc,descDesc,repExtra,repExtraDesc,despesas,totDesp});
+    // Reembolsos à imobiliária (despesas pagas por ela e descontadas do repasse do proprietário) —
+    // já estão embutidos em cb.repasse.imob (somados) e cb.repasse.prop (subtraídos); aqui só discriminamos.
+    const rembItens=(cb.reembolsos||[]).filter(r=>r.origem!=='inquilino');
+    const rembVal=rembItens.reduce((a,r)=>a+(r.valor||0),0);
+    byProp[prop].contratos[key].rows.push({mes:cb.mes,tipo:cb.tipo||'Aluguel',rec,imob,prop_v,pend,desc,descDesc,repExtra,repExtraDesc,despesas,totDesp,rembVal});
     byProp[prop].contratos[key].totRec+=rec;
     byProp[prop].contratos[key].totImob+=imob;
     byProp[prop].contratos[key].totProp+=prop_v;
@@ -4892,17 +4896,19 @@ function gerarRelRepasse(){
     byProp[prop].contratos[key].totDesc=(byProp[prop].contratos[key].totDesc||0)+desc;
     byProp[prop].contratos[key].totRepExtra=(byProp[prop].contratos[key].totRepExtra||0)+repExtra;
     byProp[prop].contratos[key].totDesp+=totDesp;
+    byProp[prop].contratos[key].totRemb=(byProp[prop].contratos[key].totRemb||0)+rembVal;
     byProp[prop].contratos[key].despesas.push(...despesas);
     if(repExtra>0)byProp[prop].contratos[key].repExtras.push({desc:repExtraDesc,valor:repExtra,mes:cb.mes});
     if(desc>0)byProp[prop].contratos[key].descontos.push({desc:descDesc,valor:desc,mes:cb.mes});
+    rembItens.forEach(r=>byProp[prop].contratos[key].reembolsos.push({desc:r.desc||'Despesa',valor:r.valor||0,mes:cb.mes}));
   });
   const pl=de===ate?relMesLabel(de):`${relMesLabel(de)} a ${relMesLabel(ate)}`;
   let html=`<h2 style="margin-bottom:4px">Repasse ao Proprietário</h2><p style="color:#666;font-size:13px;margin-bottom:20px">Período: ${pl}${propFiltro?' · '+propFiltro:''}</p>`;
   if(!Object.keys(byProp).length){html+=`<p>Nenhuma cobrança paga no período.</p>`;gerarPDF('Repasse ao Proprietário',html);return;}
-  let gRec=0,gImob=0,gProp=0,gPend=0,gDesc=0,gDesp=0;
+  let gRec=0,gImob=0,gProp=0,gPend=0,gDesc=0,gDesp=0,gRemb=0;
   Object.entries(byProp).forEach(([prop,data])=>{
     const propLabel=data.label||prop;
-    let pRec=0,pImob=0,pProp=0,pPend=0,pDesc=0,pDesp=0;
+    let pRec=0,pImob=0,pProp=0,pPend=0,pDesc=0,pDesp=0,pRemb=0;
     html+=`<div class="section"><div class="section-title">👤 ${propLabel}</div>`;
     Object.values(data.contratos).forEach(ct=>{
       html+=`<p><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
@@ -4911,7 +4917,8 @@ function gerarRelRepasse(){
         const pc=r.pend>0?`<span style="color:#dc2626;font-weight:600">${R2(r.pend)}</span>`:r.pend<0?`<span style="color:#dc2626;font-weight:600">⚠️ Prop. deve ${R2(Math.abs(r.pend))}</span>`:`<span style="color:#16a34a">✓</span>`;
         const dc=r.desc>0?`<span style="color:#7c3aed;font-weight:600">-${R2(r.desc)}</span>`:`<span style="color:#94a3b8">–</span>`;
         const ac=r.repExtra>0?`<span style="color:#15803d;font-weight:600" title="${r.repExtraDesc}">+${R2(r.repExtra)}</span>`:`<span style="color:#94a3b8">–</span>`;
-        html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.rec)}</td><td>${dc}</td><td>${ac}</td><td>${R2(r.imob)}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
+        const imobCell=r.rembVal>0?`${R2(r.imob)}<div style="font-size:9px;color:#92400e;font-weight:600">(inclui ${R2(r.rembVal)} reemb.)</div>`:R2(r.imob);
+        html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.rec)}</td><td>${dc}</td><td>${ac}</td><td>${imobCell}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
       });
       html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totRec)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${ct.totRepExtra>0?`<span style='color:#15803d;font-weight:700'>+${R2(ct.totRepExtra)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:ct.totPend<0?`<span style="color:#dc2626">⚠️ Prop. deve ${R2(Math.abs(ct.totPend))}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
       // Descontos absorvidos (aplicados ao aluguel)
@@ -4934,6 +4941,16 @@ function gerarRelRepasse(){
           </table>
         </div>`;
       }
+      // Reembolsos retidos pela imobiliária (descontados do repasse ao proprietário)
+      if(ct.totRemb>0){
+        html+=`<div style="margin:6px 0 10px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px">
+          <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">💰 Reembolsos retidos pela imobiliária (descontados do repasse)</div>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            ${ct.reembolsos.map(r=>`<tr><td style="padding:3px 0;color:#92400e">${r.desc} (${relMesLabel(r.mes)})</td><td style="text-align:right;color:#92400e;font-weight:700">-${R2(r.valor)}</td></tr>`).join('')}
+            <tr style="border-top:1px solid #fde68a"><td style="padding:3px 0;font-weight:700;color:#92400e">Total reembolsos</td><td style="text-align:right;font-weight:700;color:#92400e">-${R2(ct.totRemb)}</td></tr>
+          </table>
+        </div>`;
+      }
       // Despesas abatidas do repasse
       if(ct.totDesp>0){
         html+=`<div style="margin:6px 0 10px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px">
@@ -4945,21 +4962,21 @@ function gerarRelRepasse(){
           </table>
         </div>`;
       }
-      pRec+=ct.totRec;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;pDesc+=ct.totDesc||0;pDesp+=ct.totDesp||0;
+      pRec+=ct.totRec;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;pDesc+=ct.totDesc||0;pDesp+=ct.totDesp||0;pRemb+=ct.totRemb||0;
     });
     const pLiquido=pProp-pDesp;
     html+=`<div class="summary-grid" style="margin-top:10px;grid-template-columns:repeat(${pDesp>0?4:3},1fr)">
       <div class="summary-card"><div class="label">Recebido</div><div class="value">${R2(pRec)}</div></div>
-      <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob)}</div></div>
+      <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob)}</div>${pRemb>0?`<div style="font-size:9px;color:#92400e;margin-top:2px">inclui ${R2(pRemb)} reemb.</div>`:''}</div>
       ${pDesp>0?`<div class="summary-card red"><div class="label">Despesas Abatidas</div><div class="value">-${R2(pDesp)}</div></div>`:''}
       <div class="summary-card ${pPend>0||pProp<0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pPend<0?'⚠️ Proprietário deve':pDesp>0?'✅ Repasse Líquido':pProp<0?'⚠️ Proprietário deve':'✅ Repassado'}</div><div class="value">${pPend!==0?R2(Math.abs(pPend)):pDesp>0?R2(pLiquido):R2(Math.abs(pProp))}</div></div>
     </div></div>`;
-    gRec+=pRec;gImob+=pImob;gProp+=pProp;gPend+=pPend;gDesc+=pDesc;gDesp+=pDesp;
+    gRec+=pRec;gImob+=pImob;gProp+=pProp;gPend+=pPend;gDesc+=pDesc;gDesp+=pDesp;gRemb+=pRemb;
   });
   const gLiquido=gProp-gDesp;
   html+=`<div class="summary-grid" style="margin-top:4px;grid-template-columns:repeat(${gDesp>0?4:3},1fr)">
     <div class="summary-card dark"><div class="label">Total Recebido</div><div class="value">${R2(gRec)}</div></div>
-    <div class="summary-card dark"><div class="label">Total Taxa Imob.</div><div class="value">${R2(gImob)}</div></div>
+    <div class="summary-card dark"><div class="label">Total Taxa Imob.</div><div class="value">${R2(gImob)}</div>${gRemb>0?`<div style="font-size:9px;color:#fbbf24;margin-top:2px">inclui ${R2(gRemb)} reemb.</div>`:''}</div>
     ${gDesp>0?`<div class="summary-card dark" style="border-left-color:#f87171"><div class="label">Total Despesas</div><div class="value">-${R2(gDesp)}</div></div>`:''}
     <div class="summary-card dark" style="border-left-color:${gPend<0||gProp<0?'#f87171':'#4ade80'}"><div class="label">${gPend>0?'⚠️ Total Pendente':gPend<0?'⚠️ Proprietários devem':gDesp>0?'✅ Repasse Líquido':gProp<0?'⚠️ Proprietários devem':'✅ Total Repassado'}</div><div class="value">${gPend!==0?R2(Math.abs(gPend)):gDesp>0?R2(gLiquido):R2(Math.abs(gProp))}</div></div>
   </div>`;
