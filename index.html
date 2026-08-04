@@ -3142,6 +3142,7 @@ async function saveContract(){
       const ok=confirm(`O desconto foi removido/desativado no contrato.\n\nDeseja remover o desconto já aplicado em ${pendComDesc.length} cobrança(s) de aluguel pendente(s)?`);
       if(ok){
         const adm=c.adm==='sim';
+        let _okCount=0;const _falhas=[];
         for(const cb of pendComDesc){
           const valorOriginal=cb.valor+(cb.descontoAplicado||0);
           // preserva o status de "1º mês" (comissão de 50% do aluguel cheio, sem teto) já aplicado a esta cobrança
@@ -3160,8 +3161,13 @@ async function saveContract(){
           if(!eu){
             const ci=D.cb.findIndex(x=>x.id===cb.id);
             if(ci>=0){D.cb[ci].valor=valorOriginal;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';D.cb[ci].descontosAplicados=[];}
+            _okCount++;
+          }else{
+            console.error('[remover desconto] falha ao atualizar cobrança',cb.id,eu);
+            _falhas.push(`${cb.mes||cb.id}: ${eu.message||eu.code||'erro desconhecido'}`);
           }
         }
+        if(_falhas.length)alert(`⚠️ Desconto removido em ${_okCount} de ${pendComDesc.length} cobrança(s).\n\n${_falhas.length} falharam:\n${_falhas.slice(0,8).join('\n')}${_falhas.length>8?'\n…':''}\n\nAbra o console (F12) para detalhes.`);
       }
     }
   }
