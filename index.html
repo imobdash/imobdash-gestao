@@ -5434,6 +5434,7 @@ function gerarRelFinanceiro(){
   const pendentes=D.cb.filter(cb=>!cb.pago&&cb.mes&&cb.mes>=de&&cb.mes<=ate);
   const atrasadas=D.cb.filter(cb=>!cb.pago&&DA(cb.venc)<0);
   const byTipo={};
+  const byContrato={};
   pagas.forEach(cb=>{
     const t=cb.tipo||'Aluguel';
     if(!byTipo[t])byTipo[t]={total:0,imob:0,prop:0,qtd:0};
@@ -5441,6 +5442,13 @@ function gerarRelFinanceiro(){
     byTipo[t].imob+=+(cb.repasse?.imob||0);
     byTipo[t].prop+=+(cb.repasse?.prop||0)+(+(cb.repasseExtraValor||0));
     byTipo[t].qtd++;
+    const c=D.c.find(x=>x.id===cb.contratoId);
+    const ckey=cb.contratoId||('sem-contrato-'+(c?.inquilino||cb.inquilino||'–'));
+    if(!byContrato[ckey])byContrato[ckey]={inquilino:c?.inquilino||cb.inquilino||'–',proprietario:c?.proprietario||'–',endereco:c?.endereco||'–',total:0,imob:0,prop:0,qtd:0};
+    byContrato[ckey].total+=+(cb.valorPago||cb.valor||0);
+    byContrato[ckey].imob+=+(cb.repasse?.imob||0);
+    byContrato[ckey].prop+=+(cb.repasse?.prop||0)+(+(cb.repasseExtraValor||0));
+    byContrato[ckey].qtd++;
   });
   const totRec=pagas.reduce((a,b)=>a+(+(b.valorPago||b.valor||0)),0);
   const totImob=pagas.reduce((a,b)=>a+(+(b.repasse?.imob||0)),0);
@@ -5458,6 +5466,12 @@ function gerarRelFinanceiro(){
   Object.entries(byTipo).sort((a,b)=>b[1].total-a[1].total).forEach(([tipo,v])=>{
     const pct=v.total>0?((v.imob/v.total)*100).toFixed(1):'0.0';
     html+=`<tr><td><strong>${tipo}</strong></td><td>${v.qtd}</td><td>${R2(v.total)}</td><td><strong style="color:#16a34a">${R2(v.imob)}</strong></td><td>${R2(v.prop)}</td><td>${pct}%</td></tr>`;
+  });
+  html+=`<tr style="background:#f0f4f8;font-weight:700"><td>TOTAL</td><td>${pagas.length}</td><td>${R2(totRec)}</td><td style="color:#16a34a">${R2(totImob)}</td><td>${R2(totProp)}</td><td>${totRec>0?((totImob/totRec)*100).toFixed(1):'0.0'}%</td></tr></tbody></table></div>`;
+  html+=`<div class="section"><h3>Receitas por Contrato</h3><table><thead><tr><th>Contrato</th><th>Qtd.</th><th>Volume Total</th><th>Taxa Imobiliária</th><th>Proprietário</th><th>% Imob.</th></tr></thead><tbody>`;
+  Object.values(byContrato).sort((a,b)=>b.total-a.total).forEach(v=>{
+    const pct=v.total>0?((v.imob/v.total)*100).toFixed(1):'0.0';
+    html+=`<tr><td><strong>${v.inquilino}</strong><div style="font-size:10px;color:#94a3b8">Prop.: ${v.proprietario}${v.endereco&&v.endereco!=='–'?' · '+v.endereco:''}</div></td><td>${v.qtd}</td><td>${R2(v.total)}</td><td><strong style="color:#16a34a">${R2(v.imob)}</strong></td><td>${R2(v.prop)}</td><td>${pct}%</td></tr>`;
   });
   html+=`<tr style="background:#f0f4f8;font-weight:700"><td>TOTAL</td><td>${pagas.length}</td><td>${R2(totRec)}</td><td style="color:#16a34a">${R2(totImob)}</td><td>${R2(totProp)}</td><td>${totRec>0?((totImob/totRec)*100).toFixed(1):'0.0'}%</td></tr></tbody></table></div>`;
   html+=`<div class="section"><h3>Inadimplência e Pendências</h3><table><thead><tr><th>Indicador</th><th>Qtd.</th><th>Valor</th></tr></thead><tbody>
