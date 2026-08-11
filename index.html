@@ -3796,21 +3796,27 @@ function openNDespesa(id){
   toggleDespRemb();
   oM('mdesp');
 }
-// Aplica o reembolso desta despesa nas cobranças de Aluguel pendentes do contrato a partir do mês
-// escolhido, dividindo o valor em N parcelas. origem='proprietario' reduz o repasse do proprietário
-// (a imobiliária recupera); origem='inquilino' aumenta o valor cobrado do inquilino, 100% p/ imobiliária.
+// Aplica o reembolso desta despesa nas cobranças de Aluguel do contrato a partir do mês escolhido,
+// dividindo o valor em N parcelas. origem='proprietario' reduz o repasse do proprietário (a imobiliária
+// recupera); origem='inquilino' aumenta o valor cobrado do inquilino, 100% p/ imobiliária.
 // Suporta empilhar vários reembolsos (de despesas diferentes) na mesma cobrança/mês.
+// IMPORTANTE: aplica tanto em cobranças pendentes quanto já pagas — o lançamento é aceito mesmo depois
+// da cobrança ter sido quitada, e todos os valores (valor, repasse_imob, repasse_prop) são recalculados.
+// Se a cobrança atingida já tiver repasse_realizado=true (o proprietário já recebeu esse repasse), o
+// valor em banco é corrigido do mesmo jeito, mas o dinheiro já saiu da imobiliária — quem chama esta
+// função deve avisar o usuário para recuperar essa diferença manualmente (ex.: abatendo do próximo repasse).
 async function aplicarReembolsoDespesa(despesaId,conId,valorTotal,parcelas,origem,descricao,mesInicial){
-  if(!conId||!(valorTotal>0)||!(parcelas>0))return 0;
-  const pendAlug=D.cb
-    .filter(x=>x.contratoId===conId&&!x.pago&&x.tipo==='Aluguel'&&(!mesInicial||(x.mes||'')>=mesInicial))
+  if(!conId||!(valorTotal>0)||!(parcelas>0))return{aplicadas:0,jaRepassadas:[]};
+  const alugCandidatas=D.cb
+    .filter(x=>x.contratoId===conId&&x.tipo==='Aluguel'&&(!mesInicial||(x.mes||'')>=mesInicial))
     .sort((a,b)=>(a.mes||'').localeCompare(b.mes||'')||new Date(a.venc)-new Date(b.venc));
-  const qtd=Math.min(parcelas,pendAlug.length);
-  if(qtd===0)return 0;
+  const qtd=Math.min(parcelas,alugCandidatas.length);
+  if(qtd===0)return{aplicadas:0,jaRepassadas:[]};
   const base=Math.floor((valorTotal/qtd)*100)/100;
   let acumulado=0;
+  const jaRepassadas=[];
   for(let i=0;i<qtd;i++){
-    const cb=pendAlug[i];
+    const cb=alugCandidatas[i];
     const parcVal=(i===qtd-1)?Math.round((valorTotal-acumulado)*100)/100:base;
     acumulado+=parcVal;
     const imobAtual=cb.repasse?.imob||0,propAtual=cb.repasse?.prop||0;
@@ -3829,13 +3835,14 @@ async function aplicarReembolsoDespesa(despesaId,conId,valorTotal,parcelas,orige
         D.cb[ci].repasse={...D.cb[ci].repasse,imob:novoImob,prop:novoProp};
         D.cb[ci].reembolsos=novosReembolsos;
       }
+      if(origem!=='inquilino'&&cb.repasseRealizado)jaRepassadas.push({mes:cb.mes,valor:parcVal});
     }
   }
-  return qtd;
+  return{aplicadas:qtd,jaRepassadas};
 }
-// Remove o reembolso desta despesa das cobranças ainda pendentes (cobranças já pagas não são mexidas)
+// Remove o reembolso desta despesa das cobranças (pendentes ou já pagas — mesmo padrão da aplicação)
 async function reverterReembolsoDespesa(despesaId){
-  const afetadas=D.cb.filter(x=>!x.pago&&(x.reembolsos||[]).some(r=>r.despesaId===despesaId));
+  const afetadas=D.cb.filter(x=>(x.reembolsos||[]).some(r=>r.despesaId===despesaId));
   for(const cb of afetadas){
     const item=(cb.reembolsos||[]).find(r=>r.despesaId===despesaId);
     if(!item)continue;
@@ -3885,9 +3892,15 @@ async function saveDespesa(){
   const row=result.data;
   let aplicadas=0;
   if(rembAtivo){
-    aplicadas=await aplicarReembolsoDespesa(row.id,conId,val,rembParc,rembDe,desc,rembMes);
+    const rApl=await aplicarReembolsoDespesa(row.id,conId,val,rembParc,rembDe,desc,rembMes);
+    aplicadas=rApl.aplicadas;
     if(aplicadas>0)await sb.from('despesas_imob').update({reembolso_aplicadas:aplicadas}).eq('id',row.id);
-    if(aplicadas<rembParc)alert(`Atenção: só havia ${aplicadas} cobrança(s) de aluguel pendente(s) a partir do mês escolhido — o reembolso foi dividido apenas entre elas.`);
+    if(aplicadas<rembParc)alert(`Atenção: só havia ${aplicadas} cobrança(s) de aluguel a partir do mês escolhido — o reembolso foi dividido apenas entre elas.`);
+    if(rApl.jaRepassadas&&rApl.jaRepassadas.length){
+      const totJaRep=rApl.jaRepassadas.reduce((a,r)=>a+r.valor,0);
+      const meses=rApl.jaRepassadas.map(r=>relMesLabel(r.mes)).join(', ');
+      alert(`Atenção: este reembolso foi aplicado em ${rApl.jaRepassadas.length} cobrança(s) cujo repasse ao proprietário JÁ tinha sido marcado como realizado (${meses}), totalizando ${R(totJaRep)}. Os valores foram corrigidos no sistema, mas esse dinheiro já foi transferido — será preciso recuperá-lo manualmente (ex.: abatendo do próximo repasse desse proprietário).`);
+    }
   }
   btn.disabled=false;btn.textContent='✓ Salvar Despesa';
   const mapped={id:row.id,contratoId:row.contrato_id,descricao:row.descricao,valor:Number(row.valor||0),data:row.data,tipo:row.tipo||'Outros',criadoEm:row.created_at,reembolsoDe:rembDe||'',reembolsoParcelas:rembParc,reembolsoAplicadas:aplicadas,reembolsoMesInicial:rembMes||''};
@@ -5164,10 +5177,13 @@ function gerarRelRepasse(){
         const pc=r.pend>0?`<span style="color:#dc2626;font-weight:600">${R2(r.pend)}</span>`:r.pend<0?`<span style="color:#dc2626;font-weight:600">⚠️ Prop. deve ${R2(Math.abs(r.pend))}</span>`:`<span style="color:#16a34a">✓</span>`;
         const dc=r.desc>0?`<span style="color:#7c3aed;font-weight:600">-${R2(r.desc)}</span>`:`<span style="color:#94a3b8">–</span>`;
         const ac=r.repExtra>0?`<span style="color:#15803d;font-weight:600" title="${r.repExtraDesc}">+${R2(r.repExtra)}</span>`:`<span style="color:#94a3b8">–</span>`;
-        const imobCell=r.rembVal>0?`${R2(r.imob)}<div style="font-size:9px;color:#92400e;font-weight:600">(inclui ${R2(r.rembVal)} reemb.)</div>`:R2(r.imob);
+        const imobHonor=r.imob-r.rembVal;
+        const imobCell=r.rembVal>0?`${R2(imobHonor)}<div style="font-size:9px;color:#92400e;font-weight:600">(+${R2(r.rembVal)} reembolso retido)</div>`:R2(imobHonor);
         html+=`<tr><td>${relMesLabel(r.mes)}</td><td>${r.tipo}</td><td>${R2(r.alug)}</td><td>${dc}</td><td>${ac}</td><td>${imobCell}</td><td>${R2(r.prop_v)}</td><td>${pc}</td></tr>`;
       });
-      html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totAlug)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${ct.totRepExtra>0?`<span style='color:#15803d;font-weight:700'>+${R2(ct.totRepExtra)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${R2(ct.totImob)}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:ct.totPend<0?`<span style="color:#dc2626">⚠️ Prop. deve ${R2(Math.abs(ct.totPend))}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
+      const ctImobHonor=ct.totImob-ct.totRemb;
+      const ctImobCell=ct.totRemb>0?`${R2(ctImobHonor)}<div style="font-size:9px;color:#92400e;font-weight:600">(+${R2(ct.totRemb)} reembolso retido)</div>`:R2(ctImobHonor);
+      html+=`<tr class="total-row"><td colspan="2">Subtotal</td><td>${R2(ct.totAlug)}</td><td>${ct.totDesc>0?`<span style='color:#7c3aed;font-weight:700'>-${R2(ct.totDesc)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${ct.totRepExtra>0?`<span style='color:#15803d;font-weight:700'>+${R2(ct.totRepExtra)}</span>`:`<span style='color:#94a3b8'>–</span>`}</td><td>${ctImobCell}</td><td>${R2(ct.totProp)}</td><td>${ct.totPend>0?`<span style="color:#dc2626">${R2(ct.totPend)}</span>`:ct.totPend<0?`<span style="color:#dc2626">⚠️ Prop. deve ${R2(Math.abs(ct.totPend))}</span>`:`<span style="color:#16a34a">✓</span>`}</td></tr></tbody></table>`;
       // Descontos absorvidos (aplicados ao aluguel)
       if(ct.totDesc>0){
         html+=`<div style="margin:6px 0 10px;padding:8px 10px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px">
@@ -5215,7 +5231,7 @@ function gerarRelRepasse(){
     const pLiquido=pProp-pDesp;
     html+=`<div class="summary-grid" style="margin-top:10px;grid-template-columns:repeat(${pDesp>0?4:3},1fr)">
       <div class="summary-card"><div class="label">Aluguel Cobrado</div><div class="value">${R2(pAlug)}</div></div>
-      <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob)}</div>${pRemb>0?`<div style="font-size:9px;color:#92400e;margin-top:2px">inclui ${R2(pRemb)} reemb.</div>`:''}</div>
+      <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob-pRemb)}</div>${pRemb>0?`<div style="font-size:9px;color:#92400e;margin-top:2px">+${R2(pRemb)} reembolso retido</div>`:''}</div>
       ${pDesp>0?`<div class="summary-card red"><div class="label">Despesas Abatidas</div><div class="value">-${R2(pDesp)}</div></div>`:''}
       <div class="summary-card ${pPend>0||pProp<0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pPend<0?'⚠️ Proprietário deve':pDesp>0?'✅ Repasse Líquido':pProp<0?'⚠️ Proprietário deve':'✅ Repassado'}</div><div class="value">${pPend!==0?R2(Math.abs(pPend)):pDesp>0?R2(pLiquido):R2(Math.abs(pProp))}</div></div>
     </div></div>`;
@@ -5224,7 +5240,7 @@ function gerarRelRepasse(){
   const gLiquido=gProp-gDesp;
   html+=`<div class="summary-grid" style="margin-top:4px;grid-template-columns:repeat(${gDesp>0?4:3},1fr)">
     <div class="summary-card dark"><div class="label">Total Aluguel Cobrado</div><div class="value">${R2(gAlug)}</div></div>
-    <div class="summary-card dark"><div class="label">Total Taxa Imob.</div><div class="value">${R2(gImob)}</div>${gRemb>0?`<div style="font-size:9px;color:#fbbf24;margin-top:2px">inclui ${R2(gRemb)} reemb.</div>`:''}</div>
+    <div class="summary-card dark"><div class="label">Total Taxa Imob.</div><div class="value">${R2(gImob-gRemb)}</div>${gRemb>0?`<div style="font-size:9px;color:#fbbf24;margin-top:2px">+${R2(gRemb)} reembolso retido</div>`:''}</div>
     ${gDesp>0?`<div class="summary-card dark" style="border-left-color:#f87171"><div class="label">Total Despesas</div><div class="value">-${R2(gDesp)}</div></div>`:''}
     <div class="summary-card dark" style="border-left-color:${gPend<0||gProp<0?'#f87171':'#4ade80'}"><div class="label">${gPend>0?'⚠️ Total Pendente':gPend<0?'⚠️ Proprietários devem':gDesp>0?'✅ Repasse Líquido':gProp<0?'⚠️ Proprietários devem':'✅ Total Repassado'}</div><div class="value">${gPend!==0?R2(Math.abs(gPend)):gDesp>0?R2(gLiquido):R2(Math.abs(gProp))}</div></div>
   </div>`;
