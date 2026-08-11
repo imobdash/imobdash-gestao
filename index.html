@@ -5165,12 +5165,17 @@ function gerarRelRepasse(){
     return;
   }
   let gAlug=0,gImob=0,gProp=0,gPend=0,gDesc=0,gDesp=0,gRemb=0;
+  let ctIndex=0;
+  const resumoContratos=[];
   Object.entries(byProp).forEach(([prop,data])=>{
     const propLabel=data.label||prop;
     let pAlug=0,pImob=0,pProp=0,pPend=0,pDesc=0,pDesp=0,pRemb=0;
-    html+=`<div class="owner-block"><div class="section-title">👤 ${propLabel}</div>`;
+    html+=`<div class="owner-block">`;
     Object.values(data.contratos).forEach(ct=>{
-      html+=`<div class="ct-block">`;
+      const isFirstCt=ctIndex===0;
+      ctIndex++;
+      html+=`<div class="ct-block${isFirstCt?'':' new-page'}">`;
+      html+=`<div class="ct-owner-label">👤 ${propLabel}</div>`;
       html+=`<p><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
       html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Aluguel Cobrado</th><th>Desconto</th><th>Outros</th><th>Taxa Imob.</th><th>Bruto Prop.</th><th>Pendente</th></tr></thead><tbody>`;
       ct.rows.sort((a,b)=>a.mes.localeCompare(b.mes)).forEach(r=>{
@@ -5225,24 +5230,81 @@ function gerarRelRepasse(){
           </table>
         </div>`;
       }
+      // Memória de cálculo — soma passo a passo, uma linha por lançamento, logo após o espelho do contrato
+      const ctLiquido=ct.totProp-ct.totDesp;
+      let ctRun=ct.totAlug;
+      const memSteps=[['Aluguel Cobrado',ct.totAlug,null,ctRun]];
+      if(ct.totDesc>0){ctRun-=ct.totDesc;memSteps.push(['(−) Descontos aplicados ao aluguel',-ct.totDesc,'neg',ctRun]);}
+      if(ct.totRepExtra>0){ctRun+=ct.totRepExtra;memSteps.push(['(+) Acréscimos repassados ao proprietário',ct.totRepExtra,'pos',ctRun]);}
+      ctRun-=ctImobHonor;
+      memSteps.push(['(−) Taxa de Administração Imobiliária (honorário)',-ctImobHonor,'neg',ctRun]);
+      if(ct.totRemb>0){ctRun-=ct.totRemb;memSteps.push(['(−) Reembolsos retidos pela imobiliária',-ct.totRemb,'neg',ctRun]);}
+      if(ct.totDesp>0){ctRun-=ct.totDesp;memSteps.push(['(−) Despesas pagas pela imobiliária',-ct.totDesp,'neg',ctRun]);}
+      const memRowsHtml=memSteps.map(([lbl,val,cls,run])=>
+        `<tr><td class="op">${lbl}</td><td class="val">${cls==='pos'?'+':''}${R2(val)}</td><td class="run">= ${R2(run)}</td></tr>`
+      ).join('');
+      html+=`<div class="memoria">
+        <div class="mhead">📊 Memória de Cálculo — ${ct.inquilino}</div>
+        <table>${memRowsHtml}
+          <tr class="final"><td>VALOR LÍQUIDO REPASSADO AO PROPRIETÁRIO</td><td class="val">${R2(ctLiquido)}</td><td class="val">${ct.totPend>0?'⚠️':'✓'}</td></tr>
+        </table>
+      </div>`;
+      resumoContratos.push({owner:propLabel,inquilino:ct.inquilino,alug:ct.totAlug,desc:ct.totDesc||0,acre:ct.totRepExtra||0,imob:ctImobHonor,remb:ct.totRemb||0,desp:ct.totDesp||0,repasse:ctLiquido});
       html+=`</div>`;
       pAlug+=ct.totAlug;pImob+=ct.totImob;pProp+=ct.totProp;pPend+=ct.totPend;pDesc+=ct.totDesc||0;pDesp+=ct.totDesp||0;pRemb+=ct.totRemb||0;
     });
     const pLiquido=pProp-pDesp;
-    html+=`<div class="summary-grid" style="margin-top:10px;grid-template-columns:repeat(${pDesp>0?4:3},1fr)">
-      <div class="summary-card"><div class="label">Aluguel Cobrado</div><div class="value">${R2(pAlug)}</div></div>
-      <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob-pRemb)}</div>${pRemb>0?`<div style="font-size:9px;color:#92400e;margin-top:2px">+${R2(pRemb)} reembolso retido</div>`:''}</div>
-      ${pDesp>0?`<div class="summary-card red"><div class="label">Despesas Abatidas</div><div class="value">-${R2(pDesp)}</div></div>`:''}
-      <div class="summary-card ${pPend>0||pProp<0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pPend<0?'⚠️ Proprietário deve':pDesp>0?'✅ Repasse Líquido':pProp<0?'⚠️ Proprietário deve':'✅ Repassado'}</div><div class="value">${pPend!==0?R2(Math.abs(pPend)):pDesp>0?R2(pLiquido):R2(Math.abs(pProp))}</div></div>
-    </div></div>`;
+    // Resumo por proprietário: só faz sentido (e só é exibido) quando o proprietário tem mais de um
+    // contrato no período — com 1 contrato só, a memória de cálculo do próprio contrato já é o resumo,
+    // e duplicar aqui só criaria uma página extra quase em branco.
+    if(Object.values(data.contratos).length>1){
+      html+=`<div class="owner-recap"><div class="section-title">👤 Resumo — ${propLabel}</div><div class="summary-grid" style="margin-top:4px;grid-template-columns:repeat(${pDesp>0?4:3},1fr)">
+        <div class="summary-card"><div class="label">Aluguel Cobrado</div><div class="value">${R2(pAlug)}</div></div>
+        <div class="summary-card"><div class="label">Taxa Imobiliária</div><div class="value">${R2(pImob-pRemb)}</div>${pRemb>0?`<div style="font-size:9px;color:#92400e;margin-top:2px">+${R2(pRemb)} reembolso retido</div>`:''}</div>
+        ${pDesp>0?`<div class="summary-card red"><div class="label">Despesas Abatidas</div><div class="value">-${R2(pDesp)}</div></div>`:''}
+        <div class="summary-card ${pPend>0||pProp<0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pPend<0?'⚠️ Proprietário deve':pDesp>0?'✅ Repasse Líquido':pProp<0?'⚠️ Proprietário deve':'✅ Repassado'}</div><div class="value">${pPend!==0?R2(Math.abs(pPend)):pDesp>0?R2(pLiquido):R2(Math.abs(pProp))}</div></div>
+      </div></div>`;
+    }
     gAlug+=pAlug;gImob+=pImob;gProp+=pProp;gPend+=pPend;gDesc+=pDesc;gDesp+=pDesp;gRemb+=pRemb;
   });
   const gLiquido=gProp-gDesp;
-  html+=`<div class="summary-grid" style="margin-top:4px;grid-template-columns:repeat(${gDesp>0?4:3},1fr)">
-    <div class="summary-card dark"><div class="label">Total Aluguel Cobrado</div><div class="value">${R2(gAlug)}</div></div>
-    <div class="summary-card dark"><div class="label">Total Taxa Imob.</div><div class="value">${R2(gImob-gRemb)}</div>${gRemb>0?`<div style="font-size:9px;color:#fbbf24;margin-top:2px">+${R2(gRemb)} reembolso retido</div>`:''}</div>
-    ${gDesp>0?`<div class="summary-card dark" style="border-left-color:#f87171"><div class="label">Total Despesas</div><div class="value">-${R2(gDesp)}</div></div>`:''}
-    <div class="summary-card dark" style="border-left-color:${gPend<0||gProp<0?'#f87171':'#4ade80'}"><div class="label">${gPend>0?'⚠️ Total Pendente':gPend<0?'⚠️ Proprietários devem':gDesp>0?'✅ Repasse Líquido':gProp<0?'⚠️ Proprietários devem':'✅ Total Repassado'}</div><div class="value">${gPend!==0?R2(Math.abs(gPend)):gDesp>0?R2(gLiquido):R2(Math.abs(gProp))}</div></div>
+  const gImobHonor=gImob-gRemb;
+  // Página final — Memória de Cálculo Total: soma geral passo a passo + tabela com a contribuição de cada contrato
+  let gRun=gAlug;
+  const gSteps=[['Total Aluguel Cobrado ('+resumoContratos.length+' contrato(s))',gAlug,null,gRun]];
+  if(gDesc>0){gRun-=gDesc;gSteps.push(['(−) Total de Descontos aplicados',-gDesc,'neg',gRun]);}
+  const gAcre=resumoContratos.reduce((a,r)=>a+r.acre,0);
+  if(gAcre>0){gRun+=gAcre;gSteps.push(['(+) Total de Acréscimos repassados',gAcre,'pos',gRun]);}
+  gRun-=gImobHonor;
+  gSteps.push(['(−) Total de Taxa de Administração Imobiliária (honorário)',-gImobHonor,'neg',gRun]);
+  if(gRemb>0){gRun-=gRemb;gSteps.push(['(−) Total de Reembolsos retidos pela imobiliária',-gRemb,'neg',gRun]);}
+  if(gDesp>0){gRun-=gDesp;gSteps.push(['(−) Total de Despesas pagas pela imobiliária',-gDesp,'neg',gRun]);}
+  const gStepsHtml=gSteps.map(([lbl,val,cls,run])=>
+    `<tr><td class="op">${lbl}</td><td class="val">${cls==='pos'?'+':''}${R2(val)}</td><td class="run">= ${R2(run)}</td></tr>`
+  ).join('');
+  const resumoRows=resumoContratos.map(r=>
+    `<tr><td style="padding:5px 8px">${r.owner}<div style="font-size:9px;color:#94a3b8">${r.inquilino}</div></td>
+      <td style="padding:5px 8px;text-align:right">${R2(r.alug)}</td>
+      <td style="padding:5px 8px;text-align:right">${r.desc>0?'-'+R2(r.desc):'–'}</td>
+      <td style="padding:5px 8px;text-align:right">${r.acre>0?'+'+R2(r.acre):'–'}</td>
+      <td style="padding:5px 8px;text-align:right">${R2(r.imob)}</td>
+      <td style="padding:5px 8px;text-align:right">${r.remb>0?'-'+R2(r.remb):'–'}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700">${R2(r.repasse)}</td></tr>`
+  ).join('');
+  html+=`<div class="total-page">
+    <div class="section-title">📊 MEMÓRIA DE CÁLCULO TOTAL — ${pl}</div>
+    <table style="font-size:9.5px">
+      <thead><tr><th>Contrato</th><th>Aluguel</th><th>Descontos</th><th>Acréscimos</th><th>Taxa Adm.</th><th>Reembolsos</th><th>Repasse</th></tr></thead>
+      <tbody>${resumoRows}
+        <tr class="total-row"><td>TOTAL GERAL</td><td style="text-align:right">${R2(gAlug)}</td><td style="text-align:right">${gDesc>0?'-'+R2(gDesc):'–'}</td><td style="text-align:right">${gAcre>0?'+'+R2(gAcre):'–'}</td><td style="text-align:right">${R2(gImobHonor)}</td><td style="text-align:right">${gRemb>0?'-'+R2(gRemb):'–'}</td><td style="text-align:right">${R2(gLiquido)}</td></tr>
+      </tbody>
+    </table>
+    <div class="memoria">
+      <div class="mhead">📊 Soma Geral — Passo a Passo</div>
+      <table>${gStepsHtml}
+        <tr class="final"><td>TOTAL REPASSADO AOS PROPRIETÁRIOS</td><td class="val">${R2(gLiquido)}</td><td class="val">${gPend>0?'⚠️':'✓'}</td></tr>
+      </table>
+    </div>
   </div>`;
   abrirPaginaRepasse(html,pl);
 }
@@ -5259,9 +5321,22 @@ function abrirPaginaRepasse(bodyHtml,pl){
     .content{position:relative;z-index:1}
     h1{text-align:center;font-size:16px;font-weight:800;letter-spacing:.3px;margin-bottom:6px;color:#1f2937}
     .linha{font-size:12px;line-height:1.4;text-align:center}
-    .owner-block{margin-bottom:18px;padding:12px 14px;border:1px solid #e2e8f0;border-radius:8px}
-    .ct-block{page-break-inside:avoid;margin-bottom:14px}
+    .owner-block{margin-bottom:18px}
+    .ct-block{page-break-inside:avoid;break-inside:avoid;margin-bottom:14px;padding-top:2px}
+    .ct-block.new-page{page-break-before:always;break-before:page;padding-top:16px}
+    .owner-recap{page-break-inside:avoid;break-inside:avoid;margin:8px 0 14px}
+    .total-page{page-break-before:always;break-before:page;padding-top:16px}
+    .ct-owner-label{font-size:11px;font-weight:700;color:#1e3a8a;margin-bottom:6px;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.3px}
     .section-title{font-size:12px;font-weight:700;color:#1e3a8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:6px}
+    .memoria{border:1.4px solid #1e3a8a;border-radius:6px;margin:8px 0 4px;overflow:hidden;page-break-inside:avoid;break-inside:avoid}
+    .memoria .mhead{background:#1e3a8a;color:#fff;padding:6px 10px;font-size:10.5px;font-weight:700;letter-spacing:.2px}
+    .memoria table{width:100%;border-collapse:collapse;margin-bottom:0;font-size:10px}
+    .memoria td{padding:5px 10px;border-bottom:1px solid #e2e8f0}
+    .memoria td.op{color:#475569;width:55%}
+    .memoria td.val{text-align:right;font-weight:700;color:#1f2937;width:23%}
+    .memoria td.run{text-align:right;color:#94a3b8;font-size:8.6px;width:22%}
+    .memoria tr.final td{background:#eff6ff;font-weight:800;font-size:11px;color:#1e3a8a;border-top:2px solid #1e3a8a;border-bottom:none}
+    .memoria tr.final td.val{color:#1e3a8a}
     table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px}
     thead tr{background:#1e3a8a;color:#fff}
     th{font-size:9.5px;font-weight:700;text-align:left;padding:6px 8px;letter-spacing:.3px;text-transform:uppercase}
@@ -5287,7 +5362,8 @@ function abrirPaginaRepasse(bodyHtml,pl){
       body{background:#fff;padding-top:0}
       .no-print{display:none!important}
       .page{margin:0;box-shadow:none}
-      .owner-block{page-break-inside:avoid}
+      .ct-block.new-page,.total-page{page-break-before:always;break-before:page}
+      .owner-recap{page-break-inside:avoid;break-inside:avoid}
     }
   </style>
   </head><body>
