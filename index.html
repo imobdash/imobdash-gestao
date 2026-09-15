@@ -851,13 +851,13 @@ tr:hover td{background:rgba(255,255,255,.018);}
   <div class="mh"><div><h2 id="mdesp-title">＋ Nova Despesa</h2></div><button class="mx" onclick="cM('mdesp')">✕</button></div>
   <div class="mb">
     <div class="fg">
-      <div class="g ff"><label>Descrição</label><input type="text" id="desp-desc" placeholder="Ex: Vistoria Apto 802, Análise Alude..."></div>
+      <div class="g ff"><label>Descrição</label><input type="text" id="desp-desc" placeholder="Ex: Vistoria Apto 802, Análise de Crédito..."></div>
       <div class="g"><label>Valor (R$)</label><input type="number" id="desp-val" step="0.01" placeholder="0,00"></div>
       <div class="g"><label>Data</label><input type="date" id="desp-dt"></div>
       <div class="g"><label>Tipo</label>
         <select id="desp-tipo">
           <option value="Vistoria">🔍 Vistoria</option>
-          <option value="Análise Crédito">📊 Análise de Crédito (Alude)</option>
+          <option value="Análise Crédito">📊 Análise de Crédito (SPC/Serasa)</option>
           <option value="Honorários">⚖️ Honorários / Jurídico</option>
           <option value="Marketing">📣 Marketing / Publicidade</option>
           <option value="Manutenção">🔧 Manutenção / OS</option>
@@ -902,17 +902,28 @@ tr:hover td{background:rgba(255,255,255,.018);}
 <!-- MODAL NOVA ANÁLISE DE PRETENDENTE -->
 <div class="mo" id="mpret">
 <div class="md" style="max-width:520px">
-  <div class="mh"><div><h2>🔍 Análise de Pretendente</h2><p style="font-size:12px;color:var(--dm);margin:0">Suba a análise de crédito (Alude) e informe o imóvel</p></div><button class="mx" onclick="cM('mpret')">✕</button></div>
+  <div class="mh"><div><h2>🔍 Análise de Pretendente</h2><p style="font-size:12px;color:var(--dm);margin:0">Suba a consulta de crédito e, se tiver, os documentos de renda — depois informe o imóvel</p></div><button class="mx" onclick="cM('mpret')">✕</button></div>
   <div class="mb">
-    <!-- Upload análise Alude -->
+    <!-- Upload consulta de crédito (qualquer bureau/plataforma) -->
     <div style="margin-bottom:14px">
-      <label style="font-size:11px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">📊 Análise de Crédito (Alude) *</label>
+      <label style="font-size:11px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">📊 Consulta de Crédito (SPC/Serasa/Alude/outro) *</label>
       <div id="pret-upload-area" style="border:2px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:.2s;background:var(--sf2)" onclick="document.getElementById('pret-pdf').click()">
         <div style="font-size:28px;margin-bottom:6px">📄</div>
-        <div id="pret-upload-label" style="font-size:13px;color:var(--dm)">Clique para selecionar o PDF da Alude</div>
-        <div style="font-size:11px;color:var(--dm);margin-top:4px">Aceita PDF</div>
+        <div id="pret-upload-label" style="font-size:13px;color:var(--dm)">Clique para selecionar o PDF da consulta de crédito</div>
+        <div style="font-size:11px;color:var(--dm);margin-top:4px">Aceita PDF de qualquer empresa (Alude, Serasa, SPC/Boa Vista, etc.)</div>
       </div>
       <input type="file" id="pret-pdf" accept=".pdf" style="display:none" onchange="onPretPdfSelect(this)">
+    </div>
+    <!-- Upload comprovação de renda (opcional, múltiplos arquivos) -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">💰 Comprovação de Renda (opcional, recomendado)</label>
+      <div id="pret-renda-area" style="border:2px dashed var(--bd);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:.2s;background:var(--sf2)" onclick="document.getElementById('pret-renda-pdf').click()">
+        <div style="font-size:24px;margin-bottom:4px">📎</div>
+        <div style="font-size:13px;color:var(--dm)">Extrato bancário, imposto de renda (IRPF) ou contracheque</div>
+        <div style="font-size:11px;color:var(--dm);margin-top:4px">Pode selecionar vários PDFs</div>
+      </div>
+      <input type="file" id="pret-renda-pdf" accept=".pdf" multiple style="display:none" onchange="onPretRendaSelect(this)">
+      <div id="pret-renda-lista" style="display:flex;flex-direction:column;gap:5px;margin-top:8px"></div>
     </div>
     <!-- Dados do imóvel -->
     <div style="font-size:11px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏠 Imóvel Pretendido</div>
@@ -3922,7 +3933,7 @@ function renderDespesas(){
   const byTipo={};
   D.d.forEach(d=>{if(!byTipo[d.tipo])byTipo[d.tipo]=0;byTipo[d.tipo]+=d.valor;});
   if(!D.d.length){
-    el.innerHTML='<div class="empty"><div class="ei">🧾</div><h3>Nenhuma despesa registrada</h3><p>Clique em "+ Nova Despesa" para lançar vistoria, análise Alude, honorários, etc.</p></div>';
+    el.innerHTML='<div class="empty"><div class="ei">🧾</div><h3>Nenhuma despesa registrada</h3><p>Clique em "+ Nova Despesa" para lançar vistoria, análise de crédito, honorários, etc.</p></div>';
     return;
   }
   el.innerHTML=`
@@ -4080,7 +4091,8 @@ const PRET_DOC_CATS=[
 // estado do resultado atual (sem persistir no DB o conteúdo completo)
 let _pretResultado=null; // {nome,tel,imovel,valor,garantia,prop,nivel,parecer}
 let _pretMsgTipo=null;   // 'pretendente'|'proprietario'
-let _pretPdfB64=null;    // base64 do PDF Alude
+let _pretPdfB64=null;    // base64 do PDF da consulta de crédito (SPC/Serasa/Alude/outro)
+let _pretRendaFiles=[];  // [{nome,b64}] docs de comprovação de renda (extrato, IR, contracheque...)
 
 function onPretPdfSelect(input){
   const f=input.files[0];if(!f)return;
@@ -4091,12 +4103,40 @@ function onPretPdfSelect(input){
   reader.readAsDataURL(f);
 }
 
+function onPretRendaSelect(input){
+  const files=Array.from(input.files||[]);
+  if(!files.length)return;
+  files.forEach(f=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      _pretRendaFiles.push({nome:f.name,b64:e.target.result.split(',')[1]});
+      renderPretRendaLista();
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value='';
+}
+
+function removerPretRenda(idx){
+  _pretRendaFiles.splice(idx,1);
+  renderPretRendaLista();
+}
+
+function renderPretRendaLista(){
+  const el=document.getElementById('pret-renda-lista');
+  if(!el)return;
+  el.innerHTML=_pretRendaFiles.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;background:var(--sf2);border:1px solid var(--bd);border-radius:7px;padding:6px 10px"><span>📄 ${f.nome}</span><span onclick="removerPretRenda(${i})" style="cursor:pointer;color:var(--re);font-weight:700">✕</span></div>`).join('');
+}
+
 function openNPretendente(){
   _pretPdfB64=null;
+  _pretRendaFiles=[];
   _pretResultado=null;
-  document.getElementById('pret-upload-label').textContent='Clique para selecionar o PDF da Alude';
+  document.getElementById('pret-upload-label').textContent='Clique para selecionar o PDF da consulta de crédito';
   document.getElementById('pret-upload-area').style.borderColor='var(--bd)';
   document.getElementById('pret-pdf').value='';
+  document.getElementById('pret-renda-pdf').value='';
+  document.getElementById('pret-renda-lista').innerHTML='';
   document.getElementById('pret-imovel').value='';
   document.getElementById('pret-valor').value='';
   document.getElementById('pret-garantia').value='';
@@ -4105,21 +4145,27 @@ function openNPretendente(){
 }
 
 async function executarAnalise(){
-  if(!_pretPdfB64){alert('Selecione o PDF da análise de crédito (Alude).');return;}
+  if(!_pretPdfB64){alert('Selecione o PDF da consulta de crédito (SPC, Serasa, Alude ou outra plataforma).');return;}
   const btn=document.getElementById('btnAnalisar');
   btn.disabled=true;btn.textContent='⏳ Analisando...';
   const imovel=document.getElementById('pret-imovel').value.trim();
   const valor=parseFloat(document.getElementById('pret-valor').value)||0;
   const garantia=document.getElementById('pret-garantia').value;
   const prop=document.getElementById('pret-prop').value.trim();
-  const prompt=`Você é um especialista em análise de crédito imobiliária. Analise o documento PDF de crédito e responda APENAS com um objeto JSON válido, sem nenhum texto adicional, sem markdown, sem blocos de código, sem explicações. Responda somente com o JSON puro:\n{"nome":"","cpf":"","telefone":"","score":0,"classificacao":"","nivel":"ALTO","recomendacao":"","pontos":[{"ok":true,"texto":""}],"debitosTotal":0,"processosCriticos":"","condicoes":"","statusSugerido":"recusado"}\n\nRegras: nivel = ALTO, MÉDIO ou BAIXO. statusSugerido = aprovado, atencao ou recusado. pontos: liste 4 a 6 itens relevantes. Contexto do imóvel pretendido: Endereço: ${imovel||'não informado'}, Aluguel: R$ ${valor||'não informado'}, Garantia: ${garantia||'não informada'}. Renda mínima recomendada: 3x o aluguel. IMPORTANTE: retorne SOMENTE o JSON, começando com { e terminando com }.`;
+  const temRenda=_pretRendaFiles.length>0;
+  const listaDocsRenda=temRenda?_pretRendaFiles.map(f=>f.nome).join(', '):'nenhum';
+  const prompt=`Você é um especialista em análise de crédito e locação imobiliária. Você vai receber ${1+_pretRendaFiles.length} documento(s) em PDF: o PRIMEIRO é uma consulta/relatório de crédito (pode ser de qualquer bureau ou plataforma — Alude, Serasa, SPC/Boa Vista, ou outra) e, se houver, os demais são documentos de comprovação de renda do candidato (extrato bancário, declaração de imposto de renda, contracheque/holerite). Analise TODOS os documentos recebidos e responda APENAS com um objeto JSON válido, sem nenhum texto adicional, sem markdown, sem blocos de código, sem explicações. Responda somente com o JSON puro:\n{"nome":"","cpf":"","telefone":"","orgaoConsulta":"","score":0,"classificacao":"","nivel":"ALTO","recomendacao":"","pontos":[{"ok":true,"texto":""}],"debitosTotal":0,"processosCriticos":"","condicoes":"","rendaComprovada":0,"rendaSuficiente":false,"resumoRenda":"","statusSugerido":"recusado"}\n\nRegras:\n- orgaoConsulta: nome da empresa/plataforma que emitiu o relatório de crédito (ex: Alude, Serasa Experian, Boa Vista SCPC, SPC Brasil). Se não conseguir identificar, deixe em branco.\n- nivel = ALTO, MÉDIO ou BAIXO (nível de risco de crédito). statusSugerido = aprovado, atencao ou recusado.\n- pontos: liste 4 a 6 itens relevantes do relatório de crédito (dívidas, restrições, protestos, score, etc).\n- rendaComprovada: se houver extrato bancário, imposto de renda ou contracheque entre os documentos enviados, estime a renda mensal comprovada do candidato (número, em reais). Se nenhum documento de renda foi enviado, use 0.\n- rendaSuficiente: true se rendaComprovada for maior ou igual a 3x o valor do aluguel informado abaixo; caso contrário false. Se não houver documento de renda, use false.\n- resumoRenda: resuma em 1-2 frases o que foi encontrado nos documentos de renda (tipo de documento, valores, consistência entre eles). Se nenhum documento de renda foi enviado, escreva "Nenhum documento de renda enviado".\n\nContexto do imóvel pretendido: Endereço: ${imovel||'não informado'}, Aluguel: R$ ${valor||'não informado'}, Garantia: ${garantia||'não informada'}. Renda mínima recomendada: 3x o aluguel. Documentos de renda enviados: ${listaDocsRenda}. IMPORTANTE: retorne SOMENTE o JSON, começando com { e terminando com }.`;
   const apiKeyPret=getApiKey();
   if(!apiKeyPret){
     document.getElementById('pret-err').textContent='⚠️ API key não configurada. Acesse Configurações e salve sua chave Anthropic.';
     btn.disabled=false;btn.textContent='🔍 Analisar';return;
   }
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':apiKeyPret,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:_pretPdfB64}},{type:'text',text:prompt}]}]})});
+    const docsContent=[
+      {type:'document',source:{type:'base64',media_type:'application/pdf',data:_pretPdfB64}},
+      ..._pretRendaFiles.map(f=>({type:'document',source:{type:'base64',media_type:'application/pdf',data:f.b64}}))
+    ];
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':apiKeyPret,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[...docsContent,{type:'text',text:prompt}]}]})});
     const json=await resp.json();
     if(json.error){throw new Error(json.error.message||'Erro na API');}
     let txt=(json.content&&json.content[0]?.text)||'';
@@ -4128,7 +4174,9 @@ async function executarAnalise(){
     // Extrai apenas o primeiro objeto JSON válido
     const match=txt.match(/\{[\s\S]*\}/);
     if(!match)throw new Error('Resposta da IA não contém JSON válido. Tente novamente.');
-    const par=JSON.parse(match[0]);
+    const parBase=JSON.parse(match[0]);
+    const docsRenda=_pretRendaFiles.map(f=>f.nome);
+    const par={...parBase,docsRenda};
     _pretResultado={...par,imovel,valor,garantia,prop};
     // Salva histórico enxuto no Supabase (sem bloquear se tabela não existir)
     try{await sb.from('pretendentes').insert({nome:par.nome,cpf:par.cpf,telefone:par.telefone,imovel_pretendido:imovel,valor_pretendido:valor||null,garantia:garantia||null,proprietario:prop||null,nivel_risco:par.nivel,status:par.statusSugerido||'atencao',parecer_ia:par});}catch(e){console.warn('Histórico não salvo:',e);}
@@ -4148,8 +4196,10 @@ function mostrarResultadoAnalise(par,imovel,valor,prop){
   const nivelBg=par.nivel==='ALTO'?'var(--rd)':par.nivel==='MÉDIO'?'var(--yd)':'var(--gd)';
   const nivelCor=par.nivel==='ALTO'?'var(--re)':par.nivel==='MÉDIO'?'var(--ye)':'var(--gn)';
   const stLabel=par.statusSugerido==='aprovado'?'✅ Aprovado':par.statusSugerido==='recusado'?'❌ Recusado':'⚠️ Aprovar com atenção';
+  const rendaOk=par.rendaSuficiente===true;
+  const temDocsRenda=par.docsRenda&&par.docsRenda.length>0;
   document.getElementById('pret-result-title').textContent=`📋 ${par.nome||'Pretendente'}`;
-  document.getElementById('pret-result-sub').textContent=`CPF: ${par.cpf||'–'} · Score: ${par.score||'–'} ${par.classificacao||''}`;
+  document.getElementById('pret-result-sub').textContent=`CPF: ${par.cpf||'–'} · Score: ${par.score||'–'} ${par.classificacao||''}${par.orgaoConsulta?' · Fonte: '+par.orgaoConsulta:''}`;
   document.getElementById('pret-result-content').innerHTML=`
     <!-- Nível de risco -->
     <div style="background:${nivelBg};border-radius:12px;padding:16px;margin-bottom:14px">
@@ -4166,11 +4216,20 @@ function mostrarResultadoAnalise(par,imovel,valor,prop){
       ${par.processosCriticos?`<div style="margin-top:10px;padding:8px 10px;background:rgba(0,0,0,.12);border-radius:7px;font-size:12px"><strong>⚖️ Processos críticos:</strong> ${par.processosCriticos}</div>`:''}
       ${par.condicoes?`<div style="margin-top:8px;padding:8px 10px;background:rgba(0,0,0,.08);border-radius:7px;font-size:12px"><strong>📋 Condições sugeridas:</strong> ${par.condicoes}</div>`:''}
     </div>
+    <!-- Comprovação de renda -->
+    <div class="card" style="margin-bottom:10px">
+      <div class="ch" style="font-size:12px">💰 Comprovação de Renda ${temDocsRenda?`<span class="chip ${rendaOk?'cg':'cy'}" style="margin-left:6px">${rendaOk?'✅ Suficiente':'⚠️ Verificar'}</span>`:''}</div>
+      <div class="cb">
+        ${temDocsRenda?`<div class="ir"><span class="il">Documentos analisados</span><span class="iv">${par.docsRenda.join(', ')}</span></div>
+        <div class="ir"><span class="il">Renda comprovada</span><span class="iv">${par.rendaComprovada?'R$ '+Number(par.rendaComprovada).toFixed(2).replace('.',','):'–'}</span></div>`:`<div style="font-size:12px;color:var(--dm)">Nenhum documento de renda enviado nesta análise.</div>`}
+        ${par.resumoRenda?`<div style="font-size:12px;color:var(--dm);margin-top:6px">${par.resumoRenda}</div>`:''}
+      </div>
+    </div>
     <!-- Dados extraídos -->
     <div class="card" style="margin-bottom:0">
-      <div class="ch" style="font-size:12px">📊 Dados extraídos do documento</div>
+      <div class="ch" style="font-size:12px">📊 Dados extraídos do(s) documento(s)</div>
       <div class="cb">
-        ${[['Nome',par.nome],['CPF',par.cpf],['Telefone',par.telefone||'–'],['Score',par.score?(par.score+' '+par.classificacao):'–'],['Débitos',par.debitosTotal?'R$ '+par.debitosTotal.toFixed(2):'R$ 0,00'],['Imóvel pretendido',imovel||'não informado'],['Valor do aluguel',valor?'R$ '+valor.toFixed(2).replace('.',','):'não informado'],['Garantia',_pretResultado?.garantia||'não informada'],['Proprietário',prop||'não informado']].map(([l,v])=>`<div class="ir"><span class="il">${l}</span><span class="iv">${v||'–'}</span></div>`).join('')}
+        ${[['Nome',par.nome],['CPF',par.cpf],['Telefone',par.telefone||'–'],['Fonte da consulta',par.orgaoConsulta||'não identificada'],['Score',par.score?(par.score+' '+par.classificacao):'–'],['Débitos',par.debitosTotal?'R$ '+par.debitosTotal.toFixed(2):'R$ 0,00'],['Imóvel pretendido',imovel||'não informado'],['Valor do aluguel',valor?'R$ '+valor.toFixed(2).replace('.',','):'não informado'],['Garantia',_pretResultado?.garantia||'não informada'],['Proprietário',prop||'não informado']].map(([l,v])=>`<div class="ir"><span class="il">${l}</span><span class="iv">${v||'–'}</span></div>`).join('')}
       </div>
     </div>`;
   oM('mpret-result');
@@ -4317,6 +4376,7 @@ Realizamos a análise de crédito e perfil do candidato interessado no seu imóv
 
 *Resultado:* ${nivelEmoji} Risco ${r.nivel||'–'}
 _${r.recomendacao||''}_
+${r.docsRenda&&r.docsRenda.length?'\n*Renda:* '+(r.rendaSuficiente?'✅ Comprovação suficiente':'⚠️ Verificar comprovação')+(r.rendaComprovada?' (R$ '+Number(r.rendaComprovada).toFixed(2).replace('.',',')+'/mês)':''):'\n*Renda:* nenhum documento de renda enviado'}
 ${pontosCrit?'\n*Pontos de atenção:*\n'+pontosCrit:''}${pontosOk?'\n*Pontos positivos:*\n'+pontosOk:''}
 ${r.condicoes?'\n📋 *Condições sugeridas:* '+r.condicoes:''}
 
@@ -4394,6 +4454,10 @@ function gerarRelatorioPDF(){
           <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Score de crédito</div>
           <div style="font-size:13px;font-weight:600;color:#111">${r.score||'–'} ${r.classificacao?'('+r.classificacao+')':''}</div>
         </div>
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Fonte da consulta</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.orgaoConsulta||'não identificada'}</div>
+        </div>
       </div>
     </div>
 
@@ -4414,6 +4478,23 @@ function gerarRelatorioPDF(){
           <div style="font-size:13px;font-weight:600;color:#111">${r.garantia||'–'}</div>
         </div>
       </div>
+    </div>
+
+    <!-- Comprovação de renda -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Comprovação de Renda</div>
+      ${r.docsRenda&&r.docsRenda.length?`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Documentos analisados</div>
+          <div style="font-size:13px;font-weight:600;color:#111">${r.docsRenda.join(', ')}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:6px;padding:10px 14px">
+          <div style="font-size:10px;color:#9ca3af;margin-bottom:2px">Renda mensal comprovada</div>
+          <div style="font-size:13px;font-weight:600;color:${r.rendaSuficiente?'#16a34a':'#d97706'}">${r.rendaComprovada?'R$ '+Number(r.rendaComprovada).toFixed(2).replace('.',','):'–'} ${r.rendaSuficiente?'(suficiente)':'(verificar)'}</div>
+        </div>
+      </div>
+      ${r.resumoRenda?`<div style="font-size:12px;color:#374151;line-height:1.5">${r.resumoRenda}</div>`:''}`:`<div style="font-size:12px;color:#6b7280">Nenhum documento de renda foi enviado para esta análise.</div>`}
     </div>
 
     <!-- Resultado -->
@@ -4445,10 +4526,10 @@ function gerarRelatorioPDF(){
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:24px">
       <div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:6px">⚖️ SEUS DIREITOS — LEI GERAL DE PROTEÇÃO DE DADOS (LGPD — Lei 13.709/2018)</div>
       <div style="font-size:11px;color:#64748b;line-height:1.7">
-        Esta análise foi realizada com base em dados de crédito autorizados por você junto à plataforma Alude. Conforme o <strong>Art. 20 da LGPD</strong>, você tem o direito de:<br>
+        Esta análise foi realizada com base em dados de crédito autorizados por você junto à plataforma consultada${r.orgaoConsulta?' ('+r.orgaoConsulta+')':''}, e, quando aplicável, em documentos de comprovação de renda fornecidos pelo(a) próprio(a) candidato(a). Conforme o <strong>Art. 20 da LGPD</strong>, você tem o direito de:<br>
         • <strong>Solicitar revisão humana</strong> desta decisão automatizada;<br>
-        • <strong>Corrigir dados imprecisos</strong> — acesse <a href="https://www.alude.com.br">alude.com.br</a> ou <a href="https://www.consumidor.gov.br">consumidor.gov.br</a>;<br>
-        • <strong>Contestar</strong> informações incorretas diretamente com os bureaus de crédito (Serasa, SPC, Boa Vista).<br>
+        • <strong>Corrigir dados imprecisos</strong> — acesse <a href="https://www.consumidor.gov.br">consumidor.gov.br</a>;<br>
+        • <strong>Contestar</strong> informações incorretas diretamente com os bureaus de crédito (Serasa, SPC, Boa Vista) ou com a plataforma consultada.<br>
         Para exercer esses direitos, entre em contato com nossa equipe.
       </div>
     </div>
@@ -4456,7 +4537,7 @@ function gerarRelatorioPDF(){
     <!-- Rodapé -->
     <div style="border-top:1px solid #e5e7eb;padding-top:16px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:10px;color:#9ca3af">Gerado em ${hoje} · Imob.Gestão · Documento de uso interno e confidencial</div>
-      <div style="font-size:10px;color:#9ca3af">Fonte: Alude Análise de Crédito</div>
+      <div style="font-size:10px;color:#9ca3af">Fonte: ${r.orgaoConsulta||'Consulta de Crédito'}</div>
     </div>
   </div>`;
 
