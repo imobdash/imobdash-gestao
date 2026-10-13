@@ -269,6 +269,7 @@ body.light #theme-toggle .i-moon{display:block;}
 .dk .lb{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .32s var(--ease),opacity .2s,margin .32s var(--ease);}
 .dk.on{background:var(--te);color:var(--bg);padding:0 16px;}
 .dk.on .lb{max-width:120px;opacity:1;margin-left:8px;}
+#dk-more{display:none;}
 .dk.alert::after{content:'';position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--ye);box-shadow:0 0 0 2px var(--sf);}
 .dk.on.alert::after{box-shadow:0 0 0 2px var(--te);}
 .nb{position:absolute;top:3px;left:26px;min-width:15px;height:15px;padding:0 3px;border-radius:10px;background:var(--re);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--sf);box-sizing:content-box;line-height:1;}
@@ -362,6 +363,8 @@ tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
   .md{border-radius:22px 22px 0 0;}
 }
 @media(max-width:760px){
+  .dk-sec{display:none;}
+  #dk-more{display:inline-flex;}
   .tb{padding:12px 14px 8px;gap:10px;}
   .ttl{font-size:20px;}
   .tbtn.srch span,.tbtn.srch kbd{display:none;}
@@ -608,6 +611,12 @@ tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
   <button class="dk" data-nav="cobrancas" onclick="go('cobrancas')" aria-label="Cobranças"><svg class="ico"><use href="#i-wallet"/></svg><span class="lb">Cobranças</span><span class="nb" id="bdgC" style="display:none">0</span></button>
   <button class="dk" data-nav="repasse" onclick="go('repasse')" aria-label="Repasse"><svg class="ico"><use href="#i-swap"/></svg><span class="lb">Repasse</span></button>
   <button class="dk" data-nav="vencimentos" onclick="go('vencimentos')" aria-label="Agenda"><svg class="ico"><use href="#i-cal"/></svg><span class="lb">Agenda</span><span class="nb y" id="bdgV" style="display:none">!</span></button>
+  <button class="dk dk-sec" data-nav="inadimplencia" onclick="go('inadimplencia')" aria-label="Inadimplência"><svg class="ico"><use href="#i-down"/></svg><span class="lb">Inadimplência</span></button>
+  <button class="dk dk-sec" data-nav="ordens" onclick="go('ordens')" aria-label="Ordens de serviço"><svg class="ico"><use href="#i-wrench"/></svg><span class="lb">OS</span><span class="nb" id="bdgO2" style="display:none">0</span></button>
+  <button class="dk dk-sec" data-nav="despesas" onclick="go('despesas')" aria-label="Despesas"><svg class="ico"><use href="#i-receipt"/></svg><span class="lb">Despesas</span></button>
+  <button class="dk dk-sec" data-nav="finimob" onclick="go('finimob')" aria-label="Financeiro da imobiliária"><svg class="ico"><use href="#i-brief"/></svg><span class="lb">Financeiro</span></button>
+  <button class="dk dk-sec" data-nav="pretendentes" onclick="go('pretendentes')" aria-label="Pretendentes"><svg class="ico"><use href="#i-user"/></svg><span class="lb">Pretendentes</span><span class="nb y" id="bdgPret2" style="display:none">0</span></button>
+  <button class="dk dk-sec" data-nav="relatorios" onclick="go('relatorios')" aria-label="Relatórios"><svg class="ico"><use href="#i-chart"/></svg><span class="lb">Relatórios</span></button>
   <button class="dk" id="dk-more" data-pop onclick="togglePop('more')" aria-label="Mais telas"><svg class="ico"><use id="more-use" href="#i-grid"/></svg><span class="lb" id="more-lb">Mais</span></button>
 </div>
 
@@ -6218,6 +6227,10 @@ function navActive(v){
 function moreDot(){
   const vis=id=>{const e=document.getElementById(id);return !!e&&e.style.display!=='none'&&e.textContent.trim()!=='0';};
   document.getElementById('dk-more').classList.toggle('alert',vis('bdgO')||vis('bdgPret'));
+  [['bdgO','bdgO2'],['bdgPret','bdgPret2']].forEach(([a,b])=>{
+    const s=document.getElementById(a),t=document.getElementById(b);
+    if(s&&t){t.textContent=s.textContent;t.style.display=vis(a)?'':'none';}
+  });
 }
 function setFab(v){
   document.querySelectorAll('#sd .sdi').forEach(b=>{
