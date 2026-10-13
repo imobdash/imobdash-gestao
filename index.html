@@ -4,32 +4,23 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ImobGestão</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--bg:#0d1117;--sf:#161b22;--sf2:#21262d;--bd:#30363d;--te:#e6edf3;--dm:#8b949e;--dmr:#6e7681;--ac:#3b82f6;--ac2:#60a5fa;--ag:rgba(37,99,235,.1);--gn:#22c55e;--gd:rgba(34,197,94,.1);--ye:#f59e0b;--yd:rgba(245,158,11,.1);--re:#ef4444;--rd:rgba(239,68,68,.1);--or:#f97316;--r:10px;--rs:7px;}
 body.light{--bg:#f0f4f8;--sf:#ffffff;--sf2:#f5f7fa;--bd:#d0d7de;--te:#1c2128;--dm:#57606a;--dmr:#6e7781;--ac:#2563eb;--ac2:#1d4ed8;--ag:rgba(37,99,235,.08);--gn:#16a34a;--gd:rgba(22,163,74,.09);--ye:#d97706;--yd:rgba(217,119,6,.09);--re:#dc2626;--rd:rgba(220,38,38,.09);--or:#ea580c;}
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--te);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s;}
+body{background:var(--bg);color:var(--te);font-family:'Manrope',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s;}
 .app{display:block;min-height:100vh;}
-/* SIDEBAR */
-.sidebar{background:var(--sf);border-right:1px solid var(--bd);position:fixed;top:0;left:0;bottom:0;width:220px;display:flex;flex-direction:column;z-index:100;transition:transform .25s;}
 .logo{padding:20px 18px 14px;border-bottom:1px solid var(--bd);}
-.br{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.3px;}
+.br{font-family:'Manrope',sans-serif;font-weight:800;font-size:20px;letter-spacing:-.3px;}
 .dot{color:var(--ac2);}
 .su{font-size:11px;color:var(--dm);margin-top:2px;}
-nav{flex:1;padding:10px 8px;overflow-y:auto;}
-.ns{font-size:10px;font-weight:700;color:var(--dmr);text-transform:uppercase;letter-spacing:.6px;padding:12px 10px 4px;}
-.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rs);cursor:pointer;color:var(--dm);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:1px;}
-.ni:hover{background:var(--sf2);color:var(--te);}
-.ni.on{background:var(--ag);color:var(--ac2);}
-.ic{width:18px;text-align:center;font-size:14px;}
 .bdg{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;font-size:10px;font-weight:700;padding:0 5px;margin-left:auto;}
-.sfoot{padding:12px 14px;border-top:1px solid var(--bd);}
 /* MAIN */
-.main{margin-left:220px;display:flex;flex-direction:column;min-height:100vh;}
+.main{margin-left:0;display:flex;flex-direction:column;min-height:100vh;}
 .topbar{padding:14px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--sf);position:sticky;top:0;z-index:50;}
-.ttl{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;}
+.ttl{font-family:'Manrope',sans-serif;font-weight:700;font-size:17px;}
 .content{padding:22px 24px;flex:1;}
 /* VIEWS */
 .view{display:none;}.view.on{display:block;}
@@ -45,15 +36,15 @@ nav{flex:1;padding:10px 8px;overflow-y:auto;}
 .sc.or{border-color:rgba(249,115,22,.3);background:rgba(249,115,22,.06);}
 .sc.re{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06);}
 .slb{font-size:10px;font-weight:700;color:var(--dm);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
-.sv{font-family:'Syne',sans-serif;font-weight:800;font-size:19px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sv{font-family:'Manrope',sans-serif;font-weight:800;font-size:19px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ss{font-size:11px;color:var(--dmr);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* CARDS */
 .card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:14px;}
-.ch{padding:13px 16px;border-bottom:1px solid var(--bd);font-family:'Syne',sans-serif;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
+.ch{padding:13px 16px;border-bottom:1px solid var(--bd);font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
 .cb{padding:12px 16px;}
 .tw{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:14px;}
 .th2{padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
-.th2 h3{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
+.th2 h3{font-family:'Manrope',sans-serif;font-weight:700;font-size:14px;}
 /* TABLE */
 table{width:100%;border-collapse:collapse;}
 th{font-size:11px;color:var(--dm);font-weight:600;text-align:left;padding:9px 14px;border-bottom:1px solid var(--bd);}
@@ -83,7 +74,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .rep{font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;}
 .rep-pr{background:var(--gd);color:var(--gn);}.rep-im{background:var(--ag);color:var(--ac2);}
 /* BTNS */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rs);border:1px solid transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;transition:all .15s;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rs);border:1px solid transparent;cursor:pointer;font-family:'Manrope',sans-serif;font-size:13px;font-weight:500;transition:all .15s;}
 .bp{background:var(--ac);color:#fff;border-color:var(--ac);}.bp:hover{background:#2563eb;}
 .bg{background:var(--sf2);color:var(--te);border-color:var(--bd);}.bg:hover{border-color:var(--ac2);color:var(--ac2);}
 .bk{background:var(--gd);color:var(--gn);border-color:rgba(34,197,94,.3);}.bk:hover{background:rgba(34,197,94,.2);}
@@ -91,7 +82,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .bsm{padding:4px 9px;font-size:12px;}
 /* SEARCH */
 .sb{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--dm);}
-.sb input{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 10px;outline:none;width:180px;}
+.sb input{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;padding:5px 10px;outline:none;width:180px;}
 .sb input:focus{border-color:var(--ac2);}
 /* MODAL */
 .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(5px);}
@@ -100,7 +91,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .mdw{max-width:940px;}
 @keyframes mi{from{opacity:0;transform:scale(.96) translateY(8px);}to{opacity:1;transform:none;}}
 .mh{padding:18px 22px 0;display:flex;align-items:flex-start;justify-content:space-between;}
-.mh h2{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;}
+.mh h2{font-family:'Manrope',sans-serif;font-weight:700;font-size:17px;}
 .mh p{color:var(--dm);font-size:13px;margin-top:2px;}
 .mx{background:none;border:none;color:var(--dm);cursor:pointer;font-size:20px;line-height:1;padding:2px;}.mx:hover{color:var(--te);}
 .mb{padding:16px 22px 22px;}
@@ -109,11 +100,11 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .ff{grid-column:1/-1;}
 .fg .g{display:flex;flex-direction:column;gap:4px;}
 .fg label{font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px;}
-.fg input,.fg select,.fg textarea{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;transition:border-color .15s;width:100%;}
+.fg input,.fg select,.fg textarea{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;padding:8px 10px;outline:none;transition:border-color .15s;width:100%;}
 .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--ac2);}
 .fg textarea{resize:vertical;min-height:56px;}
 .fa{display:flex;gap:9px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);}
-.fsec{grid-column:1/-1;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--dm);text-transform:uppercase;letter-spacing:.5px;padding-top:5px;border-top:1px solid var(--bd);margin-top:2px;}
+.fsec{grid-column:1/-1;font-family:'Manrope',sans-serif;font-weight:700;font-size:11px;color:var(--dm);text-transform:uppercase;letter-spacing:.5px;padding-top:5px;border-top:1px solid var(--bd);margin-top:2px;}
 /* UPLOAD */
 .uz{border:2px dashed var(--bd);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--sf2);position:relative;overflow:hidden;}
 .uz:hover{border-color:var(--ac2);background:var(--ag);}
@@ -139,7 +130,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .vi{display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid rgba(48,54,61,.3);cursor:pointer;transition:background .1s;}
 .vi:last-child{border-bottom:none;}.vi:hover{background:rgba(255,255,255,.018);}
 .vd{width:46px;height:46px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
-.vd .n{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;line-height:1;}.vd .l{font-size:9px;font-weight:600;text-transform:uppercase;margin-top:1px;opacity:.8;}
+.vd .n{font-family:'Manrope',sans-serif;font-weight:800;font-size:17px;line-height:1;}.vd .l{font-size:9px;font-weight:600;text-transform:uppercase;margin-top:1px;opacity:.8;}
 .vd.ok{background:var(--gd);color:var(--gn);}.vd.wa{background:var(--yd);color:var(--ye);}.vd.cr{background:var(--rd);color:var(--re);}.vd.pa{background:rgba(139,148,158,.1);color:var(--dm);}
 /* TL */
 .tl{position:relative;padding-left:18px;}.tl::before{content:'';position:absolute;left:4px;top:0;bottom:0;width:2px;background:var(--bd);}
@@ -151,7 +142,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .tabs{display:flex;gap:2px;background:var(--sf2);border-radius:var(--rs);padding:3px;width:fit-content;}
 .tab{padding:5px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:var(--dm);transition:all .15s;}.tab.on{background:var(--sf);color:var(--te);box-shadow:0 1px 3px rgba(0,0,0,.3);}
 /* EMPTY */
-.empty{text-align:center;padding:36px 20px;}.empty .ei{font-size:34px;margin-bottom:7px;}.empty h3{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:3px;}.empty p{color:var(--dm);font-size:13px;}
+.empty{text-align:center;padding:36px 20px;}.empty .ei{font-size:34px;margin-bottom:7px;}.empty h3{font-family:'Manrope',sans-serif;font-weight:700;font-size:15px;margin-bottom:3px;}.empty p{color:var(--dm);font-size:13px;}
 /* INFO BOX */
 .ibox{border-radius:var(--rs);padding:9px 12px;font-size:12px;line-height:1.5;margin-top:7px;}
 .ibox-y{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--ye);}
@@ -175,20 +166,10 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .bar-fill{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .3s;}
 .bar-lbl{font-size:9px;color:var(--dm);text-align:center;}
 /* RESPONSIVE */
-.hm{display:none;align-items:center;justify-content:center;width:34px;height:34px;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;cursor:pointer;font-size:18px;}
-.ovm{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99;}.ovm.on{display:block;}
 /* Wrappers para tabelas rolarem lateralmente no mobile */
 .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 /* FAB: botão flutuante Novo Contrato (mobile only) */
-.fab{display:none;position:fixed;bottom:80px;right:18px;z-index:90;width:52px;height:52px;border-radius:50%;background:var(--ac);color:#fff;border:none;cursor:pointer;font-size:24px;box-shadow:0 4px 18px rgba(37,99,235,.5);align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;}
-.fab:active{transform:scale(.93);box-shadow:0 2px 8px rgba(37,99,235,.4);}
 /* Bottom nav (mobile only) */
-.bnav{display:none;position:fixed;bottom:0;left:0;right:0;height:62px;background:var(--sf);border-top:1px solid var(--bd);z-index:100;padding:0 4px;align-items:stretch;}
-.bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--dm);border:none;background:none;font-family:'DM Sans',sans-serif;padding:4px 2px;border-radius:8px;position:relative;transition:color .15s;}
-.bni.on{color:var(--ac2);}
-.bni-ic{font-size:20px;line-height:1;}
-.bni-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
-.bni-bdg{position:absolute;top:4px;right:calc(50% - 18px);min-width:16px;height:16px;border-radius:8px;font-size:9px;font-weight:700;background:var(--re);color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;}
 
 /* ── TABLET (≤ 1024px) ── */
 @media(max-width:1024px){
@@ -197,8 +178,6 @@ tr:hover td{background:rgba(255,255,255,.018);}
 /* ── MOBILE (≤ 900px) ── */
 @media(max-width:900px){
   /* Sidebar vira gaveta lateral */
-  .sidebar{transform:translateX(-220px);box-shadow:none;}
-  .sidebar.on{transform:translateX(0);box-shadow:4px 0 30px rgba(0,0,0,.4);}
   .main{margin-left:0;padding-bottom:62px;}/* espaço para bottom nav */
   .topbar{padding:10px 14px;}
   .content{padding:14px 12px;}
@@ -211,13 +190,9 @@ tr:hover td{background:rgba(255,255,255,.018);}
   /* Grids 2 cols do dashboard → 1 col */
   .dash-grid{grid-template-columns:1fr!important;}
   /* Hamb. visível */
-  .hm{display:flex;}
   /* Botão "+ Novo" some do topbar */
-  .btn-nc-topbar{display:none;}
   /* FAB aparece */
-  .fab{display:flex;}
   /* Bottom nav aparece */
-  .bnav{display:flex;}
   /* Modal: ocupa a tela toda e desliza de baixo */
   .mo{padding:0;align-items:flex-end;}
   .md{border-radius:20px 20px 0 0;max-height:90vh;animation:mslide .25s ease;}
@@ -253,6 +228,159 @@ tr:hover td{background:rgba(255,255,255,.018);}
   /* rtable colunas: scroll */
   .rtable{min-width:560px;}
 }
+
+/* ═══════════════ v6 · NOVO VISUAL ═══════════════
+   Dock flutuante + botão de ações + busca Ctrl K.
+   Seleção sempre em "tinta" (invertido), azul só para ação principal. */
+:root{--bg:#0b0e13;--sf:#131720;--sf2:#1a1f29;--bd:#232a35;--te:#e9eef5;--dm:#8f9aaa;--dmr:#677284;--r:16px;--rs:10px;--ease:cubic-bezier(.3,.9,.3,1);--soft:color-mix(in srgb,var(--bd) 55%,transparent);}
+body.light{--bg:#f3f5f8;--sf:#ffffff;--sf2:#f0f3f7;--bd:#e4e8ee;--te:#17202c;--dm:#5b6879;--dmr:#7b8797;}
+body{font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;}
+.ico{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;}
+button:focus-visible,.dk:focus-visible,.tile:focus-visible,.sdi:focus-visible,.cmi:focus-visible{outline:2px solid var(--ac2);outline-offset:2px;}
+
+/* layout */
+.main{margin-left:0;padding-bottom:0;align-items:stretch;}
+.content{max-width:1240px;width:100%;margin:0 auto;padding:6px 28px 150px;}
+
+/* topo */
+.topbar{position:sticky;top:0;z-index:50;display:block;padding:0;border:none;background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);}
+.tb{max-width:1240px;margin:0 auto;padding:16px 28px 12px;display:flex;align-items:center;gap:12px;}
+.mark{width:34px;height:34px;border-radius:11px;background:var(--ac);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;letter-spacing:-.04em;flex:none;}
+.ttl{flex:1;min-width:0;margin-left:2px;font-weight:800;font-size:24px;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tbtn{height:38px;min-width:38px;padding:0 12px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);color:var(--dm);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;transition:color .15s,border-color .15s;}
+.tbtn:hover{color:var(--te);border-color:var(--dmr);}
+.tbtn kbd{font:inherit;font-size:11px;color:var(--dmr);border:1px solid var(--bd);border-radius:6px;padding:1px 6px;}
+#theme-toggle .i-moon{display:none;}
+body.light #theme-toggle .i-sun{display:none;}
+body.light #theme-toggle .i-moon{display:block;}
+.uwrap{position:relative;}
+.av{width:38px;height:38px;border-radius:50%;border:1px solid var(--bd);background:var(--sf2);color:var(--te);font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.pop{position:fixed;z-index:120;background:var(--sf);border:1px solid var(--bd);border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.35);opacity:0;visibility:hidden;transition:opacity .18s,transform .24s var(--ease),visibility .18s;}
+.pop.on{opacity:1;visibility:visible;}
+#umenu{position:absolute;top:46px;right:0;width:240px;padding:16px;transform:translateY(-6px) scale(.97);transform-origin:top right;}
+#umenu.on{transform:none;}
+.um-email{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.um-sub{font-size:12px;color:var(--dm);margin-top:2px;}
+
+/* dock */
+.dock{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:100;display:flex;gap:2px;padding:6px;border-radius:999px;background:color-mix(in srgb,var(--sf) 90%,transparent);-webkit-backdrop-filter:blur(22px) saturate(1.5);backdrop-filter:blur(22px) saturate(1.5);border:1px solid var(--bd);box-shadow:0 14px 44px rgba(0,0,0,.32);}
+.dk{position:relative;flex:none;height:44px;padding:0 13px;border:none;border-radius:999px;background:none;color:var(--dm);display:inline-flex;align-items:center;cursor:pointer;font:inherit;font-size:13px;font-weight:700;transition:background .25s,color .25s,padding .25s;}
+.dk:hover{color:var(--te);}
+.dk .lb{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .32s var(--ease),opacity .2s,margin .32s var(--ease);}
+.dk.on{background:var(--te);color:var(--bg);padding:0 16px;}
+.dk.on .lb{max-width:120px;opacity:1;margin-left:8px;}
+.dk.alert::after{content:'';position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--ye);box-shadow:0 0 0 2px var(--sf);}
+.dk.on.alert::after{box-shadow:0 0 0 2px var(--te);}
+.nb{position:absolute;top:3px;left:26px;min-width:15px;height:15px;padding:0 3px;border-radius:10px;background:var(--re);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--sf);box-sizing:content-box;line-height:1;}
+.nb.y{background:var(--ye);color:#000;}
+.dk.on .nb{border-color:var(--te);left:29px;}
+
+/* menu "Mais" */
+#more{left:50%;bottom:90px;width:min(340px,calc(100vw - 24px));padding:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;transform:translate(-50%,10px) scale(.96);transform-origin:bottom center;}
+#more.on{transform:translateX(-50%);}
+.tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 6px 12px;border:none;background:none;border-radius:14px;color:var(--te);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-align:center;}
+.tile:hover{background:var(--sf2);}
+.tile .ico{width:22px;height:22px;color:var(--dm);}
+.tile.on{background:var(--sf2);}
+.tile.on .ico{color:var(--ac2);}
+.tile .nb{top:8px;right:calc(50% - 26px);border-color:var(--sf);}
+
+/* botão flutuante de ações */
+.fab2{position:fixed;right:28px;bottom:22px;z-index:110;width:56px;height:56px;border-radius:50%;border:none;background:var(--ac);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px color-mix(in srgb,var(--ac) 45%,transparent);transition:transform .2s,background .2s;}
+.fab2:hover{background:var(--ac2);}
+.fab2:active{transform:scale(.94);}
+.fab2 .ico{width:26px;height:26px;stroke-width:2.2;transition:transform .3s var(--ease);}
+.fab2.on .ico{transform:rotate(135deg);}
+.fdim{position:fixed;inset:0;z-index:105;background:color-mix(in srgb,var(--bg) 60%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s;}
+.fdim.on{opacity:1;visibility:visible;}
+.sd{position:fixed;right:28px;bottom:90px;z-index:110;display:flex;flex-direction:column-reverse;gap:10px;align-items:flex-end;pointer-events:none;}
+.sd.on{pointer-events:auto;}
+.sdi{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 18px 0 14px;border-radius:999px;border:1px solid var(--bd);background:var(--sf);color:var(--te);font:inherit;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transform:translateY(14px) scale(.96);transition:opacity .2s,transform .3s var(--ease);transition-delay:calc(var(--i,0)*30ms);}
+.sd.on .sdi{opacity:1;transform:none;}
+.sdi.pri{background:var(--ac);border-color:var(--ac);color:#fff;}
+.sdi .ico{width:19px;height:19px;}
+
+/* busca Ctrl K */
+.cmdk{position:fixed;inset:0;z-index:300;display:none;align-items:flex-start;justify-content:center;padding:14vh 16px 16px;background:color-mix(in srgb,#000 50%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+.cmdk.on{display:flex;}
+.cmdk-box{width:100%;max-width:560px;background:var(--sf);border:1px solid var(--bd);border-radius:20px;box-shadow:0 30px 90px rgba(0,0,0,.5);overflow:hidden;animation:mi .18s ease;}
+.cmdk-in{display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--bd);color:var(--dm);}
+.cmdk-in input{flex:1;height:56px;background:none;border:none;outline:none;color:var(--te);font:inherit;font-size:16px;}
+#cmdk-list{max-height:min(55vh,420px);overflow-y:auto;padding:8px;}
+.cmg{padding:10px 12px 4px;font-size:12px;font-weight:600;color:var(--dmr);}
+.cmi{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:600;font-size:14px;}
+.cmi .ico{color:var(--dm);}
+.cmi.sel{background:var(--sf2);}
+.cmi small{margin-left:auto;padding-left:12px;color:var(--dm);font-size:12px;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;}
+.cmempty{padding:28px 12px;text-align:center;color:var(--dm);}
+
+/* menos poluição: números, cards, tabelas, formulários */
+.stats,.stats2{gap:14px;margin-bottom:14px;}
+.sc,.sc.bl,.sc.gr,.sc.pu,.sc.ye,.sc.or,.sc.re{background:var(--sf)!important;border:1px solid var(--bd)!important;border-radius:var(--r);padding:16px 18px;position:relative;}
+.sc::before{content:'';position:absolute;top:18px;right:18px;width:8px;height:8px;border-radius:50%;background:var(--dmr);}
+.sc.bl::before{background:var(--ac);}.sc.gr::before{background:var(--gn);}.sc.pu::before{background:#8b5cf6;}.sc.ye::before{background:var(--ye);}.sc.or::before{background:var(--or);}.sc.re::before{background:var(--re);}
+.slb{font-size:12.5px;font-weight:600;color:var(--dm);text-transform:none;letter-spacing:0;margin-bottom:8px;padding-right:18px;}
+.sv{font-weight:800;font-size:clamp(17px,2vw,22px)!important;letter-spacing:-.02em;}
+.ss{font-size:12px;}
+.card,.tw{border-radius:var(--r);border:1px solid var(--bd);background:var(--sf);}
+.ch,.th2{border-bottom:none;padding:18px 20px 6px;font-weight:700;font-size:15px;}
+.th2 h3{font-size:15px;font-weight:700;}
+.cb{padding:8px 20px 18px;}
+th{font-size:12px;font-weight:600;color:var(--dm);padding:10px 16px;}
+td{padding:13px 16px;border-bottom-color:var(--soft);}
+tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
+.alrt,.ci,.di,.ckitem,.ir,.vi,.rtable td{border-bottom-color:var(--soft);}
+.tabs{background:var(--sf2);border-radius:999px;padding:4px;}
+.tab{border-radius:999px;padding:7px 15px;font-weight:600;}
+.tab.on{background:var(--te);color:var(--bg);box-shadow:none;}
+.btn-tab-con{border:1px solid var(--bd);padding:7px 15px;font-weight:600;}
+.btn-tab-con.active{background:var(--te);border-color:var(--te);color:var(--bg);}
+.btn{border-radius:11px;font-weight:600;padding:8px 16px;}
+.bsm{padding:5px 11px;}
+.bg{background:transparent;border-color:var(--bd);}
+.mo{background:color-mix(in srgb,#000 55%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
+.md{border:none;border-radius:22px;box-shadow:0 30px 90px rgba(0,0,0,.5);}
+.fg label{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;}
+.fsec{text-transform:none;letter-spacing:0;font-size:13px;color:var(--te);}
+.fg input,.fg select,.fg textarea{border-radius:11px;padding:10px 12px;}
+.sb input{border-radius:11px;padding:8px 12px;}
+.vd .l{text-transform:none;}
+.lnk{display:inline-flex;align-items:center;gap:6px;margin:-2px 0 14px;padding:6px 2px;background:none;border:none;color:var(--dm);font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+.lnk:hover{color:var(--te);}
+.lnk .ico{width:16px;height:16px;transition:transform .25s var(--ease);}
+#view-dashboard.more .lnk .ico{transform:rotate(180deg);}
+#stats{display:none;}
+#view-dashboard.more #stats{display:grid;}
+[style*="text-transform:uppercase"]{text-transform:none!important;letter-spacing:0!important;}
+.th2{flex-wrap:wrap;gap:10px;}
+@media(min-width:901px){.tw,.card{overflow:hidden;}}
+/* os botões "Nova ..." de cada tela agora ficam no botão flutuante */
+.view > div > button[onclick^="openN"]{display:none;}
+
+@media(max-width:900px){
+  .md{border-radius:22px 22px 0 0;}
+}
+@media(max-width:760px){
+  .tb{padding:12px 14px 8px;gap:10px;}
+  .ttl{font-size:20px;}
+  .tbtn.srch span,.tbtn.srch kbd{display:none;}
+  .tbtn.srch{padding:0;width:38px;}
+  .content{padding:4px 14px 190px;}
+  .stats2>.sc:last-child:nth-child(odd){grid-column:1/-1;}
+  .sb{flex:1 1 100%;}
+  .sb input{width:100%;}
+  .dock{left:12px;right:12px;transform:none;bottom:max(12px,env(safe-area-inset-bottom));justify-content:space-between;}
+  .fab2{right:16px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 74px);width:54px;height:54px;}
+  .sd{right:16px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 140px);}
+  #more{bottom:calc(max(12px,env(safe-area-inset-bottom)) + 74px);}
+}
+@media(max-width:420px){
+  .dk{padding:0 10px;}
+  .dk.on{padding:0 13px;}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;}
+}
 </style>
 </head>
 <body>
@@ -261,19 +389,19 @@ tr:hover td{background:rgba(255,255,255,.018);}
 <div id="auth-screen" style="position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px">
   <div style="width:100%;max-width:400px">
     <div style="text-align:center;margin-bottom:32px">
-      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:30px;color:var(--te)">Imob<span style="color:var(--ac2)">.</span>Gestão</div>
+      <div style="font-family:'Manrope',sans-serif;font-weight:800;font-size:30px;color:var(--te)">Imob<span style="color:var(--ac2)">.</span>Gestão</div>
       <div style="font-size:13px;color:var(--dm);margin-top:5px">Gestão Inteligente de Imóveis</div>
     </div>
     <div style="background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:20px">Acesse sua conta</div>
+      <div style="font-family:'Manrope',sans-serif;font-weight:700;font-size:16px;margin-bottom:20px">Acesse sua conta</div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">E-mail</label>
-          <input type="email" id="auth-email" placeholder="seu@email.com" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--ac2)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')document.getElementById('auth-password').focus()">
+          <input type="email" id="auth-email" placeholder="seu@email.com" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--ac2)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')document.getElementById('auth-password').focus()">
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--dm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px">Senha</label>
-          <input type="password" id="auth-password" placeholder="••••••••" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--ac2)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')login()">
+          <input type="password" id="auth-password" placeholder="••••••••" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--ac2)'" onblur="this.style.borderColor='var(--bd)'" onkeydown="if(event.key==='Enter')login()">
         </div>
         <div id="auth-error" style="display:none;font-size:12px;padding:8px 10px;border-radius:6px;line-height:1.5"></div>
         <button id="auth-btn-login" onclick="login()" class="btn bp" style="width:100%;justify-content:center;padding:11px;font-size:14px">Entrar</button>
@@ -292,78 +420,72 @@ tr:hover td{background:rgba(255,255,255,.018);}
   <div style="text-align:center">
     <div class="sp" style="width:32px;height:32px;border-width:3px;margin:0 auto 14px"></div>
     <div id="loading-msg" style="font-size:13px;color:var(--dm)">Carregando seus dados...</div>
-    <button id="loading-retry" onclick="location.reload()" style="display:none;margin-top:16px;padding:8px 18px;background:var(--ac);color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px">↺ Tentar Novamente</button>
+    <button id="loading-retry" onclick="location.reload()" style="display:none;margin-top:16px;padding:8px 18px;background:var(--ac);color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:'Manrope',sans-serif;font-size:13px">↺ Tentar Novamente</button>
   </div>
 </div>
 
 <!-- ══════════════ APP ══════════════ -->
 <div class="app" id="main-app" style="display:none">
 
-<aside class="sidebar" id="sb">
-  <div class="logo"><div class="br">Imob<span class="dot">.</span>Gestão</div><div class="su">Gestão Inteligente</div></div>
-  <nav>
-    <div class="ns">Principal</div>
-    <div class="ni on" onclick="go('dashboard')"><span class="ic">⬛</span> Dashboard</div>
-    <div class="ni" onclick="go('contratos')"><span class="ic">📋</span> Contratos</div>
-    <div class="ns">Financeiro</div>
-    <div class="ni" onclick="go('cobrancas')"><span class="ic">💰</span> Cobranças <span class="bdg" id="bdgC" style="background:var(--re)">0</span></div>
-    <div class="ni" onclick="go('repasse')"><span class="ic">🔄</span> Repasse</div>
-    <div class="ni" onclick="go('inadimplencia')"><span class="ic">📉</span> Inadimplência</div>
-    <div class="ns">Agenda</div>
-    <div class="ni" onclick="go('vencimentos')"><span class="ic">📅</span> Vencimentos <span class="bdg" id="bdgV" style="background:var(--ye);color:#000;display:none">!</span></div>
-    <div class="ns">Suporte</div>
-    <div class="ni" onclick="go('ordens')"><span class="ic">🔧</span> OS <span class="bdg" id="bdgO" style="background:var(--re);display:none">0</span></div>
-    <div class="ns">Imobiliária</div>
-    <div class="ni" onclick="go('despesas')"><span class="ic">🧾</span> Despesas</div>
-    <div class="ni" onclick="go('finimob')"><span class="ic">💼</span> Fin. Imobiliária</div>
-    <div class="ns">Análise</div>
-    <div class="ni" onclick="go('pretendentes')"><span class="ic">🔍</span> Pretendentes <span class="bdg" id="bdgPret" style="background:var(--ye);display:none">0</span></div>
-    <div class="ni" onclick="go('relatorios')"><span class="ic">📊</span> Relatórios</div>
-  </nav>
-  <div class="sfoot">
-    <div style="display:flex;align-items:center;gap:9px">
-      <div id="user-initials" style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--ac),#7c3aed);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:#fff;flex-shrink:0">?</div>
-      <div style="flex:1;min-width:0">
-        <div id="user-email" style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Carregando...</div>
-        <div style="font-size:10px;color:var(--dm)">ImobGestão</div>
-      </div>
-      <button onclick="logout()" title="Sair da conta" style="background:none;border:none;color:var(--dm);cursor:pointer;font-size:16px;padding:3px;flex-shrink:0;line-height:1" onmouseover="this.style.color='var(--re)'" onmouseout="this.style.color='var(--dm)'">⏻</button>
-    </div>
-  </div>
-</aside>
-<div class="ovm" id="ovm" onclick="cSB()"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="14.5" r=".8"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></symbol>
+<symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+<symbol id="i-brief" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+</defs></svg>
 
 <main class="main">
-  <div class="topbar">
-    <div style="display:flex;align-items:center;gap:11px">
-      <div class="hm" onclick="tSB()">☰</div>
-      <div class="ttl" id="ttl">Dashboard</div>
+  <header class="topbar">
+    <div class="tb">
+      <div class="mark" aria-hidden="true">IG</div>
+      <div class="ttl" id="ttl">Início</div>
+      <button class="tbtn srch" onclick="openCmd()" aria-label="Buscar"><svg class="ico"><use href="#i-search"/></svg><span>Buscar</span><kbd id="kbd-hint">Ctrl K</kbd></button>
+      <button class="tbtn" id="theme-toggle" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema"><svg class="ico i-sun"><use href="#i-sun"/></svg><svg class="ico i-moon"><use href="#i-moon"/></svg></button>
+      <div class="uwrap" data-pop>
+        <button class="av" id="user-initials" onclick="togglePop('umenu')" aria-label="Minha conta">?</button>
+        <div class="pop" id="umenu" data-pop>
+          <div class="um-email" id="user-email">Carregando...</div>
+          <div class="um-sub">ImobGestão</div>
+          <button class="btn bg" onclick="logout()" style="width:100%;justify-content:center;margin-top:14px">Sair da conta</button>
+        </div>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button id="theme-toggle" onclick="toggleTheme()" title="Alternar tema" style="background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);color:var(--dm);cursor:pointer;font-size:16px;padding:5px 9px;line-height:1;transition:all .15s" onmouseover="this.style.color='var(--te)'" onmouseout="this.style.color='var(--dm)'">☀️</button>
-      <button class="btn bp btn-nc-topbar" onclick="openNC()">＋ Novo Contrato</button>
-    </div>
-  </div>
+  </header>
+  
   <div class="content">
 
     <!-- DASHBOARD -->
     <div class="view on" id="view-dashboard">
-      <div class="stats" id="stats"></div>
       <div class="stats2" id="stats2"></div>
+      <button class="lnk" onclick="toggleStats()"><span id="stats-lbl">Ver histórico e métricas</span><svg class="ico"><use href="#i-chev"/></svg></button>
+      <div class="stats" id="stats"></div>
       <div id="sugestoes-box" style="margin-bottom:14px"></div>
       <div class="dash-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
         <div class="card" style="margin-bottom:0">
-          <div class="ch">🔔 Alertas Inteligentes</div>
+          <div class="ch">Alertas</div>
           <div id="alertas-list"></div>
         </div>
         <div class="card" style="margin-bottom:0">
-          <div class="ch">📊 Receita dos Últimos 6 Meses</div>
+          <div class="ch">Receita dos últimos 6 meses</div>
           <div class="cb"><div class="chart-bar" id="chart-receita"></div></div>
         </div>
       </div>
       <div class="dash-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="tw"><div class="th2"><h3>📅 Vencimentos</h3><button class="btn bg bsm" onclick="go('vencimentos')">Ver →</button></div><div id="dv"></div></div>
-        <div class="tw"><div class="th2"><h3>💸 Cobranças a Vencer</h3><button class="btn bg bsm" onclick="go('cobrancas')">Ver →</button></div><div id="dp"></div></div>
+        <div class="tw"><div class="th2"><h3>Vencimentos</h3><button class="btn bg bsm" onclick="go('vencimentos')">Ver tudo</button></div><div id="dv"></div></div>
+        <div class="tw"><div class="th2"><h3>Cobranças a vencer</h3><button class="btn bg bsm" onclick="go('cobrancas')">Ver tudo</button></div><div id="dp"></div></div>
       </div>
     </div>
 
@@ -374,11 +496,11 @@ tr:hover td{background:rgba(255,255,255,.018);}
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <h3 style="margin:0">Contratos</h3>
             <div style="display:flex;gap:6px">
-              <button class="btn-tab-con active" id="tab-con-ativo" onclick="setContratosFiltro('ativo')">✅ Ativos</button>
-              <button class="btn-tab-con" id="tab-con-encerrado" onclick="setContratosFiltro('encerrado')">🔒 Encerrados</button>
+              <button class="btn-tab-con active" id="tab-con-ativo" onclick="setContratosFiltro('ativo')">Ativos</button>
+              <button class="btn-tab-con" id="tab-con-encerrado" onclick="setContratosFiltro('encerrado')">Encerrados</button>
             </div>
           </div>
-          <div class="sb">🔍 <input type="text" id="sc" placeholder="Buscar..." oninput="renderContratos()"></div>
+          <div class="sb"><input type="text" id="sc" placeholder="Buscar..." oninput="renderContratos()"></div>
         </div>
         <div id="tc"></div>
       </div>
@@ -393,7 +515,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
           <div class="tab" onclick="fCob('lembrete',this)">Ação Necessária</div>
           <div class="tab" onclick="fCob('pago',this)">Pagas</div>
           <div class="tab" onclick="fCob('todas',this)">Todas</div>
-          <div class="tab" onclick="fCob('encargos',this)">📋 Encargos</div>
+          <div class="tab" onclick="fCob('encargos',this)">Encargos</div>
         </div>
         <button class="btn bg" onclick="openNCob()">＋ Nova Cobrança</button>
       </div>
@@ -409,8 +531,8 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <!-- VENCIMENTOS -->
     <div class="view" id="view-vencimentos">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="tw"><div class="th2"><h3>🏠 Vigência dos Contratos</h3></div><div id="vvc"></div></div>
-        <div class="tw"><div class="th2"><h3>💳 Cobranças por Vencer</h3></div><div id="vvb"></div></div>
+        <div class="tw"><div class="th2"><h3>Vigência dos contratos</h3></div><div id="vvc"></div></div>
+        <div class="tw"><div class="th2"><h3>Cobranças por vencer</h3></div><div id="vvb"></div></div>
       </div>
     </div>
 
@@ -457,29 +579,44 @@ tr:hover td{background:rgba(255,255,255,.018);}
   </div>
 </main>
 
-<!-- FAB mobile -->
-<button class="fab" onclick="openNC()" title="Novo Contrato">＋</button>
+<!-- Ações rápidas (botão flutuante) -->
+<div class="fdim" id="fdim"></div>
+<div class="sd" id="sd" data-pop>
+  <button class="sdi" style="--i:0" data-v="contratos,dashboard,detalhe" onclick="fabDo('openNC')"><svg class="ico"><use href="#i-file"/></svg>Novo contrato</button>
+  <button class="sdi" style="--i:1" data-v="cobrancas,repasse,inadimplencia" onclick="fabDo('openNCob')"><svg class="ico"><use href="#i-wallet"/></svg>Nova cobrança</button>
+  <button class="sdi" style="--i:2" data-v="ordens" onclick="fabDo('openNOS')"><svg class="ico"><use href="#i-wrench"/></svg>Nova OS</button>
+  <button class="sdi" style="--i:3" data-v="despesas,finimob" onclick="fabDo('openNDespesa')"><svg class="ico"><use href="#i-receipt"/></svg>Nova despesa</button>
+  <button class="sdi" style="--i:4" data-v="pretendentes" onclick="fabDo('openNPretendente')"><svg class="ico"><use href="#i-user"/></svg>Novo pretendente</button>
+</div>
+<button class="fab2" id="fab" data-pop onclick="toggleFab()" aria-label="Ações rápidas" aria-expanded="false"><svg class="ico"><use href="#i-plus"/></svg></button>
 
-<!-- BOTTOM NAV mobile -->
-<nav class="bnav" id="bnav">
-  <button class="bni on" id="bni-dashboard" onclick="go('dashboard');bniActive('dashboard')">
-    <span class="bni-ic">⬛</span><span class="bni-lbl">Home</span>
-  </button>
-  <button class="bni" id="bni-contratos" onclick="go('contratos');bniActive('contratos')">
-    <span class="bni-ic">📋</span><span class="bni-lbl">Contratos</span>
-  </button>
-  <button class="bni" id="bni-cobrancas" onclick="go('cobrancas');bniActive('cobrancas')">
-    <span class="bni-ic">💰</span><span class="bni-lbl">Cobranças</span>
-    <span class="bni-bdg" id="bniC" style="display:none">0</span>
-  </button>
-  <button class="bni" id="bni-repasse" onclick="go('repasse');bniActive('repasse')">
-    <span class="bni-ic">🔄</span><span class="bni-lbl">Repasse</span>
-  </button>
-  <button class="bni" id="bni-vencimentos" onclick="go('vencimentos');bniActive('vencimentos')">
-    <span class="bni-ic">📅</span><span class="bni-lbl">Agenda</span>
-    <span class="bni-bdg" id="bniV" style="display:none">!</span>
-  </button>
-</nav>
+<!-- Menu "Mais" -->
+<div class="pop" id="more" data-pop>
+  <button class="tile" data-nav="inadimplencia" onclick="go('inadimplencia')"><svg class="ico"><use href="#i-down"/></svg>Inadimplência</button>
+  <button class="tile" data-nav="ordens" onclick="go('ordens')"><svg class="ico"><use href="#i-wrench"/></svg>Ordens de serviço<span class="nb" id="bdgO" style="display:none">0</span></button>
+  <button class="tile" data-nav="despesas" onclick="go('despesas')"><svg class="ico"><use href="#i-receipt"/></svg>Despesas</button>
+  <button class="tile" data-nav="finimob" onclick="go('finimob')"><svg class="ico"><use href="#i-brief"/></svg>Financeiro</button>
+  <button class="tile" data-nav="pretendentes" onclick="go('pretendentes')"><svg class="ico"><use href="#i-user"/></svg>Pretendentes<span class="nb y" id="bdgPret" style="display:none">0</span></button>
+  <button class="tile" data-nav="relatorios" onclick="go('relatorios')"><svg class="ico"><use href="#i-chart"/></svg>Relatórios</button>
+</div>
+
+<!-- Dock de navegação -->
+<div class="dock" role="navigation" aria-label="Navegação principal">
+  <button class="dk on" data-nav="dashboard" onclick="go('dashboard')" aria-label="Início"><svg class="ico"><use href="#i-home"/></svg><span class="lb">Início</span></button>
+  <button class="dk" data-nav="contratos" onclick="go('contratos')" aria-label="Contratos"><svg class="ico"><use href="#i-file"/></svg><span class="lb">Contratos</span></button>
+  <button class="dk" data-nav="cobrancas" onclick="go('cobrancas')" aria-label="Cobranças"><svg class="ico"><use href="#i-wallet"/></svg><span class="lb">Cobranças</span><span class="nb" id="bdgC" style="display:none">0</span></button>
+  <button class="dk" data-nav="repasse" onclick="go('repasse')" aria-label="Repasse"><svg class="ico"><use href="#i-swap"/></svg><span class="lb">Repasse</span></button>
+  <button class="dk" data-nav="vencimentos" onclick="go('vencimentos')" aria-label="Agenda"><svg class="ico"><use href="#i-cal"/></svg><span class="lb">Agenda</span><span class="nb y" id="bdgV" style="display:none">!</span></button>
+  <button class="dk" id="dk-more" data-pop onclick="togglePop('more')" aria-label="Mais telas"><svg class="ico"><use id="more-use" href="#i-grid"/></svg><span class="lb" id="more-lb">Mais</span></button>
+</div>
+
+<!-- Busca e atalhos (Ctrl K) -->
+<div class="cmdk" id="cmdk" onclick="if(event.target===this)closeCmd()">
+  <div class="cmdk-box" role="dialog" aria-label="Buscar">
+    <div class="cmdk-in"><svg class="ico"><use href="#i-search"/></svg><input id="cmdk-in" type="text" autocomplete="off" placeholder="Buscar inquilino, imóvel ou ir para..." oninput="_cmSel=0;renderCmd()"></div>
+    <div id="cmdk-list"></div>
+  </div>
+</div>
 
 </div><!-- fim #main-app -->
 
@@ -696,7 +833,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="g"><label>Valor (R$)</label><input type="number" id="ecob-val" step="0.01" oninput="ecobRepUpdate()"></div>
       <div class="g"><label>Vencimento</label><input type="date" id="ecob-vnc"></div>
       <div class="g ff"><label>Para quem vai o dinheiro?</label>
-        <select id="ecob-dest" onchange="ecobDestChange()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px">
+        <select id="ecob-dest" onchange="ecobDestChange()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'Manrope',sans-serif;font-size:13px">
           <option value="prop">🏦 100% Proprietário</option>
           <option value="imob">🏢 100% Imobiliária</option>
           <option value="div">⚖️ Dividir</option>
@@ -704,16 +841,16 @@ tr:hover td{background:rgba(255,255,255,.018);}
       </div>
       <div id="ecob-divbox" class="g ff" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Imobiliária (R$)</div><input type="number" id="ecob-imob" step="0.01" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
-          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Proprietário (R$)</div><input type="number" id="ecob-prop" step="0.01" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Imobiliária (R$)</div><input type="number" id="ecob-imob" step="0.01" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;outline:none"></div>
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Proprietário (R$)</div><input type="number" id="ecob-prop" step="0.01" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;outline:none"></div>
         </div>
       </div>
       <div id="ecob-repview" class="g ff" style="font-size:12px;color:var(--dm);padding:8px;background:var(--sf2);border-radius:7px;border:1px solid var(--bd)"></div>
       <div style="border-top:1px solid var(--bd);margin-top:4px;padding-top:8px">
         <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:6px">🏦 REPASSE EXTRA AO PROPR. <span style="font-size:10px;font-weight:400;color:var(--dm)">(opcional)</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Valor (R$)</div><input type="number" id="ecob-rext-val" min="0" step="0.01" placeholder="0,00" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
-          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Descrição</div><input type="text" id="ecob-rext-desc" placeholder="Ex: IPTU Prop. Parcela 2/10" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></div>
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Valor (R$)</div><input type="number" id="ecob-rext-val" min="0" step="0.01" placeholder="0,00" oninput="ecobRepUpdate()" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;outline:none"></div>
+          <div><div style="font-size:11px;color:var(--dm);margin-bottom:3px">Descrição</div><input type="text" id="ecob-rext-desc" placeholder="Ex: IPTU Prop. Parcela 2/10" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 10px;color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;outline:none"></div>
         </div>
       </div>
     </div>
@@ -759,7 +896,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="g ff"><label>Índice de correção (%)</label><input type="number" id="reaj-pct" step="0.01" placeholder="0,00" oninput="calcNovoValor()"></div>
       <div style="background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:8px;padding:11px;margin:10px 0">
         <div style="font-size:11px;color:var(--dm);margin-bottom:4px">NOVO VALOR</div>
-        <div id="reaj-novo" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--ac2)">R$ –</div>
+        <div id="reaj-novo" style="font-family:'Manrope',sans-serif;font-weight:700;font-size:18px;color:var(--ac2)">R$ –</div>
       </div>
     </div>
     <div class="fa"><button class="btn bg" onclick="cM('mreaj')">Cancelar</button><button class="btn bp" onclick="confirmReajuste()">✓ Aplicar</button></div>
@@ -779,11 +916,11 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div style="display:flex;gap:12px">
         <div>
           <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Original</div>
-          <div id="caut-orig" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--dm)">R$ 0,00</div>
+          <div id="caut-orig" style="font-family:'Manrope',sans-serif;font-weight:700;color:var(--dm)">R$ 0,00</div>
         </div>
         <div>
           <div style="font-size:10px;color:var(--dm);margin-bottom:2px">Atual</div>
-          <div id="caut-atual" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--ac2)">R$ 0,00</div>
+          <div id="caut-atual" style="font-family:'Manrope',sans-serif;font-weight:700;color:var(--ac2)">R$ 0,00</div>
         </div>
       </div>
     </div>
@@ -799,7 +936,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
       <div class="g ff"><label>Motivo</label><input type="text" id="caut-mot" placeholder="Ex: Devolvido ao final do contrato"></div>
       <div style="background:var(--gd);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:11px">
         <div style="font-size:11px;color:var(--dm);margin-bottom:4px">NOVO VALOR</div>
-        <div id="caut-novo" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--gn)">R$ –</div>
+        <div id="caut-novo" style="font-family:'Manrope',sans-serif;font-weight:700;font-size:18px;color:var(--gn)">R$ –</div>
       </div>
     </div>
     <div class="fa"><button class="btn bg" onclick="cM('mcaut')">Cancelar</button><button class="btn bp" onclick="confirmAjustarCaucao()">✓ Confirmar</button></div>
@@ -976,7 +1113,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
   <div class="mh"><div><h2 id="mmsg-title">📱 Mensagem</h2><p id="mmsg-sub" style="font-size:12px;color:var(--dm);margin:0"></p></div><button class="mx" onclick="cM('mmsg')">✕</button></div>
   <div class="mb">
     <div style="font-size:11px;color:var(--dm);margin-bottom:6px">Revise e edite antes de enviar — o destinatário não verá detalhes da análise:</div>
-    <textarea id="mmsg-txt" rows="11" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:12px;color:var(--te);font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.6;resize:vertical;outline:none"></textarea>
+    <textarea id="mmsg-txt" rows="11" style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:12px;color:var(--te);font-family:'Manrope',sans-serif;font-size:13px;line-height:1.6;resize:vertical;outline:none"></textarea>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <button class="btn bg" style="flex:1;justify-content:center" onclick="copiarMsg()">📋 Copiar</button>
       <button class="btn" style="flex:2;justify-content:center;background:#25D366;border-color:#25D366;color:#fff" onclick="enviarWhatsApp()">📲 Abrir no WhatsApp</button>
@@ -1056,12 +1193,11 @@ let _repInitialized=false;
 function toggleTheme(){
   const isLight=document.body.classList.toggle('light');
   localStorage.setItem('ig_theme',isLight?'light':'dark');
-  document.getElementById('theme-toggle').textContent=isLight?'🌙':'☀️';
 }
 (function initTheme(){
   const t=localStorage.getItem('ig_theme');
   if(t==='light'){document.body.classList.add('light');
-  const btn=document.getElementById('theme-toggle');if(btn)btn.textContent='🌙';}
+  }
 })();
 
 // ══════════════════════════════════════════
@@ -1636,6 +1772,7 @@ function badges(){
   if(bniC){bniC.textContent=pend;bniC.style.display=pend?'flex':'none';}
   const bniV=document.getElementById('bniV');
   if(bniV)bniV.style.display=vA?'flex':'none';
+  if(typeof moreDot==='function')moreDot();
 }
 
 // ══════════════════════════════════════════
@@ -1663,36 +1800,7 @@ function renderChart(){
 // ══════════════════════════════════════════
 // NAV
 // ══════════════════════════════════════════
-const TITLES={dashboard:'Dashboard',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Vencimentos',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios',despesas:'Despesas da Imobiliária',finimob:'Financeiro da Imobiliária',pretendentes:'Pretendentes'};
-function go(v){
-  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
-  document.querySelectorAll('.ni').forEach(e=>e.classList.remove('on'));
-  document.getElementById('view-'+v).classList.add('on');
-  document.getElementById('ttl').textContent=TITLES[v]||v;
-  const ni=document.querySelectorAll('.ni');
-  const m={dashboard:0,contratos:1,cobrancas:2,repasse:3,inadimplencia:4,vencimentos:5,ordens:6,despesas:7,finimob:8,pretendentes:9,relatorios:10};
-  if(m[v]!==undefined)ni[m[v]]?.classList.add('on');
-  bniActive(v);
-  if(v==='dashboard')renderDash();
-  if(v==='contratos')renderContratos();
-  if(v==='cobrancas')renderCobrancas();
-  if(v==='repasse')renderRepasse();
-  if(v==='inadimplencia')renderInadimplencia();
-  if(v==='vencimentos')renderVenc();
-  if(v==='ordens')renderOS();
-  if(v==='despesas')renderDespesas();
-  if(v==='finimob')renderFinImob();
-  if(v==='pretendentes')renderPretendentes();
-  if(v==='relatorios')renderRelatorios();
-  cSB();
-}
-function tSB(){document.getElementById('sb').classList.toggle('on');document.getElementById('ovm').classList.toggle('on');}
-function cSB(){document.getElementById('sb').classList.remove('on');document.getElementById('ovm').classList.remove('on');}
-function bniActive(v){
-  document.querySelectorAll('.bni').forEach(b=>b.classList.remove('on'));
-  const el=document.getElementById('bni-'+v);
-  if(el)el.classList.add('on');
-}
+const TITLES={dashboard:'Início',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Agenda',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios',despesas:'Despesas da Imobiliária',finimob:'Financeiro da Imobiliária',pretendentes:'Pretendentes'};
 function oM(id){document.getElementById(id).classList.add('on');}
 function cM(id){document.getElementById(id).classList.remove('on');}
 
@@ -1731,7 +1839,7 @@ function renderDash(){
   const totalCaucImob=caucoes.filter(c=>c.caucaoTp==='imob').reduce((a,b)=>a+b.caucaoAtual,0);
   const totalCaucProp=caucoes.filter(c=>c.caucaoTp==='prop').reduce((a,b)=>a+b.caucaoAtual,0);
   const carcCard=caucoes.length?`<div class="card" style="margin-bottom:14px">
-    <div class="ch">🔒 Caução em Custódia</div>
+    <div class="ch">Caução em custódia</div>
     <div class="cb">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div style="padding:10px;background:var(--ag);border:1px solid rgba(37,99,235,.2);border-radius:9px;text-align:center">
@@ -1761,7 +1869,7 @@ function renderDash(){
   al.innerHTML=alrt.length?alrt.map(a=>`<div class="alrt">
     <div class="alrt-dot ${a.prioridade}"></div>
     <div style="flex:1"><div style="font-size:13px">${a.msg}</div><div style="font-size:11px;color:var(--dm);text-transform:uppercase;font-weight:600;margin-top:2px">${a.prioridade}</div></div>
-    ${a.acao==='detalhe'&&a.id?`<button class="btn bg bsm" onclick="detail('${a.id}')">Ver →</button>`:a.acao==='cobrancas'?`<button class="btn bg bsm" onclick="go('cobrancas')">Ver →</button>`:''}
+    ${a.acao==='detalhe'&&a.id?`<button class="btn bg bsm" onclick="detail('${a.id}')">Ver</button>`:a.acao==='cobrancas'?`<button class="btn bg bsm" onclick="go('cobrancas')">Ver</button>`:''}
   </div>`).join(''):`<div class="empty" style="padding:20px"><div class="ei">✅</div><p>Nenhum alerta</p></div>`;
   renderChart();
   const allV=[
@@ -1814,7 +1922,7 @@ function renderContratos(){
   const el=document.getElementById('tc');
   if(!fl.length){
     const msg=enc?'Nenhum contrato encerrado encontrado':'Nenhum contrato ativo encontrado';
-    const sub=enc?'Contratos finalizados aparecerão aqui':'Clique em "+ Novo Contrato"';
+    const sub=enc?'Contratos finalizados aparecerão aqui':'Use o botão + e escolha "Novo Contrato"';
     el.innerHTML=`<div class="empty"><div class="ei">${enc?'🔒':'📋'}</div><h3>${q?'Nenhum resultado':msg}</h3><p>${sub}</p></div>`;
     return;
   }
@@ -1841,7 +1949,7 @@ function renderContratos(){
         <td><span class="chip cr" style="font-size:11px">${encEm}</span></td>
         <td style="max-width:140px;font-size:12px;color:var(--dm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${motivo}">${motivo}</td>
         <td style="display:flex;gap:6px;align-items:center">
-          <button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button>
+          <button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver</button>
           ${renovado?`<span class="chip cb2" style="font-size:10px;white-space:nowrap" title="Contrato renovado ativo para este imóvel">🔄 Renovado</span>`:''}
         </td>
       </tr>`;
@@ -1866,7 +1974,7 @@ function renderContratos(){
         <td><span class="chip ${riscoCls}">${ind.risco}</span></td>
         <td><span class="chip ${docsCls}">${ck.ok}/${ck.total}</span></td>
         <td><span class="chip ${s.cl}">${s.l}</span></td>
-        <td><button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button></td>
+        <td><button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver</button></td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
   }
@@ -1998,7 +2106,7 @@ function detail(id){
         <div class="cb">${repasseCard(id)}</div>
       </div>
       <div class="card" style="margin-bottom:0">
-        <div class="ch">🔒 Caução em Custódia <button class="btn bg bsm" onclick="openAjustarCaucao('${c.id}')">Ajustar</button></div>
+        <div class="ch">Caução em custódia <button class="btn bg bsm" onclick="openAjustarCaucao('${c.id}')">Ajustar</button></div>
         <div class="cb">
           <div class="ir"><span class="il">Valor Original</span><span class="iv">${R(c.caucao)}</span></div>
           <div class="ir"><span class="il">Valor Atual</span><span class="iv" style="color:var(--ac2);font-weight:600">${R(c.caucaoAtual)}</span></div>
@@ -2079,7 +2187,7 @@ function renderInadimplencia(){
           </div>
         </td>
         <td><span class="chip ${riscoCl}">${ind.risco}</span></td>
-        <td><button class="btn bg bsm" onclick="detail('${c.id}')">Ver →</button></td>
+        <td><button class="btn bg bsm" onclick="detail('${c.id}')">Ver</button></td>
       </tr>`;
     }).join('')}</tbody></table></div>
   </div>`;
@@ -2144,7 +2252,7 @@ function renderRepasse(){
         <div style="display:flex;align-items:center;gap:10px">
           ${pendRep.length?`<span style="font-size:12px;color:var(--ye)">💸 ${pendRep.length} aguardando repasse</span>`:''}
           <span style="font-size:12px;color:var(--gn)">Prop: ${R(totalProp)}</span>${c.adm==='sim'?`<span style="font-size:12px;color:var(--ac2)">Imob: ${R(totalImob)}</span>`:''}
-          <button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver →</button>
+          <button class="btn bg bsm" onclick="event.stopPropagation();detail('${c.id}')">Ver</button>
         </div>
       </div>
       ${collapsed?'':(`<div style="padding:14px 16px">
@@ -3933,7 +4041,7 @@ function renderDespesas(){
   const byTipo={};
   D.d.forEach(d=>{if(!byTipo[d.tipo])byTipo[d.tipo]=0;byTipo[d.tipo]+=d.valor;});
   if(!D.d.length){
-    el.innerHTML='<div class="empty"><div class="ei">🧾</div><h3>Nenhuma despesa registrada</h3><p>Clique em "+ Nova Despesa" para lançar vistoria, análise de crédito, honorários, etc.</p></div>';
+    el.innerHTML='<div class="empty"><div class="ei">🧾</div><h3>Nenhuma despesa registrada</h3><p>Use o botão + e escolha "Nova Despesa" para lançar vistoria, análise de crédito, honorários, etc.</p></div>';
     return;
   }
   el.innerHTML=`
@@ -4248,7 +4356,7 @@ function renderPretendentes(){
   document.getElementById('pret-filtros').innerHTML=Object.entries({todos:'Todos',aprovado:'✅ Aprovados',atencao:'⚠️ Atenção',recusado:'❌ Recusados'}).map(([k,l])=>`<button class="btn bsm ${filtroAtual===k?'bp':'bg'}" onclick="window._pretFiltro='${k}';renderPretendentes()">${l} (${tots[k]})</button>`).join('');
   const lista=filtroAtual==='todos'?D.p:D.p.filter(p=>p.status===filtroAtual);
   if(!lista.length){
-    el.innerHTML=`<div class="empty"><div class="ei">🔍</div><h3>Nenhuma análise${filtroAtual!=='todos'?' com este resultado':' realizada'}</h3><p>Clique em "+ Novo Pretendente" para analisar um candidato.</p></div>`;
+    el.innerHTML=`<div class="empty"><div class="ei">🔍</div><h3>Nenhuma análise${filtroAtual!=='todos'?' com este resultado':' realizada'}</h3><p>Use o botão + e escolha "Novo Pretendente" para analisar um candidato.</p></div>`;
     return;
   }
   el.innerHTML=lista.map(p=>{
@@ -5854,6 +5962,144 @@ async function confirmarFinalizar(){
 // INIT
 // ══════════════════════════════════════════
 document.getElementById('osdt').value=TD();
+
+// ══════════════════════════════════════════
+// v6 · NAVEGAÇÃO NOVA (dock, ações rápidas, busca)
+// ══════════════════════════════════════════
+const NAV_MAP={detalhe:'contratos'};
+const NAV_MORE={inadimplencia:['Inadimplência','down'],ordens:['OS','wrench'],despesas:['Despesas','receipt'],finimob:['Financeiro','brief'],pretendentes:['Pretendentes','user'],relatorios:['Relatórios','chart']};
+function navActive(v){
+  const k=NAV_MAP[v]||v;
+  document.querySelectorAll('.dk[data-nav],.tile[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===k));
+  const more=document.getElementById('dk-more');
+  const m=NAV_MORE[k];
+  more.classList.toggle('on',!!m);
+  document.getElementById('more-lb').textContent=m?m[0]:'Mais';
+  document.getElementById('more-use').setAttribute('href','#i-'+(m?m[1]:'grid'));
+}
+function moreDot(){
+  const vis=id=>{const e=document.getElementById(id);return !!e&&e.style.display!=='none'&&e.textContent.trim()!=='0';};
+  document.getElementById('dk-more').classList.toggle('alert',vis('bdgO')||vis('bdgPret'));
+}
+function setFab(v){
+  document.querySelectorAll('#sd .sdi').forEach(b=>{
+    const pri=b.dataset.v.split(',').includes(v);
+    b.classList.toggle('pri',pri);
+    b.style.order=pri?'-1':'0';
+  });
+}
+function closePops(){
+  document.querySelectorAll('.pop.on,.sd.on,.fdim.on,.fab2.on').forEach(e=>e.classList.remove('on'));
+  const f=document.getElementById('fab');if(f)f.setAttribute('aria-expanded','false');
+}
+function togglePop(id){
+  const el=document.getElementById(id);const was=el.classList.contains('on');
+  closePops();if(!was)el.classList.add('on');
+}
+function toggleFab(){
+  const sd=document.getElementById('sd');const was=sd.classList.contains('on');
+  closePops();
+  if(!was){sd.classList.add('on');document.getElementById('fab').classList.add('on');document.getElementById('fdim').classList.add('on');document.getElementById('fab').setAttribute('aria-expanded','true');}
+}
+function fabDo(fn){closePops();if(typeof window[fn]==='function')window[fn]();}
+function toggleStats(){
+  const on=document.getElementById('view-dashboard').classList.toggle('more');
+  document.getElementById('stats-lbl').textContent=on?'Ocultar histórico':'Ver histórico e métricas';
+}
+function tSB(){closePops();}
+function cSB(){closePops();}
+function bniActive(){}
+
+function go(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('on'));
+  document.getElementById('view-'+v).classList.add('on');
+  document.getElementById('ttl').textContent=TITLES[v]||v;
+  window._curView=v;
+  navActive(v);setFab(v);
+  window.scrollTo({top:0});
+  if(v==='dashboard')renderDash();
+  if(v==='contratos')renderContratos();
+  if(v==='cobrancas')renderCobrancas();
+  if(v==='repasse')renderRepasse();
+  if(v==='inadimplencia')renderInadimplencia();
+  if(v==='vencimentos')renderVenc();
+  if(v==='ordens')renderOS();
+  if(v==='despesas')renderDespesas();
+  if(v==='finimob')renderFinImob();
+  if(v==='pretendentes')renderPretendentes();
+  if(v==='relatorios')renderRelatorios();
+  closePops();moreDot();
+}
+
+// ── Busca / atalhos (Ctrl K) ──
+const CMD_NAV=[['dashboard','Início','home'],['contratos','Contratos','file'],['cobrancas','Cobranças','wallet'],['repasse','Repasse ao proprietário','swap'],['vencimentos','Agenda de vencimentos','cal'],['inadimplencia','Inadimplência','down'],['ordens','Ordens de serviço','wrench'],['despesas','Despesas da imobiliária','receipt'],['finimob','Financeiro da imobiliária','brief'],['pretendentes','Pretendentes','user'],['relatorios','Relatórios','chart']];
+const CMD_ACT=[['openNC','Novo contrato','file'],['openNCob','Nova cobrança','wallet'],['openNOS','Nova ordem de serviço','wrench'],['openNDespesa','Nova despesa','receipt'],['openNPretendente','Novo pretendente','user']];
+let _cmSel=0,_cmItems=[];
+const _nz=s=>(s==null?'':String(s)).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function _svgIco(n){
+  const NS='http://www.w3.org/2000/svg';
+  const s=document.createElementNS(NS,'svg');s.setAttribute('class','ico');
+  const u=document.createElementNS(NS,'use');u.setAttribute('href','#i-'+n);s.appendChild(u);return s;
+}
+function openCmd(){
+  closePops();
+  document.getElementById('cmdk').classList.add('on');
+  const i=document.getElementById('cmdk-in');i.value='';_cmSel=0;renderCmd();
+  setTimeout(()=>i.focus(),20);
+}
+function closeCmd(){document.getElementById('cmdk').classList.remove('on');}
+function renderCmd(){
+  const q=_nz(document.getElementById('cmdk-in').value.trim());
+  const items=[];
+  if(q.length>=2&&typeof D!=='undefined'&&D.c){
+    D.c.filter(c=>[c.inquilino,c.proprietario,c.endereco].some(x=>_nz(x).includes(q))).slice(0,6)
+      .forEach(c=>items.push({g:'Contratos',icon:'file',label:c.inquilino||'Contrato',sub:(c.endereco||'')+(c.encerrado?' · encerrado':''),run:()=>detail(c.id)}));
+  }
+  CMD_NAV.forEach(([k,l,ic])=>{if(!q||_nz(l).includes(q))items.push({g:'Ir para',icon:ic,label:l,run:()=>go(k)});});
+  CMD_ACT.forEach(([fn,l,ic])=>{if(!q||_nz(l).includes(q))items.push({g:'Criar',icon:ic,label:l,run:()=>window[fn]()});});
+  _cmItems=items;
+  if(_cmSel>=items.length)_cmSel=Math.max(0,items.length-1);
+  const box=document.getElementById('cmdk-list');box.textContent='';
+  if(!items.length){const d=document.createElement('div');d.className='cmempty';d.textContent='Nada encontrado para essa busca.';box.appendChild(d);return;}
+  let lastG='';
+  items.forEach((it,idx)=>{
+    if(it.g!==lastG){const h=document.createElement('div');h.className='cmg';h.textContent=it.g;box.appendChild(h);lastG=it.g;}
+    const row=document.createElement('div');row.className='cmi'+(idx===_cmSel?' sel':'');row.dataset.i=idx;
+    row.appendChild(_svgIco(it.icon));
+    const l=document.createElement('span');l.textContent=it.label;row.appendChild(l);
+    if(it.sub){const s=document.createElement('small');s.textContent=it.sub;row.appendChild(s);}
+    row.onclick=()=>runCmd(idx);
+    row.onmousemove=()=>{if(_cmSel!==idx){_cmSel=idx;box.querySelectorAll('.cmi').forEach(r=>r.classList.toggle('sel',+r.dataset.i===idx));}};
+    box.appendChild(row);
+  });
+}
+function runCmd(i){const it=_cmItems[i];if(!it)return;closeCmd();it.run();}
+document.addEventListener('keydown',e=>{
+  const app=document.getElementById('main-app');
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){
+    if(!app||app.style.display==='none')return;
+    e.preventDefault();openCmd();return;
+  }
+  const open=document.getElementById('cmdk').classList.contains('on');
+  if(e.key==='Escape'){if(open)closeCmd();else closePops();return;}
+  if(!open)return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    const n=_cmItems.length;if(!n)return;
+    _cmSel=(_cmSel+(e.key==='ArrowDown'?1:-1)+n)%n;
+    const rows=document.querySelectorAll('#cmdk-list .cmi');
+    rows.forEach(r=>r.classList.toggle('sel',+r.dataset.i===_cmSel));
+    rows[_cmSel]?.scrollIntoView({block:'nearest'});
+  }else if(e.key==='Enter'){e.preventDefault();runCmd(_cmSel);}
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('[data-pop]'))closePops();
+});
+(function(){
+  const k=document.getElementById('kbd-hint');
+  if(k&&/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent))k.textContent='⌘K';
+  navActive('dashboard');setFab('dashboard');
+})();
 </script>
 </body>
 </html>
