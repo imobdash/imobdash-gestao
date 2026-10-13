@@ -354,6 +354,7 @@ tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
 [style*="text-transform:uppercase"]{text-transform:none!important;letter-spacing:0!important;}
 .th2{flex-wrap:wrap;gap:10px;}
 @media(min-width:901px){.tw,.card{overflow:hidden;}}
+#mrep .fg>*{grid-column:1/-1;}
 /* os botões "Nova ..." de cada tela agora ficam no botão flutuante */
 .view > div > button[onclick^="openN"]{display:none;}
 
@@ -681,6 +682,7 @@ tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
       <div class="g"><label>CPF / CNPJ</label><input type="text" id="fprc"></div>
       <div class="g"><label>Telefone</label><input type="text" id="fprt" placeholder="(27) 9..."></div>
       <div class="g"><label>E-mail</label><input type="email" id="fpre"></div>
+      <div class="g ff"><label>Chave Pix do proprietário (usada nos repasses)</label><input type="text" id="fprpix" placeholder="CPF/CNPJ, e-mail, telefone ou chave aleatória"></div>
       <div class="fsec">💰 Valores & Datas</div>
       <div class="g"><label>Valor do Aluguel (R$)</label><input type="number" id="fval" placeholder="0,00" step="0.01" oninput="calcProp()"></div>
       <div class="g"><label>Dia de Vencimento</label><input type="number" id="fdv" placeholder="10" min="1" max="31"></div>
@@ -805,6 +807,10 @@ tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
     <div class="fg">
       <div class="g ff"><label>Data do Repasse</label><input type="date" id="mrep-dt"></div>
       <div id="mrep-vals" style="font-size:13px;padding:10px;background:var(--sf2);border-radius:8px;border:1px solid var(--bd);margin-bottom:4px"></div>
+      <div class="g ff"><label>Comprovante do repasse (PDF ou imagem) <span style="font-weight:400;color:var(--dm)">— vai junto no relatório do proprietário</span></label>
+        <div class="uz" style="padding:10px"><input type="file" id="mrep-file" accept=".pdf,image/*" onchange="document.getElementById('mrep-fn').textContent=this.files[0]?.name||'＋ Anexar comprovante'"><div id="mrep-fn" style="font-size:12px;color:var(--dm);margin-top:4px">＋ Anexar comprovante</div></div>
+        <div id="mrep-have" style="display:none;font-size:12px;margin-top:6px"></div>
+      </div>
       <!-- Despesas abatidas -->
       <div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden">
         <div style="padding:8px 12px;background:var(--sf2);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
@@ -961,12 +967,27 @@ tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
 </div>
 </div>
 
+<!-- MODAL: SEQUÊNCIA DE BOLETOS -->
+<div class="mo" id="mseq">
+<div class="md" style="max-width:420px">
+  <div class="mh"><div><h2>Sequência de boletos</h2><p style="font-size:12px;color:var(--dm);margin:0">O sistema numera os próximos boletos a partir daqui</p></div><button class="mx" onclick="cM('mseq')">✕</button></div>
+  <div class="mb">
+    <div class="fg">
+      <div class="g ff"><label>Último nº de boleto emitido no banco</label><input type="number" id="seq-ult" min="0" step="1" placeholder="Ex: 100"></div>
+      <div id="seq-msg" style="grid-column:1/-1;font-size:12px;color:var(--dm);line-height:1.5"></div>
+    </div>
+    <div class="fa"><button class="btn bg" onclick="cM('mseq')">Cancelar</button><button class="btn bp" onclick="saveSequenciaBoleto()">Salvar</button></div>
+  </div>
+</div>
+</div>
+
 <!-- MODAL BOLETO -->
 <div class="mo" id="mblt">
 <div class="md" style="max-width:380px">
   <div class="mh"><div><h2>📄 Boleto da Cobrança</h2><p id="mblt-sub" style="font-size:12px;color:var(--dm);margin:0"></p></div><button class="mx" onclick="cM('mblt')">✕</button></div>
   <div class="mb">
     <div class="fg">
+      <div class="g"><label>Nº do boleto</label><input type="number" id="blt-num" min="1" step="1" placeholder="automático"></div>
       <div class="g"><label>Data de Emissão</label><input type="date" id="blt-dt"></div>
       <div class="g ff"><label>Arquivo do Boleto (PDF)</label>
         <div class="uz" style="padding:10px"><input type="file" id="blt-file" accept=".pdf" onchange="document.getElementById('blt-fn').textContent=this.files[0]?.name||''"><div id="blt-fn" style="font-size:12px;color:var(--dm);margin-top:4px"></div></div>
@@ -1164,6 +1185,14 @@ tr:hover td{background:color-mix(in srgb,var(--sf2) 70%,transparent);}
 // ALTER TABLE despesas_imob ADD COLUMN reembolso_mes_inicial TEXT; -- formato 'AAAA-MM'
 // -- Descontos individualizados por cobrança (para exibir cada desconto separadamente no relatório de boletos):
 // ALTER TABLE cobrancas ADD COLUMN descontos_aplicados JSONB DEFAULT '[]';
+// -- Nº de boleto em sequência, chave Pix do proprietário e comprovante de repasse:
+// ALTER TABLE contratos ADD COLUMN IF NOT EXISTS prop_pix TEXT;
+// ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS boleto_numero INTEGER;
+// ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS repasse_comprovante_path TEXT;
+// CREATE UNIQUE INDEX IF NOT EXISTS uq_cob_boleto_numero ON cobrancas(user_id, boleto_numero) WHERE boleto_numero IS NOT NULL;
+// CREATE TABLE IF NOT EXISTS config_usuario (user_id UUID PRIMARY KEY, boleto_ultimo INTEGER DEFAULT 0, updated_at TIMESTAMPTZ DEFAULT NOW());
+// ALTER TABLE config_usuario ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "users_own_config" ON config_usuario FOR ALL USING (auth.uid()=user_id) WITH CHECK (auth.uid()=user_id);
 
 // ══════════════════════════════════════════
 // SUPABASE INIT
@@ -1331,6 +1360,7 @@ function rowToContrato(row){
     cpfProp:row.prop_cpf,
     telProp:row.prop_tel,
     emailProp:row.prop_email,
+    pixProp:row.prop_pix||'',
     endereco:row.endereco,
     adm:row.administrado?'sim':'nao',
     valor:Number(row.valor||0),
@@ -1404,6 +1434,8 @@ function rowToCobranca(row){
     descontosAplicados:(row.descontos_aplicados&&row.descontos_aplicados.length)?row.descontos_aplicados:(Number(row.desconto_aplicado||0)>0?[{desc:row.desconto_desc_cob||'Desconto',valor:Number(row.desconto_aplicado||0),origem:'prop'}]:[]),
     boletoPath:row.boleto_path||null,
     boletoEmitidoEm:row.boleto_emitido_em||null,
+    boletoNumero:(row.boleto_numero!=null?Number(row.boleto_numero):null),
+    repasseComprovantePath:row.repasse_comprovante_path||null,
     repasseExtraValor:Number(row.repasse_extra_valor||0),
     repasseExtraDesc:row.repasse_extra_desc||'',
     despesasRepasse:row.despesas_repasse||[],
@@ -1465,6 +1497,7 @@ async function loadAll(){
     const r6=await sb.from('pretendentes').select('*').order('criado_em',{ascending:false});
     D.p=(r6.data||[]).map(rowToPretendente);
   }catch(e){console.warn('pretendentes não disponível:',e);D.p=[];}
+  await cfgLoadBoleto();
 }
 function rowToPretendente(r){
   return{id:r.id,nome:r.nome,cpf:r.cpf,telefone:r.telefone,email:r.email,profissao:r.profissao,rendaDec:Number(r.renda_declarada||0),imovel:r.imovel_pretendido,valorPret:Number(r.valor_pretendido||0),garantia:r.garantia,proprietario:r.proprietario,status:r.status||'pendente',nivelRisco:r.nivel_risco,parecerIA:r.parecer_ia,obs:r.observacoes,contratoId:r.contrato_id,docs:r.docs||[],criadoEm:r.criado_em};
@@ -1674,8 +1707,15 @@ function openMarcarRepasse(ids){
   const totalProp=cbs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
   const desc=cbs.length===1?cbs[0].descricao:`${cbs.length} cobranças selecionadas`;
   document.getElementById('mrep-info').textContent=desc;
-  document.getElementById('mrep-dt').value=TD();
-  document.getElementById('mrep-vals').innerHTML=`🏦 Bruto ao Proprietário: <strong style="color:var(--gn)">${R(totalProp)}</strong>`;
+  const _ja=cbs.length===1&&cbs[0].repasseRealizado&&cbs[0].dataRepasse;
+  document.getElementById('mrep-dt').value=_ja||TD();
+  const _con=D.c.find(x=>x.id===cbs[0]?.contratoId);
+  const _pix=_con?.pixProp||'';
+  document.getElementById('mrep-vals').innerHTML=`🏦 Bruto ao Proprietário: <strong style="color:var(--gn)">${R(totalProp)}</strong>`
+    +(_pix?`<div style="margin-top:6px">Pix do proprietário: <strong style="word-break:break-all">${_escH(_pix)}</strong> <span style="color:var(--ac2);cursor:pointer;text-decoration:underline;margin-left:6px" data-pix="${_escH(_pix)}" onclick="copiarPix(this,this.dataset.pix)">copiar</span></div>`:`<div style="margin-top:6px;color:var(--ye);font-size:12px">Sem chave Pix neste contrato (edite o contrato para incluir).</div>`);
+  document.getElementById('mrep-file').value='';document.getElementById('mrep-fn').textContent='＋ Anexar comprovante';
+  const _pth=cbs.find(x=>x.repasseComprovantePath);const _hv=document.getElementById('mrep-have');
+  if(_pth){_hv.style.display='block';_hv.innerHTML=`✅ Já tem comprovante anexado. <span style="color:var(--ac2);cursor:pointer;text-decoration:underline" onclick="viewRepComprovante('${_pth.id}')">ver</span> — anexe outro para substituir.`;}else{_hv.style.display='none';}
   // Carregar despesas já salvas (se reabrindo)
   const existingDesp=cbs.length===1?(cbs[0].despesasRepasse||[]):[];
   _mrepDespesas=[...existingDesp];
@@ -1729,14 +1769,25 @@ async function confirmRepasse(){
   if(!dt){alert('Informe a data do repasse.');return;}
   const btn=document.getElementById('btnConfRep');
   btn.disabled=true;btn.textContent='Salvando...';
+  let _repPath=null;
+  const _rf=document.getElementById('mrep-file').files[0];
+  if(_rf){
+    const ext=((_rf.name.split('.').pop()||'pdf').toLowerCase().replace(/[^a-z0-9]/g,''))||'pdf';
+    _repPath=`${currentUser.id}/${_repCobIds[0]}/repasse_${Date.now()}.${ext}`;
+    const{error:upE}=await sb.storage.from('documentos').upload(_repPath,_rf);
+    if(upE){alert('Erro ao enviar o comprovante: '+upE.message);btn.disabled=false;btn.textContent='✓ Confirmar Repasse';return;}
+  }
+  let _falhaRep=null;
   for(const id of _repCobIds){
     const payload={repasse_realizado:true,data_repasse:dt,despesas_repasse:_mrepDespesas.length?_mrepDespesas:null};
+    if(_repPath)payload.repasse_comprovante_path=_repPath;
     const{error}=await sb.from('cobrancas').update(payload).eq('id',id);
     if(!error){
       const i=D.cb.findIndex(x=>x.id===id);
-      if(i>=0){D.cb[i]={...D.cb[i],repasseRealizado:true,dataRepasse:dt,despesasRepasse:_mrepDespesas};}
-    }
+      if(i>=0){D.cb[i]={...D.cb[i],repasseRealizado:true,dataRepasse:dt,despesasRepasse:_mrepDespesas,...(_repPath?{repasseComprovantePath:_repPath}:{})};}
+    }else _falhaRep=error;
   }
+  if(_falhaRep)alert('Não consegui salvar o repasse: '+_msgErroBoleto(_falhaRep));
   btn.disabled=false;btn.textContent='✓ Confirmar Repasse';
   cM('mrep');renderRepasse();renderDash();
 }
@@ -2012,7 +2063,7 @@ function detail(id){
           <div style="font-size:10px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">👤 Inquilino</div>
           ${ir('Nome',c.inquilino)}${ir('CPF/CNPJ',c.cpfInq)}${ir('Telefone',c.telInq)}${ir('E-mail',c.emailInq,'b')}
           <div style="font-size:10px;font-weight:700;color:var(--ac2);text-transform:uppercase;letter-spacing:.6px;margin:12px 0 8px">🏠 Proprietário</div>
-          ${ir('Nome',c.proprietario)}${ir('CPF/CNPJ',c.cpfProp)}${ir('Telefone',c.telProp)}${ir('E-mail',c.emailProp,'b')}
+          ${ir('Nome',c.proprietario)}${ir('CPF/CNPJ',c.cpfProp)}${ir('Telefone',c.telProp)}${ir('E-mail',c.emailProp,'b')}${ir('Chave Pix',c.pixProp,'b')}
           ${ir('Endereço',c.endereco)}
         </div>
         <div class="cb">
@@ -2302,7 +2353,7 @@ function renderRepasse(){
                   <td style="color:var(--gn);font-weight:600">${R(rp.prop+(cb.repasseExtraValor||0))}</td>
                   <td style="color:var(--ac2);font-weight:600">${R(rp.imob)}</td>
                   <td><span class="chip ${pgCl}" style="font-size:10px">${pgLbl}</span></td>
-                  <td>${cb.pago&&rp?.prop>0?`<span class="chip ${repCl}" style="font-size:10px;cursor:${!cb.repasseRealizado?'pointer':'default'}" ${!cb.repasseRealizado?`onclick="openMarcarRepasse('${cb.id}')"`:''}>${repLbl}</span>`:'<span style="font-size:11px;color:var(--dmr)">–</span>'}</td>
+                  <td>${cb.pago&&rp?.prop>0?`<span class="chip ${repCl}" style="font-size:10px;cursor:pointer" title="${cb.repasseRealizado?'Editar repasse / anexar comprovante':'Marcar como repassado'}" onclick="openMarcarRepasse('${cb.id}')">${repLbl}${cb.repasseComprovantePath?' 📎':''}</span>`:'<span style="font-size:11px;color:var(--dmr)">–</span>'}</td>
                 </tr>`;}).join('');
               if(mcobs.length<=1)return rows;
               const mProp=mcobs.reduce((a,b)=>a+(b.repasse?.prop||0)+(b.repasseExtraValor||0),0);
@@ -2383,7 +2434,7 @@ function cobItem(cb,inDetail=false,noBottomBorder=false){
         ${reembolso>0?`<span class="rep" style="background:rgba(180,83,9,.12);color:#b45309;border:1px solid rgba(180,83,9,.25)">Reemb: ${R(reembolso)}</span>`:''}
       </div>`:''}
       ${cb.comprovantePath?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--gn);cursor:pointer" onclick="viewCobFile('${cb.id}')">✅ Comprovante</span></div>`:''}
-      ${cb.boletoPath||cb.boletoEmitidoEm?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--ac2);cursor:pointer" onclick="openBoleto('${cb.id}')">📄 Boleto ${cb.boletoEmitidoEm?'('+FD(cb.boletoEmitidoEm)+')':''}</span></div>`:''}
+      ${cb.boletoPath||cb.boletoEmitidoEm||cb.boletoNumero!=null?`<div style="margin-top:3px"><span style="font-size:11px;color:var(--ac2);cursor:pointer" onclick="openBoleto('${cb.id}')">📄 Boleto ${cb.boletoNumero!=null?'nº '+cb.boletoNumero+' ':''}${cb.boletoEmitidoEm?'('+FD(cb.boletoEmitidoEm)+')':''}</span></div>`:''}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
       <span class="chip ${s.cl}">${s.l}</span>
@@ -3015,7 +3066,7 @@ function openNC(){
   oM('mc');
 }
 function clearForm(){
-  ['fen','finq','finqc','finqt','finqe','fprn','fprc','fprt','fpre','fval','fdv','fini','ffim','fobs','fcau'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['fen','finq','finqc','finqt','finqe','fprn','fprc','fprt','fpre','fprpix','fval','fdv','fini','ffim','fobs','fcau'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('fmul').value='2';
   document.getElementById('find').value='IGP-M';
   document.getElementById('fgc').checked=true;
@@ -3136,6 +3187,7 @@ async function saveContract(){
     prop_cpf:document.getElementById('fprc').value||null,
     prop_tel:document.getElementById('fprt').value||null,
     prop_email:document.getElementById('fpre').value||null,
+    ...(()=>{const v=document.getElementById('fprpix').value.trim();const old=_editContratoId?(D.c.find(x=>x.id===_editContratoId)?.pixProp||''):'';return(v||old)?{prop_pix:v||null}:{};})(),
     valor:parseFloat(document.getElementById('fval').value)||0,
     dia_venc:parseInt(document.getElementById('fdv').value)||10,
     inicio:ini||null,fim:fim||null,
@@ -3190,6 +3242,14 @@ async function saveContract(){
       }
     }
     if(document.getElementById('fgc').checked)await gerarCobsSupabase(c,userId);
+    try{
+      const _prim=D.cb.filter(x=>x.contratoId===c.id&&!x.pago).sort((a,b)=>(a.venc||'').localeCompare(b.venc||''))[0];
+      if(_prim&&_boletoConfigurado()){
+        const _r=await numerarBoletos([_prim]);
+        if(_r.ok)alert(`📄 Boleto nº ${_r.primeiro} reservado para a 1ª cobrança de ${c.inquilino}.`);
+        else if(_r.erro)console.warn('numeração do boleto:',_r.erro.message);
+      }
+    }catch(e){console.warn('numeração do boleto:',e);}
   }
   if(_seguroFile){
     const cid=newCon.id;
@@ -3842,6 +3902,7 @@ function openBoleto(cobId){
   const con=D.c.find(x=>x.id===cb.contratoId);
   document.getElementById('mblt-sub').textContent=`${cb.tipo||'Aluguel'} · ${MF(cb.mes)} · ${R(cb.valor)} · ${con?.inquilino||''}`;
   document.getElementById('blt-dt').value=cb.boletoEmitidoEm||TD();
+  document.getElementById('blt-num').value=cb.boletoNumero!=null?cb.boletoNumero:'';
   document.getElementById('blt-fn').textContent='';
   document.getElementById('blt-file').value='';
   document.getElementById('blt-view-row').style.display=cb.boletoPath?'block':'none';
@@ -3867,11 +3928,19 @@ async function saveBoleto(){
   const bltDescTxt=document.getElementById('blt-desc-txt').value.trim()||'';
   const bltUpdatePayload={boleto_path:path,boleto_emitido_em:dt};
   if(bltDescVal>0){bltUpdatePayload.desconto_aplicado=bltDescVal;bltUpdatePayload.desconto_desc_cob=bltDescTxt||'Desconto no Boleto';}
+  let _nnFinal=cb.boletoNumero!=null?cb.boletoNumero:null;
+  const _nv=document.getElementById('blt-num').value.trim();
+  if(_nv!==''){
+    const nn=parseInt(_nv,10);
+    if(!(nn>0)){alert('Nº do boleto inválido.');btn.disabled=false;btn.textContent='💾 Salvar';return;}
+    bltUpdatePayload.boleto_numero=nn;_nnFinal=nn;
+  }else if(cb.boletoNumero!=null){bltUpdatePayload.boleto_numero=null;_nnFinal=null;}
   const{error}=await sb.from('cobrancas').update(bltUpdatePayload).eq('id',_bltCobId);
   btn.disabled=false;btn.textContent='💾 Salvar';
-  if(error){alert('Erro: '+error.message);return;}
+  if(error){alert('Erro: '+_msgErroBoleto(error));return;}
+  if(_nnFinal!=null&&_nnFinal>_ultimoBoleto())await cfgSetBoleto(_nnFinal);
   const ci=D.cb.findIndex(x=>x.id===_bltCobId);
-  if(ci>=0){D.cb[ci].boletoPath=path;D.cb[ci].boletoEmitidoEm=dt;
+  if(ci>=0){D.cb[ci].boletoPath=path;D.cb[ci].boletoEmitidoEm=dt;D.cb[ci].boletoNumero=_nnFinal;
     if(bltDescVal>0){D.cb[ci].descontoAplicado=bltDescVal;D.cb[ci].descontoDesc=bltDescTxt||'Desconto no Boleto';}
   }
   cM('mblt');
@@ -4911,7 +4980,7 @@ function renderRelatorios(){
       <div class="card" style="margin-bottom:0">
         <div class="ch">🧾 Relatório de Boletos</div>
         <div class="cb">
-          <p style="font-size:12px;color:var(--dm);margin-bottom:14px">Folha de controle por cobrança: valor bruto, descontos, repasse ao proprietário e à imobiliária, com campo para anotar manualmente o número do boleto após impressão.</p>
+          ${seqBoletoBoxHtml()}<p style="font-size:12px;color:var(--dm);margin-bottom:14px">Folha de controle por cobrança: valor bruto, descontos, repasse ao proprietário e à imobiliária, com campo para anotar manualmente o número do boleto após impressão.</p>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
             <div>
               <label style="display:block;font-size:11px;color:var(--dm);font-weight:600;margin-bottom:4px">De</label>
@@ -5122,7 +5191,7 @@ function rbQuick(n){
   else if(n===1){const ant=addMes(mesAtual,-1);setDe(ant);setAte(ant);}  // mês anterior
   else{setDe(proxMes);setAte(addMes(proxMes,n-1));}     // próximos N meses (a partir do próximo)
 }
-function gerarRelatorioBoletos(){
+async function gerarRelatorioBoletos(){
   const de=document.getElementById('rb-de')?.value||'';
   const ate=document.getElementById('rb-ate')?.value||de;
   const status=document.getElementById('rb-status')?.value||'pend';
@@ -5133,8 +5202,21 @@ function gerarRelatorioBoletos(){
     if(status==='pend'&&cb.pago)return false;
     if(tipoFiltro&&cb.tipo!==tipoFiltro)return false;
     return true;
-  }).sort((a,b)=>new Date(a.venc)-new Date(b.venc));
+  }).sort((a,b)=>new Date(a.venc)-new Date(b.venc)||((a.boletoNumero??1e9)-(b.boletoNumero??1e9)));
   if(!cobs.length){alert('Nenhuma cobrança encontrada para os filtros selecionados.');return;}
+  // Numera automaticamente (em sequência) os boletos em aberto que ainda não têm número
+  let _winB=null;
+  const _semNum=cobs.filter(cb=>!cb.pago&&cb.boletoNumero==null);
+  if(_semNum.length){
+    if(!_boletoConfigurado()){abrirSequenciaBoleto();return;}
+    _winB=window.open('','_blank','width=900,height=700,scrollbars=yes');
+    if(_winB)_winB.document.write('<p style="font-family:Segoe UI,Arial,sans-serif;padding:30px;color:#334155">Numerando os boletos e montando o relatório...</p>');
+    const _r=await numerarBoletos(_semNum);
+    if(_r.erro){
+      alert('Não consegui numerar todos os boletos: '+_msgErroBoleto(_r.erro));
+      if(!_r.ok){if(_winB)_winB.close();return;}
+    }
+  }
   const fmtD=d=>{if(!d)return'–';const[y,m,di]=d.split('-');return`${di}/${m}/${y}`;};
   const fmtM=m=>{if(!m)return'';const[y,mo]=m.split('-');return`${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo-1]}/${y}`;};
   const stl=cb=>cb.pago?'Pago':(DA(cb.venc)<0?'Atrasado':'Pendente');
@@ -5230,7 +5312,7 @@ function gerarRelatorioBoletos(){
       <!-- Campo número do boleto -->
       <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fafafa;border:1px dashed #94a3b8;border-radius:8px">
         <span style="font-size:12px;font-weight:700;color:#475569;white-space:nowrap">Nº do Boleto:</span>
-        <span style="flex:1;border-bottom:1.5px dotted #94a3b8;display:block;height:18px"></span>
+        <span style="flex:1;border-bottom:1.5px dotted #94a3b8;display:block;min-height:18px;font-size:16px;font-weight:800;color:#1e3a8a;letter-spacing:.5px">${cb.boletoNumero!=null?cb.boletoNumero:''}</span>
         <span style="font-size:12px;font-weight:700;color:#475569;white-space:nowrap;margin-left:20px">Data Pgto:</span>
         <span style="width:90px;border-bottom:1.5px dotted #94a3b8;display:block;height:18px"></span>
       </div>
@@ -5281,8 +5363,8 @@ function gerarRelatorioBoletos(){
   </div>
   ${rows.join('')}
   </body></html>`;
-  const win=window.open('','_blank','width=900,height=700,scrollbars=yes');
-  if(win){win.document.write(html);win.document.close();}
+  const win=_winB||window.open('','_blank','width=900,height=700,scrollbars=yes');
+  if(win){if(_winB)win.document.open();win.document.write(html);win.document.close();}
   else alert('Permita popups para este site e tente novamente.');
 }
 function rrQuick(n){
@@ -5297,7 +5379,7 @@ function rfQuick(n){
   else if(n===1){document.getElementById('rf-de').value=m[1];document.getElementById('rf-ate').value=m[1];}
   else{document.getElementById('rf-de').value=m[Math.min(n-1,m.length-1)];document.getElementById('rf-ate').value=m[0];}
 }
-function gerarRelRepasse(){
+async function gerarRelRepasse(){
   const normPN=n=>(n||'').trim().toUpperCase().replace(/\s+/g,' ');
   const de=document.getElementById('rr-de').value;
   const ate=document.getElementById('rr-ate').value;
@@ -5312,7 +5394,8 @@ function gerarRelRepasse(){
     if(propFiltro&&propFiltro!==prop)return;
     const key=c?.id||cb.contratoId;
     if(!byProp[prop])byProp[prop]={label:propRaw,contratos:{}};
-    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',end:c?.endereco||'–',rows:[],totAlug:0,totImob:0,totProp:0,totPend:0,totDesc:0,totRepExtra:0,totDesp:0,totRemb:0,despesas:[],repExtras:[],descontos:[],reembolsos:[]};
+    if(cb.repasseRealizado&&cb.repasseComprovantePath){(byProp[prop].comps=byProp[prop].comps||{})[cb.repasseComprovantePath]=true;}
+    if(!byProp[prop].contratos[key])byProp[prop].contratos[key]={inquilino:c?.inquilino||'–',pix:c?.pixProp||'',end:c?.endereco||'–',rows:[],totAlug:0,totImob:0,totProp:0,totPend:0,totDesc:0,totRepExtra:0,totDesp:0,totRemb:0,despesas:[],repExtras:[],descontos:[],reembolsos:[]};
     // Aluguel Cobrado = valor bruto cobrado do inquilino (antes do desconto) — mostrado separado
     // dos "outros" valores (repasse extra, ex.: IPTU/Taxa), como no Relatório de Boletos.
     const alug=cb.descontoAplicado>0?(+cb.valor+ +cb.descontoAplicado):+(cb.valor||0);
@@ -5353,6 +5436,15 @@ function gerarRelRepasse(){
     abrirPaginaRepasse(html,pl);
     return;
   }
+  // Comprovantes de repasse anexados: entram no PDF logo depois de cada proprietário
+  const _compPaths=[...new Set(Object.values(byProp).flatMap(p=>Object.keys(p.comps||{})))];
+  const _compCache={};
+  let _winPre=null;
+  if(_compPaths.length){
+    _winPre=window.open('','_blank','width=900,height=1000,scrollbars=yes');
+    if(_winPre)_winPre.document.write('<p style="font-family:Segoe UI,Arial,sans-serif;padding:30px;color:#334155">Montando o relatório com os comprovantes anexados...</p>');
+    for(const p of _compPaths){try{_compCache[p]=await carregarComprovantePaginas(p);}catch(e){console.warn('comprovante:',e);_compCache[p]=null;}}
+  }
   let gAlug=0,gImob=0,gProp=0,gPend=0,gDesc=0,gDesp=0,gRemb=0;
   let ctIndex=0;
   const resumoContratos=[];
@@ -5365,6 +5457,7 @@ function gerarRelRepasse(){
       ctIndex++;
       html+=`<div class="ct-block${isFirstCt?'':' new-page'}">`;
       html+=`<div class="ct-owner-label">👤 ${propLabel}</div>`;
+      if(ct.pix)html+=`<p style="font-size:10.5px;color:#475569;margin:-2px 0 6px">Chave Pix: <strong>${_escH(ct.pix)}</strong></p>`;
       html+=`<p><strong>${ct.inquilino}</strong> — ${ct.end}</p>`;
       html+=`<table><thead><tr><th>Mês</th><th>Tipo</th><th>Aluguel Cobrado</th><th>Desconto</th><th>Outros</th><th>Taxa Imob.</th><th>Bruto Prop.</th><th>Pendente</th></tr></thead><tbody>`;
       ct.rows.sort((a,b)=>a.mes.localeCompare(b.mes)).forEach(r=>{
@@ -5454,6 +5547,7 @@ function gerarRelRepasse(){
         <div class="summary-card ${pPend>0||pProp<0?'red':'green'}"><div class="label">${pPend>0?'⚠️ Pendente':pPend<0?'⚠️ Proprietário deve':pDesp>0?'✅ Repasse Líquido':pProp<0?'⚠️ Proprietário deve':'✅ Repassado'}</div><div class="value">${pPend!==0?R2(Math.abs(pPend)):pDesp>0?R2(pLiquido):R2(Math.abs(pProp))}</div></div>
       </div></div>`;
     }
+    html+=anexosComprovantesHtml(data,propLabel,_compCache);
     gAlug+=pAlug;gImob+=pImob;gProp+=pProp;gPend+=pPend;gDesc+=pDesc;gDesp+=pDesp;gRemb+=pRemb;
   });
   const gLiquido=gProp-gDesp;
@@ -5495,9 +5589,9 @@ function gerarRelRepasse(){
       </table>
     </div>
   </div>`;
-  abrirPaginaRepasse(html,pl);
+  abrirPaginaRepasse(html,pl,_winPre);
 }
-function abrirPaginaRepasse(bodyHtml,pl){
+function abrirPaginaRepasse(bodyHtml,pl,winPre){
   const fullHtml=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
   <title>Repasse ao Proprietário — ${pl}</title>
   <style>
@@ -5515,6 +5609,8 @@ function abrirPaginaRepasse(bodyHtml,pl){
     .ct-block.new-page{page-break-before:always;break-before:page;padding-top:16px}
     .owner-recap{page-break-inside:avoid;break-inside:avoid;margin:8px 0 14px}
     .total-page{page-break-before:always;break-before:page;padding-top:16px}
+    .anexo{page-break-before:always;break-before:page;padding-top:16px}
+    .anexo img{display:block;max-width:100%;max-height:235mm;margin:0 auto 10px;border:1px solid #e2e8f0;border-radius:4px}
     .ct-owner-label{font-size:11px;font-weight:700;color:#1e3a8a;margin-bottom:6px;display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.3px}
     .section-title{font-size:12px;font-weight:700;color:#1e3a8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:6px}
     .memoria{border:1.4px solid #1e3a8a;border-radius:6px;margin:8px 0 4px;overflow:hidden;page-break-inside:avoid;break-inside:avoid}
@@ -5574,8 +5670,8 @@ function abrirPaginaRepasse(bodyHtml,pl){
     <img class="tb-footer" src="${TIMBRADO_FOOTER_B64}">
   </div>
   </body></html>`;
-  const win=window.open('','_blank','width=900,height=1000,scrollbars=yes');
-  if(win){win.document.write(fullHtml);win.document.close();}
+  const win=winPre||window.open('','_blank','width=900,height=1000,scrollbars=yes');
+  if(win){if(winPre)win.document.open();win.document.write(fullHtml);win.document.close();}
   else alert('Permita popups para este site e tente novamente.');
 }
 function shareRelRepasse(){
@@ -5874,7 +5970,7 @@ function editContrato(cid){
   set('fen',c.endereco);
   const fadm=document.getElementById('fadm');if(fadm)fadm.value=c.adm||'sim';
   set('finq',c.inquilino);set('finqc',c.cpfInq);set('finqt',c.telInq);set('finqe',c.emailInq);
-  set('fprn',c.proprietario);set('fprc',c.cpfProp);set('fprt',c.telProp);set('fpre',c.emailProp);
+  set('fprn',c.proprietario);set('fprc',c.cpfProp);set('fprt',c.telProp);set('fpre',c.emailProp);set('fprpix',c.pixProp);
   set('fval',c.valor);set('fdv',c.diaVenc);set('fini',c.inicio);set('ffim',c.fim);
   const find=document.getElementById('find');if(find)find.value=c.indice||'IGP-M';
   set('freaj',c.reajusteMeses);
@@ -5907,7 +6003,7 @@ function renovarContrato(cid){
   set('fen',c.endereco);
   const fadm=document.getElementById('fadm');if(fadm)fadm.value=c.adm||'sim';
   set('finq',c.inquilino);set('finqc',c.cpfInq);set('finqt',c.telInq);set('finqe',c.emailInq);
-  set('fprn',c.proprietario);set('fprc',c.cpfProp);set('fprt',c.telProp);set('fpre',c.emailProp);
+  set('fprn',c.proprietario);set('fprc',c.cpfProp);set('fprt',c.telProp);set('fpre',c.emailProp);set('fprpix',c.pixProp);
   set('fval',c.valor);set('fdv',c.diaVenc);
   set('fini','');set('ffim','');
   const find=document.getElementById('find');if(find)find.value=c.indice||'IGP-M';
@@ -5962,6 +6058,148 @@ async function confirmarFinalizar(){
 // INIT
 // ══════════════════════════════════════════
 document.getElementById('osdt').value=TD();
+
+// ══════════════════════════════════════════
+// SEQUÊNCIA DE Nº DE BOLETO · PIX · COMPROVANTE DE REPASSE
+// ══════════════════════════════════════════
+let _boletoUlt=null; // último nº de boleto emitido no banco (null = ainda não configurado)
+const _escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function _maxBoletoExistente(){return D.cb.reduce((m,c)=>Math.max(m,Number(c.boletoNumero)||0),0);}
+function _ultimoBoleto(){return Math.max(_boletoUlt||0,_maxBoletoExistente());}
+function _boletoConfigurado(){return _boletoUlt!==null||_maxBoletoExistente()>0;}
+async function cfgLoadBoleto(){
+  try{
+    const{data,error}=await sb.from('config_usuario').select('boleto_ultimo').eq('user_id',currentUser.id).maybeSingle();
+    if(!error){_boletoUlt=data&&data.boleto_ultimo!=null?Number(data.boleto_ultimo):null;return;}
+  }catch(e){}
+  try{const l=localStorage.getItem('ig_boleto_ultimo');_boletoUlt=l!==null?Number(l):null;}catch(e){}
+}
+async function cfgSetBoleto(n){
+  _boletoUlt=n;
+  try{localStorage.setItem('ig_boleto_ultimo',String(n));}catch(e){}
+  try{
+    const{error}=await sb.from('config_usuario').upsert({user_id:currentUser.id,boleto_ultimo:n,updated_at:new Date().toISOString()});
+    if(error)console.warn('config_usuario (rode o SQL de atualização):',error.message);
+  }catch(e){console.warn('config_usuario:',e);}
+}
+// Numera, em ordem fixa (vencimento → ordem de cadastro do contrato → tipo), as cobranças em aberto que ainda não têm nº.
+async function numerarBoletos(lista){
+  const ordem={};D.c.slice().reverse().forEach((c,i)=>{ordem[c.id]=i;});
+  const alvo=lista.filter(cb=>!cb.pago&&cb.boletoNumero==null)
+    .sort((a,b)=>(a.venc||'').localeCompare(b.venc||'')||((ordem[a.contratoId]??1e9)-(ordem[b.contratoId]??1e9))||String(a.tipo).localeCompare(String(b.tipo)));
+  let n=_ultimoBoleto(),ok=0,erro=null,primeiro=null;
+  for(const cb of alvo){
+    const num=n+1;
+    const{error}=await sb.from('cobrancas').update({boleto_numero:num}).eq('id',cb.id);
+    if(error){erro=error;break;}
+    n=num;ok++;if(primeiro===null)primeiro=num;
+    const i=D.cb.findIndex(x=>x.id===cb.id);if(i>=0)D.cb[i].boletoNumero=num;
+    cb.boletoNumero=num;
+  }
+  if(ok)await cfgSetBoleto(n);
+  return{ok,erro,primeiro,ultimo:n};
+}
+function _msgErroBoleto(e){
+  const m=(e&&e.message)||'';
+  if(/boleto_numero|schema cache|column/i.test(m))return m+'\n\nFalta rodar o SQL de atualização no Supabase (colunas novas).';
+  if(/duplicate|unique|23505/i.test(m))return'Esse nº de boleto já está em uso em outra cobrança.';
+  return m;
+}
+function abrirSequenciaBoleto(){
+  const u=_ultimoBoleto();
+  document.getElementById('seq-ult').value=_boletoConfigurado()?u:'';
+  document.getElementById('seq-msg').textContent=_boletoConfigurado()
+    ?`Hoje o último é o nº ${u}. O próximo boleto será o nº ${u+1}. (Não dá pra voltar abaixo de números já usados em cobranças.)`
+    :'Informe o último número que você emitiu no banco. A partir dele o sistema numera os próximos boletos sozinho.';
+  oM('mseq');
+}
+async function saveSequenciaBoleto(){
+  const v=document.getElementById('seq-ult').value.trim();
+  const n=parseInt(v,10);
+  if(v===''||!(n>=0)){alert('Informe o último nº de boleto emitido (pode ser 0).');return;}
+  await cfgSetBoleto(n);
+  cM('mseq');
+  if(document.getElementById('view-relatorios').classList.contains('on'))renderRelatorios();
+  alert(`✅ Sequência ajustada. O próximo boleto será o nº ${_ultimoBoleto()+1}.`);
+}
+function seqBoletoBoxHtml(){
+  const ok=_boletoConfigurado(),u=_ultimoBoleto();
+  return`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;background:var(--sf2);border:1px solid var(--bd);border-radius:10px">
+    <div style="font-size:13px">${ok?`Último boleto: <strong>nº ${u}</strong> · próximo: <strong>nº ${u+1}</strong>`:'<span style="color:var(--ye)">Sequência de boletos ainda não configurada</span>'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn bg bsm" onclick="abrirSequenciaBoleto()">${ok?'Ajustar':'Configurar'}</button><button class="btn bg bsm" onclick="numerarPeriodoBoletos()">Numerar sem imprimir</button></div>
+  </div>`;
+}
+function _cobsBoletoPeriodo(){
+  const de=document.getElementById('rb-de')?.value||'';
+  const ate=document.getElementById('rb-ate')?.value||de;
+  const tipo=document.getElementById('rb-tipo')?.value||'';
+  return D.cb.filter(cb=>{if(de&&cb.mes<de)return false;if(ate&&cb.mes>ate)return false;if(tipo&&cb.tipo!==tipo)return false;return !cb.pago;});
+}
+async function numerarPeriodoBoletos(){
+  if(!_boletoConfigurado()){abrirSequenciaBoleto();return;}
+  const sem=_cobsBoletoPeriodo().filter(cb=>cb.boletoNumero==null);
+  if(!sem.length){alert('Todas as cobranças desse período já têm número de boleto.');return;}
+  const r=await numerarBoletos(sem);
+  if(r.erro)alert('Não consegui numerar todos: '+_msgErroBoleto(r.erro));
+  if(r.ok)alert(`✅ ${r.ok} boleto(s) numerado(s): nº ${r.primeiro} até nº ${r.ultimo}.`);
+  renderRelatorios();
+}
+
+// ── Comprovante de repasse (entra no PDF do proprietário) ──
+async function viewRepComprovante(id){
+  const c=D.cb.find(x=>x.id===id);
+  if(!c?.repasseComprovantePath)return;
+  const{data}=await sb.storage.from('documentos').createSignedUrl(c.repasseComprovantePath,120);
+  if(data?.signedUrl)window.open(data.signedUrl,'_blank');
+}
+function copiarPix(el,txt){
+  try{navigator.clipboard.writeText(txt);el.textContent='copiado ✓';setTimeout(()=>{el.textContent='copiar';},1500);}catch(e){}
+}
+async function _blobToImgDataUrl(blob,maxDim=1600){
+  const bmp=await createImageBitmap(blob);
+  const k=Math.min(1,maxDim/Math.max(bmp.width,bmp.height));
+  const cv=document.createElement('canvas');cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);
+  const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(bmp,0,0,cv.width,cv.height);
+  return cv.toDataURL('image/jpeg',0.86);
+}
+function _loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  return new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res(window.pdfjsLib);};
+    sc.onerror=()=>rej(new Error('Não carregou o leitor de PDF'));
+    document.head.appendChild(sc);
+  });
+}
+async function carregarComprovantePaginas(path){
+  const{data,error}=await sb.storage.from('documentos').createSignedUrl(path,300);
+  if(error||!data?.signedUrl)throw error||new Error('sem link do arquivo');
+  const resp=await fetch(data.signedUrl);
+  if(!resp.ok)throw new Error('download '+resp.status);
+  const blob=await resp.blob();
+  const isPdf=/\.pdf$/i.test(path)||blob.type==='application/pdf';
+  if(!isPdf)return[await _blobToImgDataUrl(blob)];
+  const lib=await _loadPdfJs();
+  const pdf=await lib.getDocument({data:await blob.arrayBuffer()}).promise;
+  const pages=[];
+  for(let i=1;i<=Math.min(pdf.numPages,3);i++){
+    const pg=await pdf.getPage(i);const vp=pg.getViewport({scale:1.8});
+    const cv=document.createElement('canvas');cv.width=vp.width;cv.height=vp.height;
+    await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    pages.push(cv.toDataURL('image/jpeg',0.86));
+  }
+  return pages;
+}
+function anexosComprovantesHtml(data,propLabel,cache){
+  let h='';
+  Object.keys(data.comps||{}).forEach(p=>{
+    const pgs=cache[p];
+    if(!pgs||!pgs.length){h+=`<div class="anexo"><div class="section-title">📎 Comprovante de repasse — ${_escH(propLabel)}</div><p style="font-size:11px;color:#b45309">Não foi possível carregar o comprovante anexado.</p></div>`;return;}
+    pgs.forEach((src,i)=>{h+=`<div class="anexo"><div class="section-title">📎 Comprovante de repasse — ${_escH(propLabel)}${pgs.length>1?` (página ${i+1} de ${pgs.length})`:''}</div><img src="${src}"></div>`;});
+  });
+  return h;
+}
 
 // ══════════════════════════════════════════
 // v6 · NAVEGAÇÃO NOVA (dock, ações rápidas, busca)
