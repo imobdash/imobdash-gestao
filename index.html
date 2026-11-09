@@ -1862,6 +1862,8 @@ function renderChart(){
 // ══════════════════════════════════════════
 const TITLES={dashboard:'Início',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Agenda',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios',despesas:'Despesas da Imobiliária',finimob:'Financeiro da Imobiliária',pretendentes:'Pretendentes'};
 function oM(id){document.getElementById(id).classList.add('on');}
+// Reembolsos embutidos na cobrança: soma à Imob. e (se origem=proprietário) desconta do Prop.; origem=inquilino também está dentro de cb.valor
+function _rembCob(cb){const r=cb.reembolsos||[];const inq=r.filter(x=>x.origem==='inquilino').reduce((a,x)=>a+(x.valor||0),0);const prop=r.filter(x=>x.origem!=='inquilino').reduce((a,x)=>a+(x.valor||0),0);return{inq:Math.round(inq*100)/100,prop:Math.round(prop*100)/100};}
 // Confirmação dentro do app (substitui o confirm() nativo, que o Chrome pode bloquear silenciosamente)
 function uiConfirm(msg,okLabel='Confirmar',danger=false){
   return new Promise(res=>{
@@ -2741,7 +2743,7 @@ async function saveEditCob(){
   btn.disabled=true;btn.textContent='Salvando...';
   const rextVal=parseFloat(document.getElementById('ecob-rext-val').value)||0;
   const rextDesc=document.getElementById('ecob-rext-desc').value.trim();
-  if(rextVal>0)repProp+=rextVal;
+  // repasse_prop NÃO inclui o repasse extra (ele fica em repasse_extra_valor e é somado na exibição/relatórios)
   const{error}=await sb.from('cobrancas').update({
     descricao:document.getElementById('ecob-dsc').value,
     valor:val,
@@ -3335,32 +3337,36 @@ async function saveContract(){
           if(dcTotal===0){
             // mês antes do início do desconto: garante que não fica desconto antigo nessa cobrança
             if((cb.descontoAplicado||0)>0){
-              const vo=cb.valor+(cb.descontoAplicado||0);const isF=cb.repasse?.tipo==='primeiro';
+              const _r0=_rembCob(cb);const vo=cb.valor+(cb.descontoAplicado||0)-_r0.inq;const isF=cb.repasse?.tipo==='primeiro';
               const rr=calcRepasse('Aluguel',isF?(c.valor||vo):vo,isF,adm);const ri=isF?rr.imob:Math.min(rr.imob,vo);
-              const{error:e0}=await sb.from('cobrancas').update({valor:vo,repasse_imob:ri,repasse_prop:vo-ri,repasse_tipo:rr.tipo,desconto_aplicado:null,desconto_desc_cob:null,descontos_aplicados:null}).eq('id',cb.id);
-              if(!e0){const ci=D.cb.findIndex(x=>x.id===cb.id);if(ci>=0){D.cb[ci].valor=vo;D.cb[ci].repasse={imob:ri,prop:vo-ri,tipo:rr.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';D.cb[ci].descontosAplicados=[];}}
+              const vF=Math.round((vo+_r0.inq)*100)/100,iF=Math.round((ri+_r0.inq+_r0.prop)*100)/100,pF=Math.round((vo-ri-_r0.prop)*100)/100;
+              const{error:e0}=await sb.from('cobrancas').update({valor:vF,repasse_imob:iF,repasse_prop:pF,repasse_tipo:rr.tipo,desconto_aplicado:null,desconto_desc_cob:null,descontos_aplicados:null}).eq('id',cb.id);
+              if(!e0){const ci=D.cb.findIndex(x=>x.id===cb.id);if(ci>=0){D.cb[ci].valor=vF;D.cb[ci].repasse={imob:iF,prop:pF,tipo:rr.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';D.cb[ci].descontosAplicados=[];}}
             }
             if(dsEdEdit.every(d=>!d.inicio||mesCb>=d.inicio))break;
             continue;
           }
-          const valorOriginal=cb.valor+(cb.descontoAplicado||0);
+          const _rb=_rembCob(cb);
+          const valorOriginal=cb.valor+(cb.descontoAplicado||0)-_rb.inq;
           const novoValor=Math.max(0,valorOriginal-dcTotal);
           // preserva o status de "1º mês" (comissão de 50% do aluguel cheio, sem teto) já aplicado a esta cobrança
           const isFirstCb=cb.repasse?.tipo==='primeiro';
           const repBase=isFirstCb?(origemPropE?c.valor:Math.max(0,c.valor-dcTotal)):(origemPropE?valorOriginal:novoValor);
           const repRaw=calcRepasse('Aluguel',repBase,isFirstCb,adm);
           const repImob=isFirstCb?repRaw.imob:Math.min(repRaw.imob,novoValor);
-          const repProp=novoValor-repImob;
+          const repImobF=Math.round((repImob+_rb.inq+_rb.prop)*100)/100;
+          const repProp=Math.round((novoValor-repImob-_rb.prop)*100)/100;
+          const valorFinal=Math.round((novoValor+_rb.inq)*100)/100;
           const{error:eu}=await sb.from('cobrancas').update({
-            valor:novoValor,
-            repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
+            valor:valorFinal,
+            repasse_imob:repImobF,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
             desconto_aplicado:dcTotal,
             desconto_desc_cob:dcDescArr.join(', '),
             descontos_aplicados:dcDetalheArr
           }).eq('id',cb.id);
           if(!eu){
             const ci=D.cb.findIndex(x=>x.id===cb.id);
-            if(ci>=0){D.cb[ci].valor=novoValor;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=dcTotal;D.cb[ci].descontoDesc=dcDescArr.join(', ');D.cb[ci].descontosAplicados=dcDetalheArr;}
+            if(ci>=0){D.cb[ci].valor=valorFinal;D.cb[ci].repasse={imob:repImobF,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=dcTotal;D.cb[ci].descontoDesc=dcDescArr.join(', ');D.cb[ci].descontosAplicados=dcDetalheArr;}
             usadas++;
           }
         }
@@ -3381,15 +3387,17 @@ async function saveContract(){
         const adm=c.adm==='sim';
         let _okCount=0;const _falhas=[];
         for(const cb of pendComDesc){
-          const valorOriginal=cb.valor+(cb.descontoAplicado||0);
+          const _rbR=_rembCob(cb);
+          const valorOriginal=cb.valor+(cb.descontoAplicado||0)-_rbR.inq;
           // preserva o status de "1º mês" (comissão de 50% do aluguel cheio, sem teto) já aplicado a esta cobrança
           const isFirstCb=cb.repasse?.tipo==='primeiro';
           const repBase=isFirstCb?(c.valor||valorOriginal):valorOriginal;
           const repRaw=calcRepasse('Aluguel',repBase,isFirstCb,adm);
-          const repImob=isFirstCb?repRaw.imob:Math.min(repRaw.imob,valorOriginal);
-          const repProp=valorOriginal-repImob;
+          const repImob=Math.round(((isFirstCb?repRaw.imob:Math.min(repRaw.imob,valorOriginal))+_rbR.inq+_rbR.prop)*100)/100;
+          const repProp=Math.round((valorOriginal-(repImob-_rbR.inq-_rbR.prop)-_rbR.prop)*100)/100;
+          const valorFinalR=Math.round((valorOriginal+_rbR.inq)*100)/100;
           const{error:eu}=await sb.from('cobrancas').update({
-            valor:valorOriginal,
+            valor:valorFinalR,
             repasse_imob:repImob,repasse_prop:repProp,repasse_tipo:repRaw.tipo,
             desconto_aplicado:null,
             desconto_desc_cob:null,
@@ -3397,7 +3405,7 @@ async function saveContract(){
           }).eq('id',cb.id);
           if(!eu){
             const ci=D.cb.findIndex(x=>x.id===cb.id);
-            if(ci>=0){D.cb[ci].valor=valorOriginal;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';D.cb[ci].descontosAplicados=[];}
+            if(ci>=0){D.cb[ci].valor=valorFinalR;D.cb[ci].repasse={imob:repImob,prop:repProp,tipo:repRaw.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';D.cb[ci].descontosAplicados=[];}
             _okCount++;
           }else{
             console.error('[remover desconto] falha ao atualizar cobrança',cb.id,eu);
