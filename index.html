@@ -2106,7 +2106,7 @@ function detail(id){
           ${ir('Vencimento','Todo dia '+(c.diaVenc||'–'))}${ir('Índice',c.indice)}${ir('Multa',c.multa+'%')}
           ${c.caucao?ir('Caução',R(c.caucao)+' — '+(c.caucaoTp==='imob'?'Imobiliária':'Proprietário')):''}
           ${ir('Administrado',c.adm==='sim'?'✅ Sim':'Não')}
-          ${(()=>{const ds=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop',inicio:''}]:[]);const fmtMes=m=>{if(!m)return'';const[y,mo]=m.split('-');return`${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo-1]}/${y}`;};return ds.map(d=>ir('Desconto',`-${R(d.valor)} · ${d.desc||''} · ${d.parc}x · ${(d.origem||'prop')==='prop'?'Prop.':'Imob.'}${d.inicio?` · Início: ${fmtMes(d.inicio)}`:''}`)).join('')+(ds.length>0?ir('Valor c/ Desconto',R(c.valor-ds.reduce((s,d)=>s+d.valor,0))):'');})()}
+          ${(()=>{const ds=(c.descontos&&c.descontos.length>0)?c.descontos:(c.descontoValor>0?[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop',inicio:''}]:[]);const fmtMes=m=>{if(!m)return'';const[y,mo]=m.split('-');return`${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][+mo-1]}/${y}`;};return ds.map(d=>ir('Desconto',`-${R(d.valor)} · ${d.desc||''} · ${d.parc}x a lançar · ${(d.origem||'prop')==='prop'?'Prop.':'Imob.'}${d.inicio?` · Início: ${fmtMes(d.inicio)}`:''}`)).join('')+(ds.length>0?ir('Valor c/ Desconto',R(c.valor-ds.reduce((s,d)=>s+d.valor,0))):'');})()}
           ${c.repasseExtraValor>0?ir('Rep.Extra Prop.',`+${R(c.repasseExtraValor)} · ${c.repasseExtraDesc||'Repasse Extra'} · ${c.repasseExtraParc}x restantes`):''}
           ${c.repasseExtraValor>0?ir('Total c/ Rep.Extra',R(c.valor+c.repasseExtraValor)):''}
           ${ir('Início',FD(c.inicio))}${ir('Término',FD(c.fim))}
@@ -3297,14 +3297,26 @@ async function saveContract(){
   }
   const wasEdit=_editContratoId!==null;
   // ── APLICAR DESCONTOS ÀS COBRANÇAS PENDENTES (edição — múltiplos) ──
-  if(wasEdit && c.descontoValor>0 && c.descontoParc>0){
+  // Parcelas do contrato = parcelas AINDA NÃO lançadas. Cobranças pendentes que já carregam o desconto
+  // devolvem suas parcelas ao saldo antes de recalcular (antes cada edição consumia as parcelas de novo até zerar).
+  const _cobTemDesc=(cb,d)=>{const nm=d.desc||'Desconto';return (cb.descontosAplicados||[]).some(x=>x.desc===nm)||(cb.descontoDesc||'').split(', ').includes(nm);};
+  let _dcAtivoEdit=false;
+  if(wasEdit && c.descontoValor>0){
+    const _dsChk=(c.descontos&&c.descontos.length>0)?c.descontos:[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}];
+    const _pendChk=D.cb.filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel');
+    _dcAtivoEdit=_dsChk.some(d=>d.valor>0&&((d.parc||0)>0||_pendChk.some(cb=>_cobTemDesc(cb,d))));
+    if(!_dcAtivoEdit)alert('⚠️ O desconto "'+_dsChk.map(d=>d.desc||'Desconto').join(', ')+'" está com 0 parcelas, então não vai entrar em nenhuma cobrança.\n\nEdite o contrato e informe quantas parcelas faltam lançar (ex.: 12).');
+  }
+  if(_dcAtivoEdit){
     const dsEdEdit=(c.descontos&&c.descontos.length>0)?c.descontos:[{desc:c.descontoDesc,valor:c.descontoValor,parc:c.descontoParc,origem:c.descontoOrigem||'prop'}];
     const totalDcEdit=dsEdEdit.reduce((s,d)=>s+d.valor,0);
-    const maxParcEdit=dsEdEdit.reduce((m,d)=>Math.max(m,d.parc),0);
     const pendAlug=D.cb
       .filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel')
       .sort((a,b)=>new Date(a.venc)-new Date(b.venc));
-    if(pendAlug.length>0&&totalDcEdit>0){
+    const pagasCom=dsEdEdit.map(d=>D.cb.filter(x=>x.contratoId===c.id&&x.pago&&x.tipo==='Aluguel'&&_cobTemDesc(x,d)).length);
+    const dispEdit=dsEdEdit.map(d=>(d.parc||0)+pendAlug.filter(cb=>_cobTemDesc(cb,d)).length);
+    const maxParcEdit=dispEdit.reduce((m,n)=>Math.max(m,n),0);
+    if(pendAlug.length>0&&totalDcEdit>0&&maxParcEdit>0){
       const qtd=Math.min(pendAlug.length,maxParcEdit);
       const descLabelEdit=dsEdEdit.map(d=>d.desc||'Desconto').join(', ');
       const valorBase=pendAlug[0].valor+(pendAlug[0].descontoAplicado||0);
@@ -3319,8 +3331,18 @@ async function saveContract(){
           if(usadas>=maxParcEdit)break;
           let dcTotal=0;const dcDescArr=[];const dcDetalheArr=[];
           const mesCb=cb.mes||cb.venc?.substring(0,7)||'';
-          dsEdEdit.forEach((d,i)=>{if(d.parc>0&&dcContEdit[i]<d.parc&&(!d.inicio||mesCb>=d.inicio)){dcTotal+=d.valor;dcDescArr.push(d.desc||'Desconto');dcDetalheArr.push({desc:d.desc||'Desconto',valor:d.valor,parcAtual:dcContEdit[i]+1,parcTotal:d.parc,origem:d.origem||'prop'});dcContEdit[i]++;}});
-          if(dcTotal===0)break;
+          dsEdEdit.forEach((d,i)=>{if(d.valor>0&&dcContEdit[i]<dispEdit[i]&&(!d.inicio||mesCb>=d.inicio)){dcTotal+=d.valor;dcDescArr.push(d.desc||'Desconto');dcDetalheArr.push({desc:d.desc||'Desconto',valor:d.valor,parcAtual:pagasCom[i]+dcContEdit[i]+1,parcTotal:pagasCom[i]+dispEdit[i],origem:d.origem||'prop'});dcContEdit[i]++;}});
+          if(dcTotal===0){
+            // mês antes do início do desconto: garante que não fica desconto antigo nessa cobrança
+            if((cb.descontoAplicado||0)>0){
+              const vo=cb.valor+(cb.descontoAplicado||0);const isF=cb.repasse?.tipo==='primeiro';
+              const rr=calcRepasse('Aluguel',isF?(c.valor||vo):vo,isF,adm);const ri=isF?rr.imob:Math.min(rr.imob,vo);
+              const{error:e0}=await sb.from('cobrancas').update({valor:vo,repasse_imob:ri,repasse_prop:vo-ri,repasse_tipo:rr.tipo,desconto_aplicado:null,desconto_desc_cob:null,descontos_aplicados:null}).eq('id',cb.id);
+              if(!e0){const ci=D.cb.findIndex(x=>x.id===cb.id);if(ci>=0){D.cb[ci].valor=vo;D.cb[ci].repasse={imob:ri,prop:vo-ri,tipo:rr.tipo};D.cb[ci].descontoAplicado=0;D.cb[ci].descontoDesc='';D.cb[ci].descontosAplicados=[];}}
+            }
+            if(dsEdEdit.every(d=>!d.inicio||mesCb>=d.inicio))break;
+            continue;
+          }
           const valorOriginal=cb.valor+(cb.descontoAplicado||0);
           const novoValor=Math.max(0,valorOriginal-dcTotal);
           // preserva o status de "1º mês" (comissão de 50% do aluguel cheio, sem teto) já aplicado a esta cobrança
@@ -3342,7 +3364,7 @@ async function saveContract(){
             usadas++;
           }
         }
-        const novosDescsEdit=dsEdEdit.map((d,i)=>({...d,parc:Math.max(0,d.parc-dcContEdit[i])}));
+        const novosDescsEdit=dsEdEdit.map((d,i)=>({...d,parc:Math.max(0,dispEdit[i]-dcContEdit[i])}));
         const novoTotalEdit=novosDescsEdit.reduce((s,d)=>s+d.valor,0);
         const novoMaxEdit=novosDescsEdit.reduce((m,d)=>Math.max(m,d.parc),0);
         await sb.from('contratos').update({desconto_parcelas:novoMaxEdit,desconto_valor:novoTotalEdit,desconto_desc:JSON.stringify(novosDescsEdit)}).eq('id',c.id);
@@ -3351,7 +3373,7 @@ async function saveContract(){
     }
   }
   // ── REMOVER DESCONTO DE COBRANÇAS PENDENTES (desconto foi desativado/zerado na edição) ──
-  if(wasEdit && !(c.descontoValor>0 && c.descontoParc>0)){
+  if(wasEdit && !(c.descontoValor>0)){
     const pendComDesc=D.cb.filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel'&&(x.descontoAplicado||0)>0);
     if(pendComDesc.length>0){
       const ok=await uiConfirm(`O desconto foi removido/desativado no contrato.\n\nDeseja remover o desconto já aplicado em ${pendComDesc.length} cobrança(s) de aluguel pendente(s)?`);
