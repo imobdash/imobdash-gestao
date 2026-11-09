@@ -1321,7 +1321,7 @@ async function forgotPassword(){
   else showAuthError('✅ E-mail de recuperação enviado!',true);
 }
 async function logout(){
-  if(!confirm('Sair da conta?'))return;
+  if(!await uiConfirm('Sair da conta?'))return;
   await sb.auth.signOut();
   D={c:[],cb:[],o:[]};
   currentUser=null;
@@ -1862,6 +1862,31 @@ function renderChart(){
 // ══════════════════════════════════════════
 const TITLES={dashboard:'Início',contratos:'Contratos',cobrancas:'Cobranças',repasse:'Repasse ao Proprietário',inadimplencia:'Inadimplência',vencimentos:'Agenda',ordens:'Ordens de Serviço',detalhe:'Detalhe do Contrato',relatorios:'Relatórios',despesas:'Despesas da Imobiliária',finimob:'Financeiro da Imobiliária',pretendentes:'Pretendentes'};
 function oM(id){document.getElementById(id).classList.add('on');}
+// Confirmação dentro do app (substitui o confirm() nativo, que o Chrome pode bloquear silenciosamente)
+function uiConfirm(msg,okLabel='Confirmar',danger=false){
+  return new Promise(res=>{
+    let mo=document.getElementById('muiconf');
+    if(!mo){
+      mo=document.createElement('div');mo.className='mo';mo.id='muiconf';mo.style.zIndex='400';
+      mo.innerHTML=`<div class="md" style="max-width:420px"><div class="mb" style="padding:22px">
+        <div id="muiconf-msg" style="white-space:pre-line;font-size:14px;line-height:1.5;margin-bottom:18px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn bg" id="muiconf-no">Cancelar</button>
+          <button class="btn bp" id="muiconf-ok">Confirmar</button>
+        </div></div></div>`;
+      document.body.appendChild(mo);
+    }
+    mo.querySelector('#muiconf-msg').textContent=msg;
+    const ok=mo.querySelector('#muiconf-ok'),no=mo.querySelector('#muiconf-no');
+    ok.textContent=okLabel;ok.style.background=danger?'#dc2626':'';ok.style.color=danger?'#fff':'';
+    const done=v=>{mo.classList.remove('on');ok.onclick=no.onclick=mo.onclick=null;document.removeEventListener('keydown',kd);res(v);};
+    const kd=e=>{if(e.key==='Escape')done(false);if(e.key==='Enter')done(true);};
+    ok.onclick=()=>done(true);no.onclick=()=>done(false);
+    mo.onclick=e=>{if(e.target===mo)done(false);};
+    document.addEventListener('keydown',kd);
+    mo.classList.add('on');setTimeout(()=>ok.focus(),50);
+  });
+}
 function cM(id){document.getElementById(id).classList.remove('on');}
 
 // ══════════════════════════════════════════
@@ -2633,7 +2658,7 @@ function renderCobrancas(){
 }
 
 async function delCob(id,cid){
-  if(!confirm('Excluir esta cobrança?'))return;
+  if(!await uiConfirm('Excluir esta cobrança?'))return;
   const{error}=await sb.from('cobrancas').delete().eq('id',id);
   if(error){alert('Erro ao excluir: '+error.message);return;}
   D.cb=D.cb.filter(c=>c.id!==id);
@@ -3284,7 +3309,7 @@ async function saveContract(){
       const descLabelEdit=dsEdEdit.map(d=>d.desc||'Desconto').join(', ');
       const valorBase=pendAlug[0].valor+(pendAlug[0].descontoAplicado||0);
       const novoExemplo=Math.max(0,valorBase-totalDcEdit);
-      const ok=confirm(`Recalcular ${qtd} cobranças de aluguel pendentes com os descontos:\n\n💸 -${R(totalDcEdit)} (${descLabelEdit})\n\nValor cobrado → ${R(novoExemplo)}/mês\n\nClicar OK atualizará todas as cobranças pendentes.`);
+      const ok=await uiConfirm(`Recalcular ${qtd} cobranças de aluguel pendentes com os descontos:\n\n💸 -${R(totalDcEdit)} (${descLabelEdit})\n\nValor cobrado → ${R(novoExemplo)}/mês\n\nClicar OK atualizará todas as cobranças pendentes.`);
       if(ok){
         const adm=c.adm==='sim';
         const origemPropE=(dsEdEdit[0]?.origem||'prop')==='prop';
@@ -3329,7 +3354,7 @@ async function saveContract(){
   if(wasEdit && !(c.descontoValor>0 && c.descontoParc>0)){
     const pendComDesc=D.cb.filter(x=>x.contratoId===c.id&&!x.pago&&x.tipo==='Aluguel'&&(x.descontoAplicado||0)>0);
     if(pendComDesc.length>0){
-      const ok=confirm(`O desconto foi removido/desativado no contrato.\n\nDeseja remover o desconto já aplicado em ${pendComDesc.length} cobrança(s) de aluguel pendente(s)?`);
+      const ok=await uiConfirm(`O desconto foi removido/desativado no contrato.\n\nDeseja remover o desconto já aplicado em ${pendComDesc.length} cobrança(s) de aluguel pendente(s)?`);
       if(ok){
         const adm=c.adm==='sim';
         let _okCount=0;const _falhas=[];
@@ -3668,7 +3693,7 @@ async function saveOS(){
 // EXCLUIR CONTRATO
 // ══════════════════════════════════════════
 async function delContract(id){
-  if(!confirm('Excluir este contrato?\n\nTodas as cobranças e ordens de serviço vinculadas também serão removidas.'))return;
+  if(!await uiConfirm('Excluir este contrato?\n\nTodas as cobranças e ordens de serviço vinculadas também serão removidas.'))return;
   const{error}=await sb.from('contratos').delete().eq('id',id);
   if(error){alert('Erro ao excluir: '+error.message);return;}
   D.c=D.c.filter(c=>c.id!==id);
@@ -4106,7 +4131,7 @@ async function saveDespesa(){
   cM('mdesp');renderDespesas();
 }
 async function deleteDespesa(id){
-  if(!confirm('Excluir esta despesa? Se houver reembolso aplicado em cobranças pendentes, ele também será removido delas.'))return;
+  if(!await uiConfirm('Excluir esta despesa? Se houver reembolso aplicado em cobranças pendentes, ele também será removido delas.'))return;
   await reverterReembolsoDespesa(id);
   await sb.from('despesas_imob').delete().eq('id',id);
   D.d=D.d.filter(x=>x.id!==id);
@@ -5960,13 +5985,16 @@ function shareRelVencimentos(){
 }
 
 async function estornarPagamento(id){
-  if(!confirm('Reverter este pagamento? A cobrança voltará para pendente.'))return;
-  const i=D.cb.findIndex(c=>c.id===id);if(i<0)return;
-  const{error}=await sb.from('cobrancas').update({pago:false,data_pago:null,valor_pago:null,repasse_realizado:false}).eq('id',id);
+  const i=D.cb.findIndex(c=>c.id===id);
+  if(i<0){alert('Cobrança não encontrada na tela. Recarregue a página (F5) e tente de novo.');return;}
+  if(!await uiConfirm('Reverter este pagamento?\n\nA cobrança voltará para pendente e você poderá editar os valores.','↩ Estornar',true))return;
+  const{data,error}=await sb.from('cobrancas').update({pago:false,data_pago:null,valor_pago:null,repasse_realizado:false,data_repasse:null}).eq('id',id).select('id');
   if(error){alert('Erro ao estornar: '+error.message);return;}
+  if(!data||!data.length){alert('O estorno não foi gravado no banco (nenhuma linha alterada). Saia e entre de novo na conta e tente outra vez.');return;}
   const cb=D.cb[i];
-  cb.pago=false;cb.dataPago=null;cb.valorPago=null;cb.repasseRealizado=false;
+  cb.pago=false;cb.dataPago=null;cb.valorPago=null;cb.repasseRealizado=false;cb.dataRepasse=null;
   renderCobrancas();renderDash();
+  if(typeof renderRepasse==='function')renderRepasse();
   const det=document.getElementById('det');
   if(det&&det.innerHTML)detail(cb.contratoId);
 }
